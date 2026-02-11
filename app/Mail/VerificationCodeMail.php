@@ -15,10 +15,11 @@ class VerificationCodeMail extends Mailable
     public $code;
     public $userName;
 
-    public function __construct($code, $userName)
+    // CAMBIA ESTO: Ahora acepta solo el código
+    public function __construct($code)
     {
         $this->code = $code;
-        $this->userName = $userName;
+        $this->userName = 'Usuario'; // Valor por defecto
     }
 
     public function envelope(): Envelope

@@ -52,14 +52,7 @@ export default function Welcome({ canLogin }) {
                         ventas y administración de tu negocio.
                     </p>
 
-                    <div className="flex items-center justify-center space-x-4">
-                        <Link
-                            href="/login"
-                            className="px-8 py-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-medium hover:shadow-xl transform hover:-translate-y-0.5 transition duration-200"
-                        >
-                            Iniciar Sesión
-                        </Link>
-                    </div>
+                    {/* ELIMINAMOS EL BOTÓN DEL MEDIO */}
 
                     {/* Features */}
                     <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8">
