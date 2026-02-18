@@ -92,7 +92,7 @@ export default function VerifyCode({ email }) {
 
                         {/* Back to Login */}
                         <div className="text-center">
-                            <a href="/login" className="text-sm text-gray-600 hover:text-gray-900 transition">
+                            <a href="/Login" className="text-sm text-gray-600 hover:text-gray-900 transition">
                                 ← Volver al inicio de sesión
                             </a>
                         </div>
