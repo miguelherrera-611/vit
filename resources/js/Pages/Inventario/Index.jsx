@@ -1,9 +1,40 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
-export default function InventarioIndex({ productos }) {
+export default function InventarioIndex({ productos = [] }) {
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
+
+    // Calcular estadísticas dinámicamente
+    const stats = useMemo(() => {
+        const productosActivos = productos.filter(p => p.activo);
+        const productosBajoStock = productos.filter(p => p.stock <= p.stock_minimo);
+        const productosAgotados = productos.filter(p => p.stock === 0);
+
+        return {
+            total: productosActivos.length,
+            enStock: productosActivos.filter(p => p.stock > p.stock_minimo).length,
+            bajoStock: productosBajoStock.length,
+            agotados: productosAgotados.length
+        };
+    }, [productos]);
+
+    // Obtener categorías únicas de los productos reales
+    const categorias = useMemo(() => {
+        const cats = [...new Set(productos.map(p => p.categoria))].sort();
+        return cats;
+    }, [productos]);
+
+    // Filtrar productos
+    const productosFiltrados = useMemo(() => {
+        return productos.filter(producto => {
+            const matchSearch = producto.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              producto.codigo_barras?.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchCategory = !selectedCategory || producto.categoria === selectedCategory;
+            return matchSearch && matchCategory;
+        });
+    }, [productos, searchTerm, selectedCategory]);
 
     return (
         <AppLayout>
@@ -40,7 +71,7 @@ export default function InventarioIndex({ productos }) {
                                     </svg>
                                 </div>
                             </div>
-                            <p className="text-2xl font-semibold text-gray-900">0</p>
+                            <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
                             <p className="text-sm text-gray-500 mt-1">Productos totales</p>
                         </div>
 
@@ -52,7 +83,7 @@ export default function InventarioIndex({ productos }) {
                                     </svg>
                                 </div>
                             </div>
-                            <p className="text-2xl font-semibold text-gray-900">0</p>
+                            <p className="text-2xl font-semibold text-gray-900">{stats.enStock}</p>
                             <p className="text-sm text-gray-500 mt-1">En stock</p>
                         </div>
 
@@ -64,7 +95,7 @@ export default function InventarioIndex({ productos }) {
                                     </svg>
                                 </div>
                             </div>
-                            <p className="text-2xl font-semibold text-gray-900">0</p>
+                            <p className="text-2xl font-semibold text-gray-900">{stats.bajoStock}</p>
                             <p className="text-sm text-gray-500 mt-1">Stock bajo</p>
                         </div>
 
@@ -76,7 +107,7 @@ export default function InventarioIndex({ productos }) {
                                     </svg>
                                 </div>
                             </div>
-                            <p className="text-2xl font-semibold text-gray-900">0</p>
+                            <p className="text-2xl font-semibold text-gray-900">{stats.agotados}</p>
                             <p className="text-sm text-gray-500 mt-1">Agotados</p>
                         </div>
                     </div>
@@ -103,48 +134,129 @@ export default function InventarioIndex({ productos }) {
                                     </svg>
                                 </div>
                             </div>
-                            <select className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition">
-                                <option>Todos los productos</option>
-                                <option>Stock disponible</option>
-                                <option>Stock bajo</option>
-                                <option>Agotados</option>
-                            </select>
-                            <select className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition">
-                                <option>Todas las categorías</option>
-                                <option>Electrónica</option>
-                                <option>Ropa</option>
-                                <option>Alimentos</option>
+                            <select 
+                                value={selectedCategory}
+                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition"
+                            >
+                                <option value="">Todas las categorías</option>
+                                {categorias.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
                             </select>
                         </div>
                     </div>
 
-                    {/* Empty State */}
-                    <div className="bg-white rounded-2xl shadow-sm p-16">
-                        <div className="text-center">
-                            <div className="inline-flex items-center justify-center w-20 h-20 bg-orange-50 rounded-full mb-6">
-                                <svg className="w-10 h-10 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                </svg>
+                    {/* Products Table */}
+                    {productosFiltrados.length > 0 ? (
+                        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50 border-b border-gray-200">
+                                        <tr>
+                                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Producto
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Categoría
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Stock Actual
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Stock Mínimo
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Estado
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {productosFiltrados.map((producto) => (
+                                            <tr key={producto.id} className="hover:bg-gray-50 transition">
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center">
+                                                        <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mr-4">
+                                                            <span className="text-white font-semibold text-lg">
+                                                                {producto.nombre.charAt(0)}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-medium text-gray-900">
+                                                                {producto.nombre}
+                                                            </div>
+                                                            <div className="text-sm text-gray-500">
+                                                                {producto.codigo_barras || 'Sin código'}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
+                                                        {producto.categoria}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                                                    {producto.stock} unidades
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {producto.stock_minimo} unidades
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    {producto.stock > producto.stock_minimo ? (
+                                                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                            En stock
+                                                        </span>
+                                                    ) : producto.stock > 0 ? (
+                                                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                                            Bajo stock
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                                            Agotado
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                                No hay productos en inventario
-                            </h3>
-                            <p className="text-gray-500 mb-6">
-                                Primero agrega productos desde el módulo de Productos
-                            </p>
-                            <Link
-                                href="/productos/crear"
-                                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200"
-                            >
-                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                                Ir a Productos
-                            </Link>
                         </div>
-                    </div>
+                    ) : (
+                        <EmptyState />
+                    )}
                 </div>
             </div>
         </AppLayout>
+    );
+}
+
+function EmptyState() {
+    return (
+        <div className="bg-white rounded-2xl shadow-sm p-16">
+            <div className="text-center">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-orange-50 rounded-full mb-6">
+                    <svg className="w-10 h-10 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    No hay productos en inventario
+                </h3>
+                <p className="text-gray-500 mb-6">
+                    Primero agrega productos desde el módulo de Productos
+                </p>
+                <Link
+                    href="/productos/crear"
+                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200"
+                >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Ir a Productos
+                </Link>
+            </div>
+        </div>
     );
 }

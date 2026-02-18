@@ -96,11 +96,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/{id}', [ProductoController::class, 'destroy'])->name('destroy');
     });
 
-    // Gestión de Ventas (todos los roles autenticados)
+    // ✅ CORREGIDO: Gestión de Ventas (todos los roles autenticados)
     Route::prefix('ventas')->name('ventas.')->group(function () {
         Route::get('/', function () {
+            // ✅ Cargar ventas reales con relaciones de cliente y detalles
+            $ventas = \App\Models\Venta::with(['cliente', 'detalles.producto'])
+                ->orderBy('fecha_venta', 'desc')
+                ->get();
+            
             return Inertia::render('Ventas/Index', [
-                'ventas' => [],
+                'ventas' => $ventas,
             ]);
         })->name('index');
         
@@ -109,29 +114,38 @@ Route::middleware(['auth', 'verified'])->group(function () {
         })->name('create');
     });
 
-    // Gestión de Clientes (admin y super_admin)
+    // ✅ CORREGIDO: Gestión de Clientes (admin y super_admin)
     Route::middleware('role:admin|super_admin')->prefix('clientes')->name('clientes.')->group(function () {
         Route::get('/', function () {
+            // ✅ Cargar clientes reales ordenados por nombre
+            $clientes = \App\Models\Cliente::orderBy('nombre')->get();
+            
             return Inertia::render('Clientes/Index', [
-                'clientes' => [],
+                'clientes' => $clientes,
             ]);
         })->name('index');
     });
 
-    // Gestión de Inventario (admin y super_admin)
+    // ✅ CORREGIDO: Gestión de Inventario (admin y super_admin)
     Route::middleware('role:admin|super_admin')->prefix('inventario')->name('inventario.')->group(function () {
         Route::get('/', function () {
+            // ✅ Cargar productos reales ordenados por nombre
+            $productos = \App\Models\Producto::orderBy('nombre')->get();
+            
             return Inertia::render('Inventario/Index', [
-                'productos' => [],
+                'productos' => $productos,
             ]);
         })->name('index');
     });
 
-    // Gestión de Proveedores (admin y super_admin)
+    // ✅ CORREGIDO: Gestión de Proveedores (admin y super_admin)
     Route::middleware('role:admin|super_admin')->prefix('proveedores')->name('proveedores.')->group(function () {
         Route::get('/', function () {
+            // ✅ Cargar proveedores reales ordenados por nombre
+            $proveedores = \App\Models\Proveedor::orderBy('nombre')->get();
+            
             return Inertia::render('Proveedores/Index', [
-                'proveedores' => [],
+                'proveedores' => $proveedores,
             ]);
         })->name('index');
     });
