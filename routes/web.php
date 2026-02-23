@@ -99,16 +99,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ✅ CORREGIDO: Gestión de Ventas (todos los roles autenticados)
     Route::prefix('ventas')->name('ventas.')->group(function () {
         Route::get('/', function () {
-            // ✅ FIX: Usar 'created_at' en lugar de 'fecha_venta' (que NO existe)
-            $ventas = \App\Models\Venta::with(['cliente', 'detalles.producto'])
+            $ventas = \App\Models\Venta::with([
+                'cliente',
+                'detalles.producto',
+                'abonos'
+            ])
                 ->orderBy('created_at', 'desc')
                 ->get();
-            
+
             return Inertia::render('Ventas/Index', [
                 'ventas' => $ventas,
             ]);
         })->name('index');
-        
+
         Route::get('/crear', function () {
             return Inertia::render('Ventas/Create');
         })->name('create');
@@ -117,9 +120,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ✅ CORREGIDO: Gestión de Clientes (admin y super_admin)
     Route::middleware('role:admin|super_admin')->prefix('clientes')->name('clientes.')->group(function () {
         Route::get('/', function () {
-            // ✅ Cargar clientes reales ordenados por nombre
-            $clientes = \App\Models\Cliente::orderBy('nombre')->get();
-            
+            $clientes = \App\Models\Cliente::with([
+                'ventas' => function($query) {
+                    $query->orderBy('created_at', 'desc');
+                },
+                'ventas.detalles.producto',
+                'ventas.abonos'
+            ])
+                ->orderBy('nombre')
+                ->get();
+
             return Inertia::render('Clientes/Index', [
                 'clientes' => $clientes,
             ]);
@@ -129,9 +139,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ✅ CORREGIDO: Gestión de Inventario (admin y super_admin)
     Route::middleware('role:admin|super_admin')->prefix('inventario')->name('inventario.')->group(function () {
         Route::get('/', function () {
-            // ✅ Cargar productos reales ordenados por nombre
             $productos = \App\Models\Producto::orderBy('nombre')->get();
-            
+
             return Inertia::render('Inventario/Index', [
                 'productos' => $productos,
             ]);
@@ -141,9 +150,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ✅ CORREGIDO: Gestión de Proveedores (admin y super_admin)
     Route::middleware('role:admin|super_admin')->prefix('proveedores')->name('proveedores.')->group(function () {
         Route::get('/', function () {
-            // ✅ Cargar proveedores reales ordenados por nombre
             $proveedores = \App\Models\Proveedor::orderBy('nombre')->get();
-            
+
             return Inertia::render('Proveedores/Index', [
                 'proveedores' => $proveedores,
             ]);
@@ -155,11 +163,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', function () {
             return Inertia::render('Reportes/Index');
         })->name('index');
-        
+
         Route::get('/ventas', function () {
             return Inertia::render('Reportes/Ventas');
         })->name('ventas');
-        
+
         Route::get('/inventario', function () {
             return Inertia::render('Reportes/Inventario');
         })->name('inventario');

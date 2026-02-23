@@ -15,26 +15,22 @@ class Cliente extends Model
         'telefono',
         'documento',
         'direccion',
-        'tipo',
         'activo',
+        'saldo_total',
     ];
 
     protected $casts = [
         'activo' => 'boolean',
+        'saldo_total' => 'decimal:2',
     ];
 
     public function ventas()
     {
-        return $this->hasMany(Venta::class);
+        return $this->hasMany(Venta::class, 'cliente_id');
     }
 
     public function scopeActivos($query)
     {
         return $query->where('activo', true);
-    }
-
-    public function scopeVIP($query)
-    {
-        return $query->where('tipo', 'VIP');
     }
 }

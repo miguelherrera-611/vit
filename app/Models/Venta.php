@@ -13,10 +13,14 @@ class Venta extends Model
         'cliente_id',
         'user_id',
         'numero_venta',
+        'tipo_venta',
+        'forma_pago',
         'subtotal',
         'impuesto',
         'descuento',
         'total',
+        'pagado',
+        'saldo_pendiente',
         'estado',
         'metodo_pago',
         'notas',
@@ -27,6 +31,8 @@ class Venta extends Model
         'impuesto' => 'decimal:2',
         'descuento' => 'decimal:2',
         'total' => 'decimal:2',
+        'pagado' => 'decimal:2',
+        'saldo_pendiente' => 'decimal:2',
     ];
 
     public function cliente()
@@ -44,6 +50,11 @@ class Venta extends Model
         return $this->hasMany(VentaDetalle::class);
     }
 
+    public function abonos()
+    {
+        return $this->hasMany(Abono::class);
+    }
+
     public function scopeCompletadas($query)
     {
         return $query->where('estado', 'Completada');
@@ -57,34 +68,6 @@ class Venta extends Model
     public function scopeEsteMes($query)
     {
         return $query->whereMonth('created_at', now()->month)
-                     ->whereYear('created_at', now()->year);
-    }
-}
-
-class VentaDetalle extends Model
-{
-    use HasFactory;
-
-    protected $fillable = [
-        'venta_id',
-        'producto_id',
-        'cantidad',
-        'precio_unitario',
-        'subtotal',
-    ];
-
-    protected $casts = [
-        'precio_unitario' => 'decimal:2',
-        'subtotal' => 'decimal:2',
-    ];
-
-    public function venta()
-    {
-        return $this->belongsTo(Venta::class);
-    }
-
-    public function producto()
-    {
-        return $this->belongsTo(Producto::class);
+            ->whereYear('created_at', now()->year);
     }
 }
