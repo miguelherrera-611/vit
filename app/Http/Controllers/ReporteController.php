@@ -25,7 +25,7 @@ class ReporteController extends Controller
         $ventasHoy = Venta::completadas()->hoy()->sum('total');
         $ventasEsteMes = Venta::completadas()->esteMes()->sum('total');
         $totalVentas = Venta::completadas()->count();
-        
+
         // Ventas por día (últimos 30 días)
         $ventasPorDia = Venta::completadas()
             ->where('created_at', '>=', Carbon::now()->subDays(30))
@@ -151,7 +151,7 @@ class ReporteController extends Controller
         $ventasEsteMes = Venta::completadas()->esteMes()->sum('total');
         $totalProductos = Producto::count();
         $totalClientes = Cliente::count();
-        $productosB ajoStock = Producto::bajoStock()->count();
+        $productosBajoStock = Producto::bajoStock()->count();
 
         return Inertia::render('Reportes/Ejecutivo', [
             'kpis' => [

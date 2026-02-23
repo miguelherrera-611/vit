@@ -99,9 +99,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ✅ CORREGIDO: Gestión de Ventas (todos los roles autenticados)
     Route::prefix('ventas')->name('ventas.')->group(function () {
         Route::get('/', function () {
-            // ✅ Cargar ventas reales con relaciones de cliente y detalles
+            // ✅ FIX: Usar 'created_at' en lugar de 'fecha_venta' (que NO existe)
             $ventas = \App\Models\Venta::with(['cliente', 'detalles.producto'])
-                ->orderBy('fecha_venta', 'desc')
+                ->orderBy('created_at', 'desc')
                 ->get();
             
             return Inertia::render('Ventas/Index', [
