@@ -8,7 +8,7 @@ export default function VentasIndex({ ventas = [] }) {
     const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
 
-    // Función para normalizar texto (remover tildes y convertir a minúsculas)
+    // Función para normalizar texto (remover tildes y convertir a  minúsculas)
     const normalizeText = (text) => {
         if (!text) return '';
         return text
