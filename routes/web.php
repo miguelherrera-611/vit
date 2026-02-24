@@ -3,7 +3,10 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductoController;
-use Illuminate\Foundation\Application;
+use App\Http\Controllers\ProveedorController;
+use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\VentaController;
+use App\Http\Controllers\InventarioController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -15,7 +18,7 @@ use Inertia\Inertia;
 
 // Ruta de bienvenida
 Route::get('/', function () {
-    // Si el usuario está autenticado, redirigir a su dashboard
+
     if (auth()->check()) {
         $user = auth()->user();
 
@@ -34,13 +37,27 @@ Route::get('/', function () {
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
     ]);
+
 })->name('welcome');
 
-// Rutas protegidas con autenticación
+
+
+/*
+|--------------------------------------------------------------------------
+| Rutas protegidas
+|--------------------------------------------------------------------------
+*/
+
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // Dashboard general (fallback)
+    /*
+    |--------------------------------------------------------------------------
+    | Dashboards
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/dashboard', function () {
+
         $user = auth()->user();
 
         if ($user->hasRole('super_admin')) {
@@ -52,9 +69,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         }
 
         return Inertia::render('Dashboard');
+
     })->name('dashboard');
 
-    // Dashboards por rol
+
     Route::get('/dashboard/superadmin', [DashboardController::class, 'superAdmin'])
         ->middleware('role:super_admin')
         ->name('dashboard.superadmin');
@@ -67,111 +85,145 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:empleado')
         ->name('dashboard.empleado');
 
-    // Perfil de usuario
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Perfil
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // ==========================================
-    // MÓDULOS FUNCIONALES
-    // ==========================================
 
-    // Gestión de Usuarios (solo super_admin)
-    Route::middleware('role:super_admin')->prefix('usuarios')->name('usuarios.')->group(function () {
-        Route::get('/', function () {
-            return Inertia::render('Usuarios/Index', [
-                'usuarios' => [],
-            ]);
-        })->name('index');
-    });
 
-    // Gestión de Productos (admin y super_admin)
-    Route::middleware('role:admin|super_admin')->prefix('productos')->name('productos.')->group(function () {
-        Route::get('/', [ProductoController::class, 'index'])->name('index');
-        Route::get('/crear', [ProductoController::class, 'create'])->name('create');
-        Route::post('/', [ProductoController::class, 'store'])->name('store');
-        Route::get('/{id}', [ProductoController::class, 'show'])->name('show');
-        Route::get('/{id}/editar', [ProductoController::class, 'edit'])->name('edit');
-        Route::put('/{id}', [ProductoController::class, 'update'])->name('update');
-        Route::delete('/{id}', [ProductoController::class, 'destroy'])->name('destroy');
-    });
+    /*
+    |--------------------------------------------------------------------------
+    | Productos (admin y super_admin)
+    |--------------------------------------------------------------------------
+    */
 
-    // ✅ CORREGIDO: Gestión de Ventas (todos los roles autenticados)
-    Route::prefix('ventas')->name('ventas.')->group(function () {
-        Route::get('/', function () {
-            $ventas = \App\Models\Venta::with([
-                'cliente',
-                'detalles.producto',
-                'abonos'
-            ])
-                ->orderBy('created_at', 'desc')
-                ->get();
+    Route::middleware('role:admin|super_admin')
+        ->prefix('productos')
+        ->name('productos.')
+        ->group(function () {
 
-            return Inertia::render('Ventas/Index', [
-                'ventas' => $ventas,
-            ]);
-        })->name('index');
+            Route::get('/', [ProductoController::class, 'index'])->name('index');
+            Route::get('/create', [ProductoController::class, 'create'])->name('create');
+            Route::post('/', [ProductoController::class, 'store'])->name('store');
+            Route::get('/{producto}', [ProductoController::class, 'show'])->name('show');
+            Route::get('/{producto}/edit', [ProductoController::class, 'edit'])->name('edit');
+            Route::put('/{producto}', [ProductoController::class, 'update'])->name('update');
+            Route::patch('/{producto}', [ProductoController::class, 'update']);
+            Route::delete('/{producto}', [ProductoController::class, 'destroy'])->name('destroy');
+        });
 
-        Route::get('/crear', function () {
-            return Inertia::render('Ventas/Create');
-        })->name('create');
-    });
 
-    // ✅ CORREGIDO: Gestión de Clientes (admin y super_admin)
-    Route::middleware('role:admin|super_admin')->prefix('clientes')->name('clientes.')->group(function () {
-        Route::get('/', function () {
-            $clientes = \App\Models\Cliente::with([
-                'ventas' => function($query) {
-                    $query->orderBy('created_at', 'desc');
-                },
-                'ventas.detalles.producto',
-                'ventas.abonos'
-            ])
-                ->orderBy('nombre')
-                ->get();
 
-            return Inertia::render('Clientes/Index', [
-                'clientes' => $clientes,
-            ]);
-        })->name('index');
-    });
+    /*
+    |--------------------------------------------------------------------------
+    | Proveedores (admin y super_admin)
+    |--------------------------------------------------------------------------
+    */
 
-    // ✅ CORREGIDO: Gestión de Inventario (admin y super_admin)
-    Route::middleware('role:admin|super_admin')->prefix('inventario')->name('inventario.')->group(function () {
-        Route::get('/', function () {
-            $productos = \App\Models\Producto::orderBy('nombre')->get();
+    Route::middleware('role:admin|super_admin')
+        ->prefix('proveedores')
+        ->name('proveedores.')
+        ->group(function () {
 
-            return Inertia::render('Inventario/Index', [
-                'productos' => $productos,
-            ]);
-        })->name('index');
-    });
+            Route::get('/', [ProveedorController::class, 'index'])->name('index');
+            Route::get('/create', [ProveedorController::class, 'create'])->name('create');
+            Route::post('/', [ProveedorController::class, 'store'])->name('store');
+            Route::get('/{proveedor}/edit', [ProveedorController::class, 'edit'])->name('edit');
+            Route::put('/{proveedor}', [ProveedorController::class, 'update'])->name('update');
+            Route::delete('/{proveedor}', [ProveedorController::class, 'destroy'])->name('destroy');
+        });
 
-    // ✅ CORREGIDO: Gestión de Proveedores (admin y super_admin)
-    Route::middleware('role:admin|super_admin')->prefix('proveedores')->name('proveedores.')->group(function () {
-        Route::get('/', function () {
-            $proveedores = \App\Models\Proveedor::orderBy('nombre')->get();
 
-            return Inertia::render('Proveedores/Index', [
-                'proveedores' => $proveedores,
-            ]);
-        })->name('index');
-    });
 
-    // Reportes (admin y super_admin)
-    Route::middleware('role:admin|super_admin')->prefix('reportes')->name('reportes.')->group(function () {
-        Route::get('/', function () {
-            return Inertia::render('Reportes/Index');
-        })->name('index');
+    /*
+    |--------------------------------------------------------------------------
+    | Clientes (admin y super_admin)
+    |--------------------------------------------------------------------------
+    */
 
-        Route::get('/ventas', function () {
-            return Inertia::render('Reportes/Ventas');
-        })->name('ventas');
+    Route::middleware('role:admin|super_admin')
+        ->prefix('clientes')
+        ->name('clientes.')
+        ->group(function () {
 
-        Route::get('/inventario', function () {
-            return Inertia::render('Reportes/Inventario');
-        })->name('inventario');
-    });
+            Route::get('/', [ClienteController::class, 'index'])->name('index');
+            Route::get('/create', [ClienteController::class, 'create'])->name('create');
+            Route::post('/', [ClienteController::class, 'store'])->name('store');
+            Route::get('/{cliente}', [ClienteController::class, 'show'])->name('show');
+            Route::get('/{cliente}/edit', [ClienteController::class, 'edit'])->name('edit');
+            Route::put('/{cliente}', [ClienteController::class, 'update'])->name('update');
+            Route::delete('/{cliente}', [ClienteController::class, 'destroy'])->name('destroy');
+        });
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ventas (todos los roles autenticados)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('ventas')
+        ->name('ventas.')
+        ->group(function () {
+
+            Route::get('/', [VentaController::class, 'index'])->name('index');
+            Route::get('/create', [VentaController::class, 'create'])->name('create');
+            Route::post('/', [VentaController::class, 'store'])->name('store');
+        });
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Inventario (admin y super_admin)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware('role:admin|super_admin')
+        ->prefix('inventario')
+        ->name('inventario.')
+        ->group(function () {
+
+            Route::get('/', [InventarioController::class, 'index'])->name('index');
+            Route::get('/ajustar', [InventarioController::class, 'ajustar'])->name('ajustar');
+            Route::post('/ajustar', [InventarioController::class, 'procesarAjuste'])->name('procesarAjuste');
+        });
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Reportes (admin y super_admin)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware('role:admin|super_admin')
+        ->prefix('reportes')
+        ->name('reportes.')
+        ->group(function () {
+
+            Route::get('/', fn () => Inertia::render('Reportes/Index'))->name('index');
+            Route::get('/ventas', fn () => Inertia::render('Reportes/Ventas'))->name('ventas');
+            Route::get('/inventario', fn () => Inertia::render('Reportes/Inventario'))->name('inventario');
+        });
+
 });
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Auth Routes (Breeze / Jetstream)
+|--------------------------------------------------------------------------
+*/
 
 require __DIR__.'/auth.php';
