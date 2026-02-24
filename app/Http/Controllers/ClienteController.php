@@ -52,6 +52,22 @@ class ClienteController extends Controller
             ->with('success', 'Cliente creado exitosamente.');
     }
 
+    /**
+     * Muestra el detalle de un cliente con su historial de compras.
+     */
+    public function show(string $id): Response
+    {
+        $cliente = Cliente::with([
+            'ventas' => fn ($q) => $q->orderBy('created_at', 'desc'),
+            'ventas.detalles.producto',
+            'ventas.abonos',
+        ])->findOrFail($id);
+
+        return Inertia::render('Clientes/Show', [
+            'cliente' => $cliente,
+        ]);
+    }
+
     public function edit(string $id): Response
     {
         $cliente = Cliente::findOrFail($id);
@@ -84,12 +100,26 @@ class ClienteController extends Controller
             ->with('success', 'Cliente actualizado exitosamente.');
     }
 
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
+        $request->validate(['password' => 'required|string']);
+
+        if (! \Hash::check($request->password, auth()->user()->password)) {
+            return back()->withErrors(['password' => 'Contraseña incorrecta.']);
+        }
+
         $cliente = Cliente::findOrFail($id);
+
+        \App\Models\Papelera::archivar(
+            'cliente',
+            $cliente,
+            $cliente->nombre,
+            auth()->user()->name
+        );
+
         $cliente->delete();
 
         return redirect()->route('clientes.index')
-            ->with('success', 'Cliente eliminado exitosamente.');
+            ->with('success', "Cliente \"{$cliente->nombre}\" movido a la papelera.");
     }
 }

@@ -124,17 +124,31 @@ class ProductoController extends Controller
             ->with('success', 'Producto actualizado exitosamente.');
     }
 
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
-        $producto = Producto::findOrFail($id);
+        // ── Verificar contraseña ──────────────────────────────
+        $request->validate([
+            'password' => 'required|string',
+        ]);
 
-        if ($producto->imagen) {
-            Storage::disk('public')->delete($producto->imagen);
+        if (! \Hash::check($request->password, auth()->user()->password)) {
+            return back()->withErrors(['password' => 'Contraseña incorrecta.']);
         }
 
+        $producto = Producto::findOrFail($id);
+
+        // ── Guardar en papelera antes de eliminar ─────────────
+        \App\Models\Papelera::archivar(
+            'producto',
+            $producto,
+            $producto->nombre,
+            auth()->user()->name
+        );
+
+        // ── Soft delete (la imagen se mantiene por si se restaura) ──
         $producto->delete();
 
         return redirect()->route('productos.index')
-            ->with('success', 'Producto eliminado exitosamente.');
+            ->with('success', "Producto \"{$producto->nombre}\" movido a la papelera.");
     }
 }

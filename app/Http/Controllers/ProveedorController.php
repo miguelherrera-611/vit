@@ -76,13 +76,26 @@ class ProveedorController extends Controller
             ->with('success', 'Proveedor actualizado exitosamente.');
     }
 
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
+        $request->validate(['password' => 'required|string']);
+
+        if (! \Hash::check($request->password, auth()->user()->password)) {
+            return back()->withErrors(['password' => 'Contraseña incorrecta.']);
+        }
+
         $proveedor = Proveedor::findOrFail($id);
+
+        \App\Models\Papelera::archivar(
+            'proveedor',
+            $proveedor,
+            $proveedor->nombre . ($proveedor->empresa ? " ({$proveedor->empresa})" : ''),
+            auth()->user()->name
+        );
 
         $proveedor->delete();
 
         return redirect()->route('proveedores.index')
-            ->with('success', 'Proveedor eliminado exitosamente.');
+            ->with('success', "Proveedor \"{$proveedor->nombre}\" movido a la papelera.");
     }
 }

@@ -2,32 +2,34 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Cliente extends Model
 {
-    use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
         'nombre',
-        'email',
         'telefono',
+        'email',
         'documento',
         'direccion',
         'activo',
-        'saldo_total',
     ];
 
     protected $casts = [
         'activo' => 'boolean',
-        'saldo_total' => 'decimal:2',
     ];
+
+    // ── Relaciones ──────────────────────────────────────────────
 
     public function ventas()
     {
-        return $this->hasMany(Venta::class, 'cliente_id');
+        return $this->hasMany(Venta::class);
     }
+
+    // ── Scopes ──────────────────────────────────────────────────
 
     public function scopeActivos($query)
     {

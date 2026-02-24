@@ -2,29 +2,28 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Proveedor extends Model
 {
-    use HasFactory;
-
-    protected $table = 'proveedores';
+    use SoftDeletes;
 
     protected $fillable = [
         'nombre',
         'empresa',
-        'email',
         'telefono',
+        'email',
         'documento',
         'direccion',
-        'sitio_web',
         'activo',
     ];
 
     protected $casts = [
         'activo' => 'boolean',
     ];
+
+    // ── Scopes ──────────────────────────────────────────────────
 
     public function scopeActivos($query)
     {

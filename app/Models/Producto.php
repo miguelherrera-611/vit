@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Producto extends Model
 {
-    use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
         'nombre',
@@ -22,23 +22,28 @@ class Producto extends Model
     ];
 
     protected $casts = [
-        'precio' => 'decimal:2',
-        'activo' => 'boolean',
+        'precio'       => 'decimal:2',
+        'activo'       => 'boolean',
+        'stock'        => 'integer',
+        'stock_minimo' => 'integer',
     ];
 
-    public function ventaDetalles()
-    {
-        return $this->hasMany(VentaDetalle::class);
-    }
+    // ── Scopes ──────────────────────────────────────────────────
 
     public function scopeActivos($query)
     {
         return $query->where('activo', true);
     }
 
+    public function scopeConStock($query)
+    {
+        return $query->where('stock', '>', 0);
+    }
+
     public function scopeBajoStock($query)
     {
-        return $query->whereRaw('stock <= stock_minimo');
+        return $query->whereColumn('stock', '<=', 'stock_minimo')
+            ->where('stock', '>', 0);
     }
 
     public function scopeAgotados($query)
