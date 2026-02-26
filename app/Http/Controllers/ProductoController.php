@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Producto;
 use App\Models\Proveedor;
+use App\Models\GrupoCategoria;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -11,21 +12,33 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductoController extends Controller
 {
-    private $categorias = [
-        'Dama - Blusas',
-        'Dama - Vestidos',
-        'Dama - Pantalones',
-        'Dama - Faldas',
-        'Dama - Chaquetas',
-        'Dama - Ropa Interior',
-        'Dama - Accesorios',
-        'Caballero - Camisas',
-        'Caballero - Pantalones',
-        'Caballero - Chaquetas',
-        'Caballero - Ropa Interior',
-        'Caballero - Accesorios',
-        'Caballero - Camisetas',
-    ];
+    /**
+     * Genera la lista de categorías agrupadas dinámicamente desde la DB.
+     * Formato para el select: [
+     *   { grupo: 'Dama', opciones: ['Dama - Blusas', 'Dama - Vestidos', ...] },
+     *   { grupo: 'Caballero', opciones: [...] },
+     *   ...
+     * ]
+     */
+    private function getCategorias(): array
+    {
+        return GrupoCategoria::where('activo', true)
+            ->whereNull('deleted_at')
+            ->orderBy('orden')
+            ->orderBy('nombre')
+            ->with(['subcategorias' => fn($q) => $q->where('activo', true)->orderBy('nombre')])
+            ->get()
+            ->map(fn($grupo) => [
+                'grupo'   => $grupo->nombre,
+                'opciones' => $grupo->subcategorias
+                    ->map(fn($sub) => $grupo->nombre . ' - ' . $sub->nombre)
+                    ->values()
+                    ->toArray(),
+            ])
+            ->filter(fn($g) => count($g['opciones']) > 0)
+            ->values()
+            ->toArray();
+    }
 
     public function index(): Response
     {
@@ -41,7 +54,7 @@ class ProductoController extends Controller
         $proveedores = Proveedor::activos()->orderBy('nombre')->get();
 
         return Inertia::render('Productos/Create', [
-            'categorias'  => $this->categorias,
+            'categorias'  => $this->getCategorias(),
             'proveedores' => $proveedores,
         ]);
     }
@@ -83,12 +96,12 @@ class ProductoController extends Controller
 
     public function edit(string $id): Response
     {
-        $producto   = Producto::findOrFail($id);
+        $producto    = Producto::findOrFail($id);
         $proveedores = Proveedor::activos()->orderBy('nombre')->get();
 
         return Inertia::render('Productos/Edit', [
             'producto'    => $producto,
-            'categorias'  => $this->categorias,
+            'categorias'  => $this->getCategorias(),
             'proveedores' => $proveedores,
         ]);
     }
@@ -126,10 +139,7 @@ class ProductoController extends Controller
 
     public function destroy(Request $request, string $id)
     {
-        // ── Verificar contraseña ──────────────────────────────
-        $request->validate([
-            'password' => 'required|string',
-        ]);
+        $request->validate(['password' => 'required|string']);
 
         if (! \Hash::check($request->password, auth()->user()->password)) {
             return back()->withErrors(['password' => 'Contraseña incorrecta.']);
@@ -137,7 +147,6 @@ class ProductoController extends Controller
 
         $producto = Producto::findOrFail($id);
 
-        // ── Guardar en papelera antes de eliminar ─────────────
         \App\Models\Papelera::archivar(
             'producto',
             $producto,
@@ -145,7 +154,6 @@ class ProductoController extends Controller
             auth()->user()->name
         );
 
-        // ── Soft delete (la imagen se mantiene por si se restaura) ──
         $producto->delete();
 
         return redirect()->route('productos.index')

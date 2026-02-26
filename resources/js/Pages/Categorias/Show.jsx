@@ -1,259 +1,190 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, router } from '@inertiajs/react';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import PasswordConfirmModal from '@/Components/PasswordConfirmModal';
 
-const normalize = (s) =>
-    (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const GRADIENTS = {
+    pink:   'from-pink-500 via-rose-500 to-red-400',
+    blue:   'from-blue-500 via-indigo-500 to-violet-500',
+    violet: 'from-violet-500 via-purple-500 to-fuchsia-500',
+    green:  'from-emerald-500 via-teal-500 to-cyan-500',
+    orange: 'from-orange-400 via-amber-500 to-yellow-400',
+    teal:   'from-teal-500 via-cyan-500 to-sky-500',
+    red:    'from-red-500 via-rose-500 to-pink-400',
+};
 
-const formatCurrency = (v) =>
-    new Intl.NumberFormat('es-CO', {
-        style: 'currency', currency: 'COP', minimumFractionDigits: 0,
-    }).format(v);
+const SOFT_COLORS = {
+    pink:   { bg: 'bg-pink-50',    border: 'border-pink-200', badge: 'bg-pink-100 text-pink-700',   ring: 'hover:ring-pink-300',   icon: 'text-pink-400'   },
+    blue:   { bg: 'bg-blue-50',    border: 'border-blue-200', badge: 'bg-blue-100 text-blue-700',   ring: 'hover:ring-blue-300',   icon: 'text-blue-400'   },
+    violet: { bg: 'bg-violet-50',  border: 'border-violet-200', badge: 'bg-violet-100 text-violet-700', ring: 'hover:ring-violet-300', icon: 'text-violet-400' },
+    green:  { bg: 'bg-emerald-50', border: 'border-emerald-200', badge: 'bg-emerald-100 text-emerald-700', ring: 'hover:ring-emerald-300', icon: 'text-emerald-400' },
+    orange: { bg: 'bg-orange-50',  border: 'border-orange-200', badge: 'bg-orange-100 text-orange-700', ring: 'hover:ring-orange-300', icon: 'text-orange-400' },
+    teal:   { bg: 'bg-teal-50',    border: 'border-teal-200',  badge: 'bg-teal-100 text-teal-700',   ring: 'hover:ring-teal-300',   icon: 'text-teal-400'   },
+    red:    { bg: 'bg-red-50',     border: 'border-red-200',   badge: 'bg-red-100 text-red-700',     ring: 'hover:ring-red-300',    icon: 'text-red-400'    },
+};
 
-export default function CategoriasShow({ categoria, productos = [] }) {
-    const [busqueda, setBusqueda]     = useState('');
-    const [showDelete, setShowDelete] = useState(false);
-    const [processing, setProcessing] = useState(false);
-    const [pwdError, setPwdError]     = useState(null);
+export default function CategoriasShow({ grupo, subcategorias = [] }) {
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [processing,   setProcessing]   = useState(false);
+    const [pwdError,     setPwdError]     = useState(null);
 
-    const tipo  = categoria.tipo || 'custom';
-    const isPink = tipo === 'dama';
+    const gradient = GRADIENTS[grupo.color] || GRADIENTS.violet;
+    const soft     = SOFT_COLORS[grupo.color] || SOFT_COLORS.violet;
+    const hasImg   = !!grupo.imagen;
 
-    const productosFiltrados = useMemo(() => {
-        const q = normalize(busqueda);
-        if (!q) return productos;
-        return productos.filter(
-            (p) => normalize(p.nombre).includes(q) || normalize(p.codigo_barras).includes(q)
-        );
-    }, [productos, busqueda]);
-
-    const stats = useMemo(() => ({
-        total:   productos.length,
-        activos: productos.filter((p) => p.activo).length,
-        bajo:    productos.filter((p) => p.stock > 0 && p.stock <= (p.stock_minimo || 5)).length,
-        agotado: productos.filter((p) => p.stock === 0).length,
-    }), [productos]);
+    const totalProductos = subcategorias.reduce((s, c) => s + (c.total_productos || 0), 0);
 
     const handleDelete = (password) => {
         setProcessing(true);
-        router.delete(`/categorias/${categoria.id}`, {
+        router.delete(`/categorias/${grupo.id}/subcategorias/${deleteTarget.id}`, {
             data: { password },
-            onSuccess: () => { setShowDelete(false); setProcessing(false); },
-            onError: (errs) => { setPwdError(errs.password || 'Error.'); setProcessing(false); },
+            onSuccess: () => { setDeleteTarget(null); setProcessing(false); setPwdError(null); },
+            onError:   (errs) => { setPwdError(errs.password || 'Contraseña incorrecta.'); setProcessing(false); },
         });
     };
 
-    const colorBadge   = isPink ? 'bg-pink-100 text-pink-700'   : 'bg-blue-100 text-blue-700';
-    const colorGradient = isPink ? 'from-pink-500 to-rose-500'   : 'from-blue-500 to-indigo-600';
-    const colorBtn     = isPink ? 'from-pink-600 to-rose-600'    : 'from-blue-600 to-indigo-700';
-
     return (
         <AppLayout>
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+            <div className="min-h-screen bg-gray-50">
 
-                {/* Header */}
-                <div className={`bg-gradient-to-r ${colorGradient} text-white`}>
-                    <div className="max-w-7xl mx-auto px-6 py-10">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                                <Link
-                                    href="/categorias"
-                                    className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                                    </svg>
-                                </Link>
-                                <div>
-                                    <p className="text-sm opacity-75 uppercase tracking-widest mb-0.5">
-                                        {tipo === 'dama' ? 'Dama' : tipo === 'caballero' ? 'Caballero' : 'Personalizada'} · Subcategoría
-                                    </p>
-                                    <h1 className="text-3xl font-bold">{categoria.nombre}</h1>
-                                    {categoria.descripcion && (
-                                        <p className="text-sm opacity-75 mt-1">{categoria.descripcion}</p>
-                                    )}
-                                </div>
-                            </div>
+                {/* ── Banner del grupo ── */}
+                <div className="relative overflow-hidden" style={{ minHeight: '220px' }}>
+                    {hasImg ? (
+                        <img src={`/storage/${grupo.imagen}`} alt={grupo.nombre}
+                             className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                        <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} />
+                    )}
+                    <div className="absolute inset-0 bg-black/30" />
 
-                            <div className="flex items-center space-x-3">
-                                <Link
-                                    href={`/categorias/${categoria.id}/edit`}
-                                    className="flex items-center space-x-2 px-4 py-2.5 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-medium transition"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                    <span>Editar</span>
-                                </Link>
-                                <button
-                                    onClick={() => { setShowDelete(true); setPwdError(null); }}
-                                    className="flex items-center space-x-2 px-4 py-2.5 bg-red-500/80 hover:bg-red-600 rounded-xl text-sm font-medium transition"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                    <span>Eliminar</span>
-                                </button>
-                            </div>
+                    <div className="relative max-w-7xl mx-auto px-6 py-10 flex items-end justify-between" style={{ minHeight: '220px' }}>
+                        <div>
+                            <Link href="/categorias"
+                                  className="inline-flex items-center space-x-2 text-white/80 hover:text-white text-sm mb-4 transition">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                                <span>Categorías</span>
+                            </Link>
+                            <h1 className="text-5xl font-black text-white capitalize tracking-tight drop-shadow-lg">
+                                {grupo.nombre}
+                            </h1>
+                            <p className="text-white/70 mt-2 text-sm">
+                                {subcategorias.length} subcategorías · {totalProductos} productos
+                            </p>
                         </div>
 
-                        {/* Mini stats */}
-                        <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            {[
-                                { label: 'Total productos',  value: stats.total },
-                                { label: 'Activos',          value: stats.activos },
-                                { label: 'Bajo stock',       value: stats.bajo   },
-                                { label: 'Agotados',         value: stats.agotado },
-                            ].map((s) => (
-                                <div key={s.label} className="bg-white/15 rounded-2xl px-4 py-3">
-                                    <p className="text-2xl font-bold">{s.value}</p>
-                                    <p className="text-xs opacity-80 mt-0.5">{s.label}</p>
-                                </div>
-                            ))}
+                        <div className="flex items-center space-x-3">
+                            <Link
+                                href={`/categorias/${grupo.id}/edit`}
+                                className="flex items-center space-x-2 px-4 py-2.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-xl text-sm font-medium transition border border-white/30"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                <span>Editar categoría</span>
+                            </Link>
+                            <Link
+                                href={`/categorias/${grupo.id}/subcategorias/crear`}
+                                className="flex items-center space-x-2 px-4 py-2.5 bg-white text-gray-800 hover:bg-gray-100 rounded-xl text-sm font-semibold transition shadow-lg"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                <span>Nueva subcategoría</span>
+                            </Link>
                         </div>
                     </div>
                 </div>
 
-                {/* Content */}
+                {/* ── Lista de subcategorías ── */}
                 <div className="max-w-7xl mx-auto px-6 py-10">
-
-                    {/* Barra buscador + botón nuevo */}
-                    <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                        <div className="relative flex-1">
-                            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input
-                                type="text"
-                                value={busqueda}
-                                onChange={(e) => setBusqueda(e.target.value)}
-                                placeholder="Buscar productos en esta categoría..."
-                                className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white transition text-sm"
-                            />
-                        </div>
-                        <Link
-                            href={`/productos/crear?categoria=${encodeURIComponent(categoria.label_completo)}`}
-                            className={`flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r ${colorBtn} text-white rounded-xl text-sm font-medium hover:shadow-md transition`}
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                            </svg>
-                            <span>Nuevo Producto</span>
-                        </Link>
-                    </div>
-
-                    {/* Tabla */}
-                    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                        {productosFiltrados.length === 0 ? (
-                            <div className="text-center py-20">
-                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
-                                              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                    </svg>
-                                </div>
-                                <p className="font-medium text-gray-700">
-                                    {busqueda ? 'Sin resultados' : 'No hay productos en esta categoría'}
-                                </p>
-                                <p className="text-sm text-gray-400 mt-1">
-                                    {busqueda ? 'Prueba otro término' : 'Agrega el primer producto'}
-                                </p>
+                    {subcategorias.length === 0 ? (
+                        <div className="text-center py-20">
+                            <div className={`w-16 h-16 ${soft.bg} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
+                                <svg className={`w-8 h-8 ${soft.icon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
+                                          d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                </svg>
                             </div>
-                        ) : (
-                            <table className="w-full">
-                                <thead className="bg-gray-50 border-b border-gray-100">
-                                <tr>
-                                    <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Producto</th>
-                                    <th className="text-right px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Precio</th>
-                                    <th className="text-right px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Stock</th>
-                                    <th className="text-center px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
-                                    <th className="px-6 py-4" />
-                                </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                {productosFiltrados.map((p) => {
-                                    const minimo  = p.stock_minimo || 5;
-                                    const agotado = p.stock === 0;
-                                    const bajo    = p.stock > 0 && p.stock <= minimo;
+                            <p className="text-gray-500 font-medium">No hay subcategorías todavía</p>
+                            <p className="text-gray-400 text-sm mt-1">Agrega la primera subcategoría</p>
+                            <Link
+                                href={`/categorias/${grupo.id}/subcategorias/crear`}
+                                className="inline-flex items-center space-x-2 mt-4 px-5 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700 transition"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                <span>Agregar subcategoría</span>
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {subcategorias.map((sub) => (
+                                <div key={sub.id}
+                                     className={`group bg-white rounded-2xl shadow-sm border ${soft.border} overflow-hidden hover:shadow-md hover:ring-2 ${soft.ring} transition-all`}>
 
-                                    return (
-                                        <tr key={p.id} className="hover:bg-gray-50 transition">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center space-x-4">
-                                                    {p.imagen ? (
-                                                        <img src={`/storage/${p.imagen}`} alt={p.nombre}
-                                                             className="w-10 h-10 rounded-xl object-cover" />
-                                                    ) : (
-                                                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
-                                                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
-                                                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                            </svg>
-                                                        </div>
-                                                    )}
-                                                    <div>
-                                                        <p className="font-medium text-gray-900 text-sm">{p.nombre}</p>
-                                                        {p.codigo_barras && (
-                                                            <p className="text-xs text-gray-400">{p.codigo_barras}</p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <span className="font-semibold text-gray-900 text-sm">{formatCurrency(p.precio)}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex items-center justify-end space-x-1.5">
-                                                        <span className={`font-semibold text-sm ${agotado ? 'text-red-600' : bajo ? 'text-yellow-600' : 'text-gray-900'}`}>
-                                                            {p.stock}
-                                                        </span>
-                                                    {agotado && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">Agotado</span>}
-                                                    {bajo    && <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Bajo</span>}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
-                                                        p.activo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                                                    }`}>
-                                                        {p.activo ? 'Activo' : 'Inactivo'}
-                                                    </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <Link
-                                                    href={`/productos/${p.id}/edit`}
-                                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition block"
-                                                    title="Editar"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                                                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                </Link>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                                </tbody>
-                            </table>
-                        )}
-                    </div>
+                                    {/* Imagen o placeholder */}
+                                    <div className={`h-32 ${soft.bg} flex items-center justify-center overflow-hidden`}>
+                                        {sub.imagen ? (
+                                            <img src={`/storage/${sub.imagen}`} alt={sub.nombre}
+                                                 className="w-full h-full object-cover" />
+                                        ) : (
+                                            <svg className={`w-10 h-10 ${soft.icon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
+                                                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                            </svg>
+                                        )}
+                                    </div>
+
+                                    <div className="p-4">
+                                        <h3 className="font-semibold text-gray-900 text-base">{sub.nombre}</h3>
+                                        <div className="flex items-center justify-between mt-1">
+                                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${soft.badge}`}>
+                                                {sub.total_productos} prod.
+                                            </span>
+                                        </div>
+                                        {sub.descripcion && (
+                                            <p className="text-xs text-gray-400 mt-1 truncate">{sub.descripcion}</p>
+                                        )}
+
+                                        {/* Acciones */}
+                                        <div className="flex items-center space-x-2 mt-3">
+                                            <Link
+                                                href={`/categorias/${grupo.id}/subcategorias/${sub.id}/edit`}
+                                                className={`flex-1 text-center text-xs py-2 ${soft.bg} ${soft.icon} rounded-lg hover:opacity-80 transition font-medium`}
+                                            >
+                                                Editar
+                                            </Link>
+                                            <button
+                                                onClick={() => { setDeleteTarget(sub); setPwdError(null); }}
+                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
             <PasswordConfirmModal
-                open={showDelete}
-                onClose={() => setShowDelete(false)}
+                open={!!deleteTarget}
+                onClose={() => setDeleteTarget(null)}
                 onConfirm={handleDelete}
                 processing={processing}
                 error={pwdError}
-                title={`¿Eliminar "${categoria.nombre}"?`}
-                description={`Se eliminarán esta categoría y sus ${stats.total} producto(s). Podrás recuperarlos desde la papelera durante 30 días.`}
-                confirmLabel="Eliminar"
+                title={`¿Eliminar "${deleteTarget?.nombre}"?`}
+                description="Los productos de esta subcategoría se moverán a la papelera. Podrás recuperarlos en 30 días."
+                confirmLabel="Sí, eliminar"
             />
         </AppLayout>
     );

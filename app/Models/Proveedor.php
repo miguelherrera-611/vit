@@ -9,21 +9,23 @@ class Proveedor extends Model
 {
     use SoftDeletes;
 
+    // ← Esto corrige el error: Laravel usaba 'proveedors' por defecto
+    protected $table = 'proveedores';
+
     protected $fillable = [
         'nombre',
         'empresa',
-        'telefono',
         'email',
+        'telefono',
         'documento',
         'direccion',
+        'sitio_web',
         'activo',
     ];
 
     protected $casts = [
         'activo' => 'boolean',
     ];
-
-    // ── Scopes ──────────────────────────────────────────────────
 
     public function scopeActivos($query)
     {

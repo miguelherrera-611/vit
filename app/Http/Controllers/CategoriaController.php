@@ -14,16 +14,13 @@ use Inertia\Response;
 class CategoriaController extends Controller
 {
     // ─────────────────────────────────────────────────────────────
-    // INDEX — muestra las dos categorías raíz + resumen
+    // INDEX
     // ─────────────────────────────────────────────────────────────
 
     public function index(): Response
     {
         $dama = Categoria::dama()
             ->activas()
-            ->withCount(['productos as total_productos' => function ($q) {
-                // Conteo usando la columna categoria de productos
-            }])
             ->orderBy('nombre')
             ->get()
             ->map(fn($c) => $this->enriquecerCategoria($c));
@@ -48,7 +45,7 @@ class CategoriaController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────
-    // SHOW — subcategorías / productos de una categoría
+    // SHOW — productos de una categoría
     // ─────────────────────────────────────────────────────────────
 
     public function show(string $id): Response
@@ -136,7 +133,6 @@ class CategoriaController extends Controller
 
         $validated['activo'] = $request->boolean('activo', true);
 
-        // Actualizar la columna 'categoria' en productos si cambió el nombre
         $labelAnterior = $categoria->label_completo;
         $categoria->update($validated);
         $labelNuevo    = $categoria->fresh()->label_completo;
@@ -151,12 +147,11 @@ class CategoriaController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────
-    // DESTROY — requiere contraseña + guarda en papelera
+    // DESTROY
     // ─────────────────────────────────────────────────────────────
 
     public function destroy(Request $request, string $id)
     {
-        // Verificar contraseña
         $request->validate([
             'password' => 'required|string',
         ]);
@@ -188,11 +183,10 @@ class CategoriaController extends Controller
             auth()->user()->name
         );
 
-        // Soft delete de la categoría
         $categoria->delete();
 
         return redirect()->route('categorias.index')
-            ->with('success', "Categoría \"{$categoria->nombre}\" eliminada. Los productos asociados se movieron a la papelera.");
+            ->with('success', "Categoría \"{$categoria->nombre}\" eliminada.");
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -201,7 +195,7 @@ class CategoriaController extends Controller
 
     private function enriquecerCategoria(Categoria $c): array
     {
-        $data              = $c->toArray();
+        $data                    = $c->toArray();
         $data['total_productos'] = $c->contarProductos();
         $data['label_completo']  = $c->label_completo;
         return $data;

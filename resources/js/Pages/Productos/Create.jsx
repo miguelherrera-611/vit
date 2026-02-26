@@ -83,16 +83,15 @@ export default function ProductosCreate({ categorias = [] }) {
                                                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition bg-gray-50"
                                             >
                                                 <option value="">Selecciona una categoría...</option>
-                                                <optgroup label="Dama">
-                                                    {categorias.filter(c => c.startsWith('Dama')).map(c => (
-                                                        <option key={c} value={c}>{c.replace('Dama - ', '')}</option>
-                                                    ))}
-                                                </optgroup>
-                                                <optgroup label="Caballero">
-                                                    {categorias.filter(c => c.startsWith('Caballero')).map(c => (
-                                                        <option key={c} value={c}>{c.replace('Caballero - ', '')}</option>
-                                                    ))}
-                                                </optgroup>
+                                                {categorias.map((grupo) => (
+                                                    <optgroup key={grupo.grupo} label={grupo.grupo}>
+                                                        {grupo.opciones.map((op) => (
+                                                            <option key={op} value={op}>
+                                                                {op.replace(grupo.grupo + ' - ', '')}
+                                                            </option>
+                                                        ))}
+                                                    </optgroup>
+                                                ))}
                                             </select>
                                             {errors.categoria && <p className="mt-1 text-sm text-red-600">{errors.categoria}</p>}
                                         </div>

@@ -10,6 +10,7 @@ class Categoria extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'grupo_id',
         'nombre',
         'tipo',
         'imagen',
@@ -21,48 +22,30 @@ class Categoria extends Model
         'activo' => 'boolean',
     ];
 
-    // ── Scopes ──────────────────────────────────────────────────
+    // ── Relación: pertenece a un grupo ───────────────────────────
 
-    public function scopeDama($query)
+    public function grupo()
     {
-        return $query->where('tipo', 'dama');
+        return $this->belongsTo(GrupoCategoria::class, 'grupo_id');
     }
 
-    public function scopeCaballero($query)
-    {
-        return $query->where('tipo', 'caballero');
-    }
+    // ── Scopes ───────────────────────────────────────────────────
 
     public function scopeActivas($query)
     {
         return $query->where('activo', true);
     }
 
-    // ── Relaciones ──────────────────────────────────────────────
-
-    /**
-     * Productos que pertenecen a esta categoría.
-     * La columna 'categoria' en productos guarda "tipo - nombre" (ej: "Dama - Blusas").
-     */
-    public function productos()
-    {
-        $prefijo = ucfirst($this->tipo) . ' - ' . $this->nombre;
-        return Producto::where('categoria', $prefijo);
-    }
-
     // ── Helpers ──────────────────────────────────────────────────
 
-    /**
-     * Retorna el label completo: "Dama - Blusas"
-     */
     public function getLabelCompletoAttribute(): string
     {
-        return ucfirst($this->tipo) . ' - ' . $this->nombre;
+        if ($this->grupo) {
+            return $this->grupo->nombre . ' - ' . $this->nombre;
+        }
+        return ucfirst($this->tipo ?? 'custom') . ' - ' . $this->nombre;
     }
 
-    /**
-     * Cuenta productos asociados a esta categoría.
-     */
     public function contarProductos(): int
     {
         return Producto::where('categoria', $this->label_completo)->count();

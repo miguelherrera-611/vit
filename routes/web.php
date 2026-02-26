@@ -8,6 +8,7 @@ use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\GrupoCategoriaController;
 use App\Http\Controllers\PapeleraController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -174,24 +175,32 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
 // -------------------------------------------------------------------------
-// Categorías
+// Categorías (grupos principales + subcategorías)
 // -------------------------------------------------------------------------
 
 Route::middleware('role:admin|super_admin')
     ->prefix('categorias')->name('categorias.')
     ->group(function () {
-        Route::get('/',        [CategoriaController::class, 'index'])->name('index');
 
-        // estáticas primero ↓
-        Route::get('/create',  [CategoriaController::class, 'create'])->name('create');
-        Route::get('/crear',   [CategoriaController::class, 'create']);
-        Route::post('/',       [CategoriaController::class, 'store'])->name('store');
+        // ── Grupos (tarjetas grandes) ──────────────────────────────────
+        Route::get('/',        [GrupoCategoriaController::class, 'index'])->name('index');
+        Route::get('/crear',   [GrupoCategoriaController::class, 'create'])->name('create');
+        Route::get('/create',  [GrupoCategoriaController::class, 'create']);
+        Route::post('/',       [GrupoCategoriaController::class, 'store'])->name('store');
 
-        // dinámicas ↓
-        Route::get('/{categoria}/edit',  [CategoriaController::class, 'edit'])->name('edit');
-        Route::put('/{categoria}',       [CategoriaController::class, 'update'])->name('update');
-        Route::delete('/{categoria}',    [CategoriaController::class, 'destroy'])->name('destroy');
-        Route::get('/{categoria}',       [CategoriaController::class, 'show'])->name('show');
+        Route::get('/{grupo}/edit',   [GrupoCategoriaController::class, 'edit'])->name('edit');
+        Route::put('/{grupo}',        [GrupoCategoriaController::class, 'update'])->name('update');
+        Route::delete('/{grupo}',     [GrupoCategoriaController::class, 'destroy'])->name('destroy');
+
+        // ── Subcategorías dentro de un grupo ──────────────────────────
+        Route::get('/{grupo}/subcategorias/crear',         [GrupoCategoriaController::class, 'createSubcat'])->name('subcat.create');
+        Route::post('/{grupo}/subcategorias',              [GrupoCategoriaController::class, 'storeSubcat'])->name('subcat.store');
+        Route::get('/{grupo}/subcategorias/{subcat}/edit', [GrupoCategoriaController::class, 'editSubcat'])->name('subcat.edit');
+        Route::put('/{grupo}/subcategorias/{subcat}',      [GrupoCategoriaController::class, 'updateSubcat'])->name('subcat.update');
+        Route::delete('/{grupo}/subcategorias/{subcat}',   [GrupoCategoriaController::class, 'destroySubcat'])->name('subcat.destroy');
+
+        // ── Show grupo (lista subcategorías) — ÚLTIMA ruta dinámica ───
+        Route::get('/{grupo}', [GrupoCategoriaController::class, 'show'])->name('show');
     });
 
 // -------------------------------------------------------------------------
