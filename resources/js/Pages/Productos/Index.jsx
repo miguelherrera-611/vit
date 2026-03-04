@@ -2,6 +2,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Link, router } from '@inertiajs/react';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import PasswordConfirmModal from '@/Components/PasswordConfirmModal';
+import Pagination from '@/Components/Pagination';
 
 // Normaliza texto quitando tildes para búsqueda
 const normalize = (str) =>
@@ -90,6 +91,8 @@ export default function ProductosIndex({ productos = [] }) {
     const [confirmDelete, setConfirmDelete]   = useState(null);
     const [delProcessing, setDelProcessing]   = useState(false);
     const [delError, setDelError]             = useState(null);
+    const [currentPage, setCurrentPage]       = useState(1);
+    const PER_PAGE = 15;
 
     // Extraer categorías únicas de los productos
     const opcionesCategorias = useMemo(() => {
@@ -129,7 +132,17 @@ export default function ProductosIndex({ productos = [] }) {
         });
     }, [productos, busqueda, filtroCategoria, filtroStock]);
 
+    // Reset a página 1 cuando cambian los filtros
+    const prevFilters = useMemo(() => ({ busqueda, filtroCategoria, filtroStock }), [busqueda, filtroCategoria, filtroStock]);
+    useEffect(() => { setCurrentPage(1); }, [busqueda, filtroCategoria, filtroStock]);
+
     const hayFiltros = busqueda || filtroCategoria || filtroStock;
+
+    // Paginación aplicada sobre los filtrados
+    const productosPaginados = useMemo(
+        () => productosFiltrados.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE),
+        [productosFiltrados, currentPage]
+    );
 
     const handleDelete = (password) => {
         if (!confirmDelete) return;
@@ -327,7 +340,7 @@ export default function ProductosIndex({ productos = [] }) {
                                 </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
-                                {productosFiltrados.map((producto) => {
+                                {productosPaginados.map((producto) => {
                                     const minimo = producto.stock_minimo || 5;
                                     const agotado = producto.stock === 0;
                                     const bajo    = producto.stock > 0 && producto.stock <= minimo;
@@ -415,6 +428,18 @@ export default function ProductosIndex({ productos = [] }) {
                             </table>
                         )}
                     </div>
+                    {/* Paginador */}
+                    {productosFiltrados.length > PER_PAGE && (
+                        <div className="px-6 pb-6">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalItems={productosFiltrados.length}
+                                perPage={PER_PAGE}
+                                onPageChange={setCurrentPage}
+                                accentColor="blue"
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
 

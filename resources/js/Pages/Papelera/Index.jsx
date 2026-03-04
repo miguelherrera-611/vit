@@ -1,6 +1,7 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import Pagination from '@/Components/Pagination';
 import PasswordConfirmModal from '@/Components/PasswordConfirmModal';
 
 // ── Config de tipos ──────────────────────────────────────────────────────────
@@ -23,6 +24,8 @@ export default function PapeleraIndex({ items, conteos, filtro }) {
     const [modal, setModal]         = useState(null); // { tipo: 'restore'|'delete'|'vaciar', item? }
     const [processing, setProcessing] = useState(false);
     const [pwdError, setPwdError]   = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const PER_PAGE = 15;
 
     const openModal = (tipo, item = null) => {
         setModal({ tipo, item });
@@ -50,6 +53,14 @@ export default function PapeleraIndex({ items, conteos, filtro }) {
     };
 
     const datos = items.data || [];
+
+    // Reset page when filter changes
+    useEffect(() => { setCurrentPage(1); }, [filtro]);
+
+    const datosPaginados = useMemo(
+        () => datos.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE),
+        [datos, currentPage]
+    );
 
     return (
         <AppLayout>
@@ -144,65 +155,74 @@ export default function PapeleraIndex({ items, conteos, filtro }) {
                             </p>
                         </div>
                     ) : (
-                        <div className="space-y-3">
-                            {datos.map((item) => {
-                                const cfg      = TIPOS[item.tipo] || { label: item.tipo, emoji: '📄' };
-                                const urgencia = URGENCIA(item.dias_restantes);
+                        <>
+                            <div className="space-y-3">
+                                {datosPaginados.map((item) => {
+                                    const cfg      = TIPOS[item.tipo] || { label: item.tipo, emoji: '📄' };
+                                    const urgencia = URGENCIA(item.dias_restantes);
 
-                                return (
-                                    <div
-                                        key={item.id}
-                                        className="bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-4 flex items-center justify-between gap-4"
-                                    >
-                                        {/* Tipo + nombre */}
-                                        <div className="flex items-center space-x-4 min-w-0">
-                                            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
-                                                {cfg.emoji}
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            className="bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-4 flex items-center justify-between gap-4"
+                                        >
+                                            {/* Tipo + nombre */}
+                                            <div className="flex items-center space-x-4 min-w-0">
+                                                <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+                                                    {cfg.emoji}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="font-medium text-gray-900 truncate">{item.nombre_display}</p>
+                                                    <p className="text-xs text-gray-400 mt-0.5">
+                                                        {cfg.label} · Eliminado el {item.eliminado_at}
+                                                        {item.eliminado_por && ` por ${item.eliminado_por}`}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div className="min-w-0">
-                                                <p className="font-medium text-gray-900 truncate">{item.nombre_display}</p>
-                                                <p className="text-xs text-gray-400 mt-0.5">
-                                                    {cfg.label} · Eliminado el {item.eliminado_at}
-                                                    {item.eliminado_por && ` por ${item.eliminado_por}`}
-                                                </p>
-                                            </div>
-                                        </div>
 
-                                        {/* Días restantes + acciones */}
-                                        <div className="flex items-center space-x-3 flex-shrink-0">
+                                            {/* Días restantes + acciones */}
+                                            <div className="flex items-center space-x-3 flex-shrink-0">
                                             <span className={`text-xs font-semibold px-3 py-1 rounded-full ${urgencia.bg} ${urgencia.text}`}>
                                                 {urgencia.label}
                                             </span>
 
-                                            {/* Restaurar */}
-                                            <button
-                                                onClick={() => openModal('restore', item)}
-                                                className="flex items-center space-x-1.5 px-3 py-2 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-xl transition"
-                                                title="Restaurar"
-                                            >
-                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                                                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                </svg>
-                                                <span>Restaurar</span>
-                                            </button>
+                                                {/* Restaurar */}
+                                                <button
+                                                    onClick={() => openModal('restore', item)}
+                                                    className="flex items-center space-x-1.5 px-3 py-2 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-xl transition"
+                                                    title="Restaurar"
+                                                >
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                    <span>Restaurar</span>
+                                                </button>
 
-                                            {/* Eliminar permanente */}
-                                            <button
-                                                onClick={() => openModal('delete', item)}
-                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
-                                                title="Eliminar permanentemente"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
+                                                {/* Eliminar permanente */}
+                                                <button
+                                                    onClick={() => openModal('delete', item)}
+                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
+                                                    title="Eliminar permanentemente"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                    );
+                                })}
+                            </div>
+                            <Pagination
+                                currentPage={currentPage}
+                                totalItems={datos.length}
+                                perPage={PER_PAGE}
+                                onPageChange={setCurrentPage}
+                                accentColor="violet"
+                            />
+                        </>
                     )}
                 </div>
             </div>

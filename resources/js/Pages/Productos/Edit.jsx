@@ -8,6 +8,7 @@ export default function ProductosEdit({ producto, categorias = [] }) {
         codigo_barras: producto.codigo_barras || '',
         categoria: producto.categoria || '',
         precio: producto.precio || '',
+        precio_compra: producto.precio_compra || '',
         stock: producto.stock || '0',
         stock_minimo: producto.stock_minimo || '5',
         imagen: null,
@@ -108,8 +109,30 @@ export default function ProductosEdit({ producto, categorias = [] }) {
                                 </div>
 
                                 <div className="bg-white rounded-2xl shadow-sm p-8">
-                                    <h2 className="text-lg font-semibold text-gray-900 mb-6">Precio e Inventario</h2>
+                                    <h2 className="text-lg font-semibold text-gray-900 mb-6">Precios e Inventario</h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        {/* Precio de Compra */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Precio de Compra
+                                                <span className="ml-1 text-xs text-gray-400">(costo)</span>
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+                                                <input
+                                                    type="number"
+                                                    value={data.precio_compra}
+                                                    onChange={(e) => setData('precio_compra', e.target.value)}
+                                                    className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition bg-gray-50"
+                                                    min="0"
+                                                    step="100"
+                                                />
+                                            </div>
+                                            {data.precio_compra && <p className="mt-1 text-xs text-gray-500">{formatCurrency(data.precio_compra)}</p>}
+                                            {errors.precio_compra && <p className="mt-1 text-sm text-red-600">{errors.precio_compra}</p>}
+                                        </div>
+
+                                        {/* Precio de Venta */}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 Precio de Venta <span className="text-red-500">*</span>
@@ -128,6 +151,32 @@ export default function ProductosEdit({ producto, categorias = [] }) {
                                             {data.precio && <p className="mt-1 text-xs text-gray-500">{formatCurrency(data.precio)}</p>}
                                             {errors.precio && <p className="mt-1 text-sm text-red-600">{errors.precio}</p>}
                                         </div>
+
+                                        {/* Margen calculado */}
+                                        {data.precio_compra > 0 && data.precio > 0 && (
+                                            <div className="md:col-span-2">
+                                                <div className={`rounded-xl px-4 py-3 flex items-center gap-3 ${
+                                                    (data.precio - data.precio_compra) >= 0
+                                                        ? 'bg-emerald-50 border border-emerald-200'
+                                                        : 'bg-red-50 border border-red-200'
+                                                }`}>
+                                                    <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                                                    </svg>
+                                                    <p className="text-sm">
+                                                        <span className="font-semibold text-emerald-700">Margen de ganancia: </span>
+                                                        <span className="text-emerald-600">
+                                                            {formatCurrency(data.precio - data.precio_compra)} (
+                                                            {data.precio_compra > 0
+                                                                ? (((data.precio - data.precio_compra) / data.precio_compra) * 100).toFixed(1)
+                                                                : 0}%)
+                                                        </span>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Stock */}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">Stock Actual</label>
                                             <input

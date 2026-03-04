@@ -1,6 +1,7 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import Pagination from '@/Components/Pagination';
 import PasswordConfirmModal from '@/Components/PasswordConfirmModal';
 
 const GRADIENTS = {
@@ -106,6 +107,13 @@ export default function CategoriasIndex({ grupos = [] }) {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [processing,   setProcessing]   = useState(false);
     const [pwdError,     setPwdError]     = useState(null);
+    const [currentPage, setCurrentPage]   = useState(1);
+    const PER_PAGE = 12;
+
+    const gruposPaginados = useMemo(
+        () => grupos.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE),
+        [grupos, currentPage]
+    );
 
     const handleDelete = (password) => {
         setProcessing(true);
@@ -157,7 +165,7 @@ export default function CategoriasIndex({ grupos = [] }) {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {grupos.map((grupo) => (
+                            {gruposPaginados.map((grupo) => (
                                 <GrupoCard
                                     key={grupo.id}
                                     grupo={grupo}
@@ -167,6 +175,13 @@ export default function CategoriasIndex({ grupos = [] }) {
                             ))}
                         </div>
                     )}
+                    <Pagination
+                        currentPage={currentPage}
+                        totalItems={grupos.length}
+                        perPage={PER_PAGE}
+                        onPageChange={setCurrentPage}
+                        accentColor="violet"
+                    />
                 </div>
             </div>
 

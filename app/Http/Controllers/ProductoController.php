@@ -62,15 +62,16 @@ class ProductoController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre'        => 'required|string|max:255',
-            'descripcion'   => 'nullable|string',
-            'precio'        => 'required|numeric|min:0',
-            'stock'         => 'required|integer|min:0',
-            'stock_minimo'  => 'required|integer|min:0',
-            'categoria'     => 'required|string',
-            'codigo_barras' => 'nullable|string|unique:productos',
-            'imagen'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'activo'        => 'boolean',
+            'nombre'         => 'required|string|max:255',
+            'descripcion'    => 'nullable|string',
+            'precio'         => 'required|numeric|min:0',
+            'precio_compra'  => 'nullable|numeric|min:0',
+            'stock'          => 'required|integer|min:0',
+            'stock_minimo'   => 'required|integer|min:0',
+            'categoria'      => 'required|string',
+            'codigo_barras'  => 'nullable|string|unique:productos',
+            'imagen'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'activo'         => 'boolean',
         ]);
 
         if ($request->hasFile('imagen')) {
@@ -111,15 +112,16 @@ class ProductoController extends Controller
         $producto = Producto::findOrFail($id);
 
         $validated = $request->validate([
-            'nombre'        => 'required|string|max:255',
-            'descripcion'   => 'nullable|string',
-            'precio'        => 'required|numeric|min:0',
-            'stock'         => 'required|integer|min:0',
-            'stock_minimo'  => 'required|integer|min:0',
-            'categoria'     => 'required|string',
-            'codigo_barras' => 'nullable|string|unique:productos,codigo_barras,' . $id,
-            'imagen'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'activo'        => 'boolean',
+            'nombre'         => 'required|string|max:255',
+            'descripcion'    => 'nullable|string',
+            'precio'         => 'required|numeric|min:0',
+            'precio_compra'  => 'nullable|numeric|min:0',
+            'stock'          => 'required|integer|min:0',
+            'stock_minimo'   => 'required|integer|min:0',
+            'categoria'      => 'required|string',
+            'codigo_barras'  => 'nullable|string|unique:productos,codigo_barras,' . $id,
+            'imagen'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'activo'         => 'boolean',
         ]);
 
         if ($request->hasFile('imagen')) {

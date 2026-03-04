@@ -9,12 +9,15 @@ class Producto extends Model
 {
     use SoftDeletes;
 
+    protected $table = 'productos';
+
     protected $fillable = [
         'nombre',
         'descripcion',
         'codigo_barras',
         'categoria',
-        'precio',
+        'precio',          // precio de venta
+        'precio_compra',   // precio de compra (costo)
         'stock',
         'stock_minimo',
         'imagen',
@@ -22,11 +25,25 @@ class Producto extends Model
     ];
 
     protected $casts = [
-        'precio'       => 'decimal:2',
-        'activo'       => 'boolean',
-        'stock'        => 'integer',
-        'stock_minimo' => 'integer',
+        'precio'        => 'decimal:2',
+        'precio_compra' => 'decimal:2',
+        'activo'        => 'boolean',
+        'stock'         => 'integer',
+        'stock_minimo'  => 'integer',
     ];
+
+    /** Margen de ganancia en % */
+    public function getMargenAttribute(): float
+    {
+        if (!$this->precio_compra || $this->precio_compra == 0) return 0;
+        return round((($this->precio - $this->precio_compra) / $this->precio_compra) * 100, 2);
+    }
+
+    /** Ganancia unitaria bruta */
+    public function getGananciaUnitariaAttribute(): float
+    {
+        return (float) ($this->precio - ($this->precio_compra ?? 0));
+    }
 
     // ── Scopes ──────────────────────────────────────────────────
 

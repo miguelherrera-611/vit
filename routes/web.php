@@ -12,6 +12,7 @@ use App\Http\Controllers\GrupoCategoriaController;
 use App\Http\Controllers\PapeleraController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\ReporteController;
 
 /*
 |--------------------------------------------------------------------------
@@ -167,9 +168,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('role:admin|super_admin')
         ->prefix('reportes')->name('reportes.')
         ->group(function () {
-            Route::get('/',           fn () => Inertia::render('Reportes/Index'))->name('index');
-            Route::get('/ventas',     fn () => Inertia::render('Reportes/Ventas'))->name('ventas');
-            Route::get('/inventario', fn () => Inertia::render('Reportes/Inventario'))->name('inventario');
+            Route::get('/',           [ReporteController::class, 'index'])->name('index');
+            Route::get('/ventas',     [ReporteController::class, 'ventas'])->name('ventas');
+            Route::get('/inventario', [ReporteController::class, 'inventario'])->name('inventario');
+            Route::get('/clientes',   [ReporteController::class, 'clientes'])->name('clientes');
+            Route::get('/financiero', [ReporteController::class, 'financiero'])->name('financiero');
+            Route::get('/ejecutivo',  [ReporteController::class, 'ejecutivo'])->name('ejecutivo');
+            Route::get('/rentabilidad',      [ReporteController::class, 'rentabilidad'])->name('rentabilidad');
+            Route::get('/ventas-categoria',  [ReporteController::class, 'ventasCategoria'])->name('ventas-categoria');
         });
 });
 
