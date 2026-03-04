@@ -15,6 +15,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'activo',
         'verification_code',
         'code_expires_at',
     ];
@@ -28,8 +29,14 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'code_expires_at' => 'datetime',
+            'password'          => 'hashed',
+            'code_expires_at'   => 'datetime',
+            'activo'            => 'boolean',
         ];
+    }
+
+    public function scopeActivos($query)
+    {
+        return $query->where('activo', true);
     }
 }
