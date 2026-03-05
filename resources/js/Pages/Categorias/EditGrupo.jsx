@@ -4,34 +4,69 @@ import { useState } from 'react';
 import PasswordConfirmModal from '@/Components/PasswordConfirmModal';
 
 const COLORES = [
-    { value: 'pink',   label: 'Rosa',    bg: 'bg-gradient-to-br from-pink-500 to-rose-500' },
-    { value: 'blue',   label: 'Azul',    bg: 'bg-gradient-to-br from-blue-500 to-indigo-600' },
-    { value: 'violet', label: 'Violeta', bg: 'bg-gradient-to-br from-violet-500 to-purple-600' },
-    { value: 'green',  label: 'Verde',   bg: 'bg-gradient-to-br from-emerald-500 to-teal-500' },
-    { value: 'orange', label: 'Naranja', bg: 'bg-gradient-to-br from-orange-400 to-amber-500' },
-    { value: 'teal',   label: 'Cyan',    bg: 'bg-gradient-to-br from-teal-500 to-cyan-500' },
-    { value: 'red',    label: 'Rojo',    bg: 'bg-gradient-to-br from-red-500 to-rose-500' },
+    { value: 'pink',   label: 'Rosa',    grad: 'linear-gradient(135deg,#ec4899,#f43f5e)' },
+    { value: 'blue',   label: 'Azul',    grad: 'linear-gradient(135deg,#3b82f6,#6366f1)' },
+    { value: 'violet', label: 'Violeta', grad: 'linear-gradient(135deg,#8b5cf6,#a855f7)' },
+    { value: 'green',  label: 'Verde',   grad: 'linear-gradient(135deg,#10b981,#14b8a6)' },
+    { value: 'orange', label: 'Naranja', grad: 'linear-gradient(135deg,#fb923c,#f59e0b)' },
+    { value: 'teal',   label: 'Cyan',    grad: 'linear-gradient(135deg,#14b8a6,#06b6d4)' },
+    { value: 'red',    label: 'Rojo',    grad: 'linear-gradient(135deg,#ef4444,#f43f5e)' },
 ];
 
 const GRADIENTS = {
-    pink:   'from-pink-500 via-rose-500 to-red-400',
-    blue:   'from-blue-500 via-indigo-500 to-violet-500',
-    violet: 'from-violet-500 via-purple-500 to-fuchsia-500',
-    green:  'from-emerald-500 via-teal-500 to-cyan-500',
-    orange: 'from-orange-400 via-amber-500 to-yellow-400',
-    teal:   'from-teal-500 via-cyan-500 to-sky-500',
-    red:    'from-red-500 via-rose-500 to-pink-400',
+    pink:   'linear-gradient(135deg,#ec4899 0%,#f43f5e 50%,#f87171 100%)',
+    blue:   'linear-gradient(135deg,#3b82f6 0%,#6366f1 50%,#8b5cf6 100%)',
+    violet: 'linear-gradient(135deg,#8b5cf6 0%,#a855f7 50%,#d946ef 100%)',
+    green:  'linear-gradient(135deg,#10b981 0%,#14b8a6 50%,#06b6d4 100%)',
+    orange: 'linear-gradient(135deg,#fb923c 0%,#f59e0b 50%,#eab308 100%)',
+    teal:   'linear-gradient(135deg,#14b8a6 0%,#06b6d4 50%,#0ea5e9 100%)',
+    red:    'linear-gradient(135deg,#ef4444 0%,#f43f5e 50%,#ec4899 100%)',
 };
+
+const GLASS_BG = `
+    radial-gradient(ellipse 75% 60% at 0% 0%, rgba(255,210,170,0.22) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 55% at 100% 100%, rgba(255,195,145,0.18) 0%, transparent 55%),
+    linear-gradient(145deg, #fdf6f0 0%, #fdf3ec 35%, #fef5ef 70%, #fef8f4 100%)
+`;
+
+const STYLES = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;900&display=swap');
+    .pg-bg { min-height:100vh; font-family:'Inter',-apple-system,sans-serif; background:${GLASS_BG}; }
+    .pg-header { background:rgba(255,255,255,0.2); backdrop-filter:blur(32px) saturate(180%); -webkit-backdrop-filter:blur(32px) saturate(180%); border-bottom:1px solid rgba(255,255,255,0.68); box-shadow:0 4px 24px rgba(200,100,30,0.07),inset 0 1px 0 rgba(255,255,255,0.85); }
+    .glass-panel { background:rgba(255,255,255,0.06); backdrop-filter:blur(20px) saturate(150%); -webkit-backdrop-filter:blur(20px) saturate(150%); border:1px solid rgba(255,255,255,0.65); border-radius:20px; box-shadow:0 12px 40px rgba(180,90,20,0.08),inset 0 1.5px 0 rgba(255,255,255,0.85); position:relative; overflow:hidden; padding:1.75rem; }
+    .glass-panel::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.92) 30%,rgba(255,255,255,0.92) 70%,transparent); pointer-events:none; z-index:1; }
+    .panel-title { font-size:0.95rem; font-weight:600; color:#2d1a08; letter-spacing:-0.02em; margin-bottom:0.25rem; }
+    .panel-sub   { font-size:0.74rem; color:rgba(150,80,20,0.5); margin-bottom:1.1rem; }
+    .form-label  { display:block; font-size:0.7rem; font-weight:600; color:rgba(150,80,20,0.7); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.45rem; }
+    .glass-input { width:100%; padding:0.75rem 1rem; background:rgba(255,255,255,0.06); border:1px solid rgba(200,140,80,0.4); border-radius:14px; font-size:0.9rem; color:#2d1a08; font-family:'Inter',sans-serif; outline:none; transition:all 0.2s ease; backdrop-filter:blur(10px); box-shadow:0 3px 12px rgba(160,80,10,0.07),inset 0 1px 0 rgba(255,255,255,0.75); box-sizing:border-box; }
+    .glass-input::placeholder { color:rgba(180,100,30,0.38); }
+    .glass-input:focus { background:rgba(255,255,255,0.12); border-color:rgba(200,140,80,0.65); box-shadow:0 0 0 3px rgba(220,38,38,0.05),inset 0 1px 0 rgba(255,255,255,0.85); }
+    .error-text { margin-top:0.3rem; font-size:0.78rem; color:rgba(185,28,28,0.85); }
+    .color-swatch { width:100%; height:38px; border-radius:12px; cursor:pointer; border:2px solid transparent; transition:all 0.18s; position:relative; overflow:hidden; }
+    .color-swatch.active { border-color:rgba(45,26,8,0.6); transform:scale(1.1); box-shadow:0 4px 14px rgba(0,0,0,0.18); }
+    .color-swatch:not(.active) { opacity:0.72; }
+    .color-swatch:not(.active):hover { opacity:1; transform:scale(1.06); }
+    .upload-area { border:1.5px dashed rgba(200,140,80,0.35); border-radius:16px; padding:1.5rem 1rem; text-align:center; cursor:pointer; transition:all 0.2s; background:rgba(255,255,255,0.04); }
+    .upload-area:hover { border-color:rgba(200,140,80,0.6); background:rgba(255,255,255,0.08); }
+    .btn-ghost { display:inline-flex; align-items:center; justify-content:center; gap:0.4rem; padding:0.7rem 1.1rem; width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.65); border-radius:14px; font-size:0.85rem; font-weight:500; color:rgba(120,60,10,0.8); text-decoration:none; cursor:pointer; transition:all 0.2s; backdrop-filter:blur(10px); box-shadow:0 2px 8px rgba(180,90,20,0.06),inset 0 1px 0 rgba(255,255,255,0.78); font-family:'Inter',sans-serif; }
+    .btn-ghost:hover { background:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.85); color:rgba(90,40,5,0.95); }
+    .btn-primary-violet { display:inline-flex; align-items:center; justify-content:center; gap:0.4rem; padding:0.7rem 1.25rem; width:100%; background:rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.45); border-radius:14px; font-size:0.88rem; font-weight:600; color:rgba(109,40,217,0.95); cursor:pointer; transition:all 0.2s; backdrop-filter:blur(10px); box-shadow:0 4px 16px rgba(139,92,246,0.12),inset 0 1px 0 rgba(200,180,255,0.35); font-family:'Inter',sans-serif; position:relative; overflow:hidden; }
+    .btn-primary-violet::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(200,180,255,0.8) 40%,rgba(200,180,255,0.8) 60%,transparent); }
+    .btn-primary-violet:hover { background:rgba(139,92,246,0.18); border-color:rgba(139,92,246,0.65); transform:translateY(-1px); }
+    .btn-primary-violet:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+    .btn-delete { display:inline-flex; align-items:center; gap:0.4rem; padding:0.55rem 1rem; background:rgba(220,38,38,0.07); border:1px solid rgba(220,38,38,0.3); border-radius:12px; font-size:0.82rem; font-weight:500; color:rgba(185,28,28,0.85); cursor:pointer; transition:all 0.18s; font-family:'Inter',sans-serif; }
+    .btn-delete:hover { background:rgba(220,38,38,0.13); border-color:rgba(220,38,38,0.5); }
+    .btn-back { width:34px; height:34px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.65); border-radius:10px; cursor:pointer; text-decoration:none; color:rgba(150,80,20,0.6); transition:all 0.18s; flex-shrink:0; box-shadow:inset 0 1px 0 rgba(255,255,255,0.72); }
+    .btn-back:hover { background:rgba(255,255,255,0.2); color:rgba(120,50,10,0.9); }
+    .preview-card { border-radius:28px; overflow:hidden; position:relative; min-height:280px; box-shadow:0 16px 48px rgba(0,0,0,0.18); }
+    .preview-label-badge { display:inline-flex; align-items:center; background:rgba(255,255,255,0.18); backdrop-filter:blur(8px); color:white; font-size:0.72rem; font-weight:600; padding:0.3rem 0.75rem; border-radius:20px; border:1px solid rgba(255,255,255,0.28); letter-spacing:0.04em; }
+`;
 
 export default function EditGrupo({ grupo }) {
     const { data, setData, post, processing, errors } = useForm({
-        nombre:      grupo.nombre || '',
-        descripcion: grupo.descripcion || '',
-        imagen:      null,
-        color:       grupo.color || 'violet',
-        orden:       grupo.orden || 0,
-        activo:      grupo.activo ?? true,
-        _method:     'PUT',
+        nombre: grupo.nombre || '', descripcion: grupo.descripcion || '',
+        imagen: null, color: grupo.color || 'violet', orden: grupo.orden || 0,
+        activo: grupo.activo ?? true, _method: 'PUT',
     });
 
     const [preview,       setPreview]       = useState(null);
@@ -60,97 +95,69 @@ export default function EditGrupo({ grupo }) {
         });
     };
 
-    const imagenActual = preview
-        ? preview
-        : (grupo.imagen ? `/storage/${grupo.imagen}` : null);
-
-    const gradient = GRADIENTS[data.color] || GRADIENTS.violet;
+    const imagenActual = preview ? preview : (grupo.imagen ? `/storage/${grupo.imagen}` : null);
+    const gradient     = GRADIENTS[data.color] || GRADIENTS.violet;
 
     return (
         <AppLayout>
-            <div className="min-h-screen bg-gray-50">
-
-                {/* Header */}
-                <div className="bg-white border-b border-gray-200">
-                    <div className="max-w-5xl mx-auto px-6 py-8">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                                <Link href="/categorias"
-                                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <style>{STYLES}</style>
+            <div className="pg-bg">
+                <div className="pg-header">
+                    <div style={{ maxWidth:'1024px', margin:'0 auto', padding:'1.5rem' }}>
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:'0.85rem' }}>
+                                <Link href="/categorias" className="btn-back">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                                     </svg>
                                 </Link>
                                 <div>
-                                    <h1 className="text-2xl font-bold text-gray-900">Editar Categoría</h1>
-                                    <p className="text-sm text-gray-500 mt-0.5">Cambia el nombre, imagen o color de «{grupo.nombre}»</p>
+                                    <h1 style={{ fontSize:'1.45rem', fontWeight:'300', color:'#2d1a08', letterSpacing:'-0.03em' }}>Editar Categoría</h1>
+                                    <p style={{ fontSize:'0.8rem', color:'rgba(150,80,20,0.6)', marginTop:'0.2rem' }}>Cambia el nombre, imagen o color de «{grupo.nombre}»</p>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => { setShowDelete(true); setDelError(null); }}
-                                className="flex items-center space-x-1.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl border border-red-200 transition"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <button onClick={() => { setShowDelete(true); setDelError(null); }} className="btn-delete">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
-                                <span>Eliminar</span>
+                                Eliminar
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div className="max-w-5xl mx-auto px-6 py-10">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div style={{ maxWidth:'1024px', margin:'0 auto', padding:'2rem 1.5rem' }}>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 320px', gap:'1.75rem', alignItems:'start' }}>
 
-                        {/* ── Formulario ── */}
-                        <form onSubmit={submit} encType="multipart/form-data" className="space-y-6">
+                        <form onSubmit={submit} encType="multipart/form-data" style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
 
-                            <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
-                                <h2 className="text-base font-semibold text-gray-900">Información</h2>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Nombre <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={data.nombre}
-                                        onChange={(e) => setData('nombre', e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 transition bg-gray-50 text-lg font-medium"
-                                    />
-                                    {errors.nombre && <p className="mt-1 text-sm text-red-600">{errors.nombre}</p>}
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label>
-                                    <input
-                                        type="text"
-                                        value={data.descripcion}
-                                        onChange={(e) => setData('descripcion', e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 transition bg-gray-50"
-                                    />
+                            <div className="glass-panel">
+                                <p className="panel-title">Información</p>
+                                <div style={{ display:'flex', flexDirection:'column', gap:'1rem', marginTop:'1rem' }}>
+                                    <div>
+                                        <label className="form-label">Nombre <span style={{ color:'rgba(185,28,28,0.8)' }}>*</span></label>
+                                        <input type="text" value={data.nombre} onChange={e => setData('nombre', e.target.value)}
+                                               className="glass-input" style={{ fontSize:'1rem', fontWeight:'500' }} />
+                                        {errors.nombre && <p className="error-text">{errors.nombre}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Descripción</label>
+                                        <input type="text" value={data.descripcion} onChange={e => setData('descripcion', e.target.value)} className="glass-input" />
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Color */}
-                            <div className="bg-white rounded-2xl shadow-sm p-6">
-                                <h2 className="text-base font-semibold text-gray-900 mb-1">Color de fondo</h2>
-                                <p className="text-xs text-gray-400 mb-4">Solo aplica cuando no hay imagen</p>
-                                <div className="grid grid-cols-7 gap-2">
-                                    {COLORES.map((c) => (
-                                        <button
-                                            key={c.value}
-                                            type="button"
-                                            onClick={() => setData('color', c.value)}
-                                            className={`relative h-10 rounded-xl ${c.bg} transition-all ${
-                                                data.color === c.value
-                                                    ? 'ring-2 ring-offset-2 ring-gray-800 scale-110'
-                                                    : 'opacity-70 hover:opacity-100 hover:scale-105'
-                                            }`}
-                                            title={c.label}
-                                        >
+                            <div className="glass-panel">
+                                <p className="panel-title">Color de fondo</p>
+                                <p className="panel-sub">Solo aplica cuando no hay imagen</p>
+                                <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'0.5rem' }}>
+                                    {COLORES.map(c => (
+                                        <button key={c.value} type="button" onClick={() => setData('color', c.value)}
+                                                className={`color-swatch${data.color === c.value ? ' active' : ''}`}
+                                                style={{ background: c.grad }} title={c.label}>
                                             {data.color === c.value && (
-                                                <span className="absolute inset-0 flex items-center justify-center">
-                                                    <svg className="w-4 h-4 text-white drop-shadow" fill="currentColor" viewBox="0 0 20 20">
+                                                <span style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                                    <svg width="16" height="16" fill="white" viewBox="0 0 20 20" style={{ filter:'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }}>
                                                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                                     </svg>
                                                 </span>
@@ -160,72 +167,67 @@ export default function EditGrupo({ grupo }) {
                                 </div>
                             </div>
 
-                            {/* Imagen */}
-                            <div className="bg-white rounded-2xl shadow-sm p-6">
-                                <h2 className="text-base font-semibold text-gray-900 mb-1">Imagen de portada</h2>
-                                <p className="text-xs text-gray-400 mb-4">Se mostrará como fondo de la tarjeta</p>
-                                <label className="cursor-pointer block">
+                            <div className="glass-panel">
+                                <p className="panel-title">Imagen de portada</p>
+                                <p className="panel-sub">Se mostrará como fondo de la tarjeta</p>
+                                <label style={{ display:'block' }}>
                                     {imagenActual ? (
-                                        <div className="relative group">
-                                            <img src={imagenActual} alt="Categoría" className="w-full h-40 object-cover rounded-xl" />
-                                            <div className="absolute inset-0 bg-black/30 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                                                <span className="text-white text-sm font-medium">Cambiar imagen</span>
+                                        <div style={{ position:'relative' }}>
+                                            <img src={imagenActual} alt="Categoría"
+                                                 style={{ width:'100%', height:'150px', objectFit:'cover', borderRadius:'14px', border:'1px solid rgba(255,255,255,0.55)' }} />
+                                            <div style={{ position:'absolute', inset:0, borderRadius:'14px', background:'rgba(0,0,0,0)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.8rem', fontWeight:'500', color:'white', transition:'background 0.2s' }}
+                                                 onMouseOver={e => e.currentTarget.style.background='rgba(0,0,0,0.3)'}
+                                                 onMouseOut={e => e.currentTarget.style.background='rgba(0,0,0,0)'}>
+                                                Cambiar imagen
                                             </div>
                                             {preview && (
-                                                <span className="absolute top-2 left-2 bg-violet-600 text-white text-xs px-2 py-0.5 rounded-full">Nueva</span>
+                                                <span style={{ position:'absolute', top:'0.5rem', left:'0.5rem', background:'rgba(139,92,246,0.9)', color:'white', fontSize:'0.7rem', padding:'0.2rem 0.55rem', borderRadius:'20px', fontWeight:'600' }}>
+                                                    Nueva
+                                                </span>
                                             )}
                                         </div>
                                     ) : (
-                                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-violet-400 hover:bg-violet-50 transition">
-                                            <svg className="w-10 h-10 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
-                                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        <div className="upload-area">
+                                            <svg width="28" height="28" fill="none" stroke="rgba(180,100,30,0.35)" viewBox="0 0 24 24" style={{ margin:'0 auto 0.4rem', display:'block' }}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                             </svg>
-                                            <p className="text-sm font-medium text-gray-500">Subir imagen</p>
-                                            <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WEBP hasta 4MB</p>
+                                            <p style={{ fontSize:'0.82rem', color:'rgba(150,80,20,0.6)', marginBottom:'0.15rem' }}>Subir imagen</p>
+                                            <p style={{ fontSize:'0.72rem', color:'rgba(150,80,20,0.4)' }}>JPG, PNG, WEBP hasta 4MB</p>
                                         </div>
                                     )}
-                                    <input type="file" accept="image/*" onChange={handleImagen} className="hidden" />
+                                    <input type="file" accept="image/*" onChange={handleImagen} style={{ display:'none' }} />
                                 </label>
-                                {errors.imagen && <p className="mt-2 text-sm text-red-600">{errors.imagen}</p>}
+                                {errors.imagen && <p className="error-text">{errors.imagen}</p>}
                             </div>
 
-                            {/* Botones */}
-                            <div className="flex space-x-3">
-                                <Link href="/categorias"
-                                      className="flex-1 text-center py-3 border border-gray-200 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition">
-                                    Cancelar
-                                </Link>
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="flex-1 py-3 bg-gradient-to-r from-violet-600 to-purple-700 text-white rounded-xl font-semibold hover:shadow-lg transition disabled:opacity-50"
-                                >
+                            <div style={{ display:'flex', gap:'0.65rem' }}>
+                                <Link href="/categorias" className="btn-ghost">Cancelar</Link>
+                                <button type="submit" disabled={processing} className="btn-primary-violet">
                                     {processing ? 'Guardando...' : 'Guardar Cambios'}
                                 </button>
                             </div>
                         </form>
 
-                        {/* ── Preview ── */}
-                        <div className="hidden lg:block">
-                            <p className="text-sm font-medium text-gray-500 mb-4">Vista previa:</p>
-                            <div className="relative rounded-3xl overflow-hidden shadow-lg" style={{ minHeight: '280px' }}>
+                        {/* Preview */}
+                        <div style={{ position:'sticky', top:'5rem' }}>
+                            <p style={{ fontSize:'0.78rem', fontWeight:'600', color:'rgba(150,80,20,0.55)', letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:'0.85rem' }}>Vista previa</p>
+                            <div className="preview-card">
                                 {imagenActual ? (
-                                    <img src={imagenActual} alt="preview" className="absolute inset-0 w-full h-full object-cover" />
+                                    <img src={imagenActual} alt="preview"
+                                         style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} />
                                 ) : (
-                                    <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} />
+                                    <div style={{ position:'absolute', inset:0, background: gradient }} />
                                 )}
-                                <div className="absolute inset-0 bg-black/25" />
-                                <div className="absolute inset-0 flex flex-col justify-end p-8">
-                                    <div className="absolute top-5 left-5">
-                                        <span className="inline-flex items-center bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full border border-white/30">
-                                            Categoría Principal
-                                        </span>
+                                <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.26)' }} />
+                                <div style={{ position:'absolute', inset:0, opacity:0.08, backgroundImage:'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize:'32px 32px' }} />
+                                <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', justifyContent:'flex-end', padding:'2rem', zIndex:5 }}>
+                                    <div style={{ position:'absolute', top:'1.25rem', left:'1.25rem' }}>
+                                        <span className="preview-label-badge">Categoría Principal</span>
                                     </div>
-                                    <h2 className="text-5xl font-black text-white capitalize tracking-tight drop-shadow-lg leading-none mb-2">
+                                    <h2 style={{ fontSize:'2.8rem', fontWeight:'900', color:'white', textTransform:'capitalize', letterSpacing:'-0.04em', lineHeight:1, marginBottom:'0.4rem', textShadow:'0 2px 12px rgba(0,0,0,0.28)' }}>
                                         {data.nombre || grupo.nombre}
                                     </h2>
-                                    <p className="text-white/70 text-sm">
+                                    <p style={{ color:'rgba(255,255,255,0.65)', fontSize:'0.8rem' }}>
                                         {data.descripcion || grupo.descripcion || 'Sin descripción'}
                                     </p>
                                 </div>

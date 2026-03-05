@@ -1,19 +1,32 @@
 /**
  * Pagination.jsx — Componente reutilizable de paginación para VitaliStore
+ * Glassmorphism water-drop style
  *
  * Props:
  *   currentPage  : número de página actual (1-based)
  *   totalItems   : total de items
  *   perPage      : items por página
  *   onPageChange : (page: number) => void
- *   accentColor  : 'blue'|'pink'|'green'|'indigo'|'orange'|'violet'
+ *   accentColor  : 'blue'|'pink'|'green'|'indigo'|'orange'|'violet'|'red'
  */
+
+const ACCENT_MAP = {
+    blue:   { border: 'rgba(59,130,246,0.6)',  bg: 'rgba(59,130,246,0.1)',  text: 'rgba(29,78,216,0.9)',  shadow: 'rgba(59,130,246,0.18)'  },
+    pink:   { border: 'rgba(236,72,153,0.6)',  bg: 'rgba(236,72,153,0.1)',  text: 'rgba(190,24,93,0.9)',  shadow: 'rgba(236,72,153,0.18)'  },
+    green:  { border: 'rgba(16,185,129,0.6)',  bg: 'rgba(16,185,129,0.1)',  text: 'rgba(4,120,87,0.9)',   shadow: 'rgba(16,185,129,0.18)'  },
+    indigo: { border: 'rgba(99,102,241,0.6)',  bg: 'rgba(99,102,241,0.1)',  text: 'rgba(67,56,202,0.9)',  shadow: 'rgba(99,102,241,0.18)'  },
+    orange: { border: 'rgba(249,115,22,0.6)',  bg: 'rgba(249,115,22,0.1)',  text: 'rgba(194,65,12,0.9)',  shadow: 'rgba(249,115,22,0.18)'  },
+    violet: { border: 'rgba(139,92,246,0.6)',  bg: 'rgba(139,92,246,0.1)',  text: 'rgba(109,40,217,0.9)', shadow: 'rgba(139,92,246,0.18)'  },
+    red:    { border: 'rgba(220,38,38,0.6)',   bg: 'rgba(220,38,38,0.1)',   text: 'rgba(185,28,28,0.9)',  shadow: 'rgba(220,38,38,0.18)'   },
+};
+
 export default function Pagination({ currentPage, totalItems, perPage, onPageChange, accentColor = 'blue' }) {
     const totalPages = Math.ceil(totalItems / perPage);
     if (totalPages <= 1) return null;
 
     const from = (currentPage - 1) * perPage + 1;
     const to   = Math.min(currentPage * perPage, totalItems);
+    const ac   = ACCENT_MAP[accentColor] || ACCENT_MAP.blue;
 
     const getPages = () => {
         const pages = [];
@@ -26,62 +39,94 @@ export default function Pagination({ currentPage, totalItems, perPage, onPageCha
         return pages;
     };
 
-    const activeClasses = {
-        blue:   'bg-blue-600 border-blue-600 text-white shadow-sm',
-        pink:   'bg-pink-600 border-pink-600 text-white shadow-sm',
-        green:  'bg-green-600 border-green-600 text-white shadow-sm',
-        indigo: 'bg-indigo-600 border-indigo-600 text-white shadow-sm',
-        orange: 'bg-orange-600 border-orange-600 text-white shadow-sm',
-        violet: 'bg-violet-600 border-violet-600 text-white shadow-sm',
+    const btnBase = {
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '36px',
+        background: 'rgba(255,255,255,0.06)',
+        border: '1px solid rgba(255,255,255,0.62)',
+        borderRadius: '12px',
+        fontSize: '0.82rem', fontWeight: '500',
+        color: 'rgba(150,80,20,0.7)',
+        cursor: 'pointer',
+        transition: 'all 0.18s ease',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        boxShadow: '0 2px 8px rgba(180,90,20,0.05), inset 0 1px 0 rgba(255,255,255,0.72)',
+        fontFamily: "'Inter', sans-serif",
     };
-    const activeClass = activeClasses[accentColor] || activeClasses.blue;
+
+    const btnHover = {
+        background: 'rgba(255,255,255,0.14)',
+        borderColor: 'rgba(255,255,255,0.82)',
+        color: 'rgba(120,50,10,0.9)',
+    };
 
     return (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-1">
-            <p className="text-sm text-gray-500 order-2 sm:order-1">
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginTop: '1.5rem', padding: '0 0.25rem' }}>
+            <p style={{ fontSize: '0.8rem', color: 'rgba(150,80,20,0.55)' }}>
                 Mostrando{' '}
-                <span className="font-semibold text-gray-700">{from}–{to}</span>{' '}
+                <span style={{ fontWeight: '600', color: 'rgba(120,55,10,0.8)' }}>{from}–{to}</span>{' '}
                 de{' '}
-                <span className="font-semibold text-gray-700">{totalItems}</span>
+                <span style={{ fontWeight: '600', color: 'rgba(120,55,10,0.8)' }}>{totalItems}</span>
             </p>
 
-            <div className="flex items-center gap-1 order-1 sm:order-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                {/* Anterior */}
                 <button
                     onClick={() => onPageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl bg-white transition disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+                    style={{
+                        ...btnBase,
+                        padding: '0 0.85rem',
+                        gap: '0.3rem',
+                        opacity: currentPage === 1 ? 0.35 : 1,
+                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    }}
                 >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                     </svg>
-                    <span className="hidden sm:inline">Anterior</span>
+                    <span style={{ display: 'none' }}>Anterior</span>
                 </button>
 
                 {getPages().map((page, i) =>
                     page === '...' ? (
-                        <span key={`e${i}`} className="w-9 text-center text-gray-400 text-sm select-none">···</span>
+                        <span key={`e${i}`} style={{ width: '36px', textAlign: 'center', color: 'rgba(150,80,20,0.4)', fontSize: '0.82rem' }}>···</span>
                     ) : (
                         <button
                             key={page}
                             onClick={() => onPageChange(page)}
-                            className={`w-9 h-9 text-sm font-medium rounded-xl border transition ${
-                                page === currentPage
-                                    ? activeClass
-                                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                            }`}
+                            style={{
+                                ...btnBase,
+                                width: '36px',
+                                ...(page === currentPage ? {
+                                    background: ac.bg,
+                                    border: `1px solid ${ac.border}`,
+                                    color: ac.text,
+                                    boxShadow: `0 4px 14px ${ac.shadow}, inset 0 1px 0 rgba(255,255,255,0.5)`,
+                                    fontWeight: '600',
+                                } : {}),
+                            }}
                         >
                             {page}
                         </button>
                     )
                 )}
 
+                {/* Siguiente */}
                 <button
                     onClick={() => onPageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl bg-white transition disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+                    style={{
+                        ...btnBase,
+                        padding: '0 0.85rem',
+                        gap: '0.3rem',
+                        opacity: currentPage === totalPages ? 0.35 : 1,
+                        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    }}
                 >
-                    <span className="hidden sm:inline">Siguiente</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span style={{ display: 'none' }}>Siguiente</span>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                     </svg>
                 </button>

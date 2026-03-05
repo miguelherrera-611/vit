@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, router } from '@inertiajs/react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import Pagination from '@/Components/Pagination';
 import PasswordConfirmModal from '@/Components/PasswordConfirmModal';
 
@@ -14,87 +14,82 @@ const GRADIENTS = {
     red:    'from-red-500 via-rose-500 to-pink-400',
 };
 
+const GLASS_BG = `
+    radial-gradient(ellipse 75% 60% at 0% 0%, rgba(255,210,170,0.22) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 55% at 100% 100%, rgba(255,195,145,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 50% at 75% 10%, rgba(255,215,175,0.16) 0%, transparent 55%),
+    linear-gradient(145deg, #fdf6f0 0%, #fdf3ec 35%, #fef5ef 70%, #fef8f4 100%)
+`;
+
+const PAGE_STYLES = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;900&display=swap');
+    .pg-bg { min-height:100vh; font-family:'Inter',-apple-system,sans-serif; background:${GLASS_BG}; }
+    .pg-header { background:rgba(255,255,255,0.2); backdrop-filter:blur(32px) saturate(180%); -webkit-backdrop-filter:blur(32px) saturate(180%); border-bottom:1px solid rgba(255,255,255,0.68); box-shadow:0 4px 24px rgba(200,100,30,0.07),inset 0 1px 0 rgba(255,255,255,0.85); }
+    .btn-ghost { display:inline-flex; align-items:center; gap:0.4rem; padding:0.65rem 1.1rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.65); border-radius:14px; font-size:0.85rem; font-weight:500; color:rgba(120,60,10,0.8); text-decoration:none; cursor:pointer; transition:all 0.2s ease; backdrop-filter:blur(10px); box-shadow:0 2px 8px rgba(180,90,20,0.06),inset 0 1px 0 rgba(255,255,255,0.78); font-family:'Inter',sans-serif; white-space:nowrap; }
+    .btn-ghost:hover { background:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.85); color:rgba(90,40,5,0.95); }
+    .btn-primary { display:inline-flex; align-items:center; gap:0.4rem; padding:0.65rem 1.25rem; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.45); border-radius:14px; font-size:0.85rem; font-weight:500; color:rgba(185,28,28,0.95); text-decoration:none; cursor:pointer; transition:all 0.2s ease; backdrop-filter:blur(10px); box-shadow:0 4px 16px rgba(220,38,38,0.1),inset 0 1px 0 rgba(255,120,120,0.28); font-family:'Inter',sans-serif; white-space:nowrap; position:relative; overflow:hidden; }
+    .btn-primary::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,150,150,0.7) 40%,rgba(255,150,150,0.7) 60%,transparent); }
+    .btn-primary:hover { background:rgba(220,38,38,0.15); border-color:rgba(220,38,38,0.6); transform:translateY(-1px); }
+    /* grupo card overlay */
+    .grupo-card { position:relative; border-radius:28px; overflow:hidden; min-height:280px; cursor:pointer; transition:transform 0.3s ease, box-shadow 0.3s ease; }
+    .grupo-card:hover { transform:translateY(-4px); box-shadow:0 24px 64px rgba(0,0,0,0.22) !important; }
+    .grupo-actions { position:absolute; top:1rem; right:1rem; display:flex; gap:0.5rem; opacity:0; transition:opacity 0.2s; z-index:20; }
+    .grupo-card:hover .grupo-actions { opacity:1; }
+    .group-action-btn { width:36px; height:36px; background:rgba(255,255,255,0.92); border:none; border-radius:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#555; transition:all 0.15s; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
+    .group-action-btn:hover { background:white; }
+    .group-action-btn.edit:hover  { color:rgba(109,40,217,0.9); }
+    .group-action-btn.del:hover   { color:rgba(185,28,28,0.9); }
+`;
+
 function GrupoCard({ grupo, onEdit, onDelete }) {
     const gradient = GRADIENTS[grupo.color] || GRADIENTS.violet;
     const hasImg   = !!grupo.imagen;
 
     return (
-        <div className="relative group rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300"
-             style={{ minHeight: '280px' }}>
-
-            {/* Fondo: imagen o degradado */}
+        <div className="grupo-card" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.14)' }}>
             {hasImg ? (
-                <img
-                    src={`/storage/${grupo.imagen}`}
-                    alt={grupo.nombre}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
+                <img src={`/storage/${grupo.imagen}`} alt={grupo.nombre}
+                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} />
             ) : (
-                <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} />
+                <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} style={{ position: 'absolute', inset: 0 }} />
             )}
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.26)' }} />
+            <div style={{ position: 'absolute', inset: 0, opacity: 0.08, backgroundImage: 'radial-gradient(circle at 20% 80%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
-            {/* Overlay */}
-            <div className="absolute inset-0 bg-black/25 group-hover:bg-black/35 transition-all duration-300" />
-
-            {/* Patrón decorativo */}
-            <div className="absolute inset-0 opacity-10"
-                 style={{
-                     backgroundImage: 'radial-gradient(circle at 20% 80%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)',
-                     backgroundSize: '40px 40px'
-                 }} />
-
-            {/* Botones editar / eliminar */}
-            <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-20">
-                <button
-                    onClick={(e) => { e.stopPropagation(); onEdit(grupo); }}
-                    className="p-2.5 bg-white/95 hover:bg-white rounded-2xl shadow-lg text-gray-700 hover:text-violet-600 transition-all"
-                    title="Editar"
-                >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            {/* Edit/delete buttons */}
+            <div className="grupo-actions">
+                <button className="group-action-btn edit" onClick={(e) => { e.preventDefault(); onEdit(grupo); }} title="Editar">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                 </button>
-                <button
-                    onClick={(e) => { e.stopPropagation(); onDelete(grupo); }}
-                    className="p-2.5 bg-white/95 hover:bg-white rounded-2xl shadow-lg text-gray-700 hover:text-red-600 transition-all"
-                    title="Eliminar"
-                >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <button className="group-action-btn del" onClick={(e) => { e.preventDefault(); onDelete(grupo); }} title="Eliminar">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                 </button>
             </div>
 
-            {/* Área clickeable → subcategorías */}
-            <Link
-                href={`/categorias/${grupo.id}`}
-                className="absolute inset-0 flex flex-col justify-end p-8 z-10"
-            >
-                <div className="absolute top-5 left-5">
-                    <span className="inline-flex items-center bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full border border-white/30">
+            <Link href={`/categorias/${grupo.id}`} style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '2rem', zIndex: 10, textDecoration: 'none' }}>
+                <div style={{ position: 'absolute', top: '1.25rem', left: '1.25rem' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', color: 'white', fontSize: '0.7rem', fontWeight: '600', padding: '0.3rem 0.75rem', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.28)', letterSpacing: '0.04em' }}>
                         Categoría Principal
                     </span>
                 </div>
-
                 <div>
-                    <h2 className="text-5xl font-black text-white capitalize tracking-tight drop-shadow-lg leading-none mb-2">
+                    <h2 style={{ fontSize: '3rem', fontWeight: '900', color: 'white', textTransform: 'capitalize', letterSpacing: '-0.04em', lineHeight: 1, marginBottom: '0.4rem', textShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
                         {grupo.nombre}
                     </h2>
-                    <div className="flex items-center space-x-3 text-white/80 text-sm">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.78)', fontSize: '0.82rem' }}>
                         <span>{grupo.total_subcat} subcategorías</span>
-                        <span className="opacity-50">·</span>
+                        <span style={{ opacity: 0.5 }}>·</span>
                         <span>{grupo.total_productos} productos</span>
                     </div>
-                    {grupo.descripcion && (
-                        <p className="text-white/60 text-xs mt-1">{grupo.descripcion}</p>
-                    )}
+                    {grupo.descripcion && <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.75rem', marginTop: '0.25rem' }}>{grupo.descripcion}</p>}
                 </div>
-
-                {/* Flecha */}
-                <div className="absolute bottom-6 right-6 w-11 h-11 bg-white/20 group-hover:bg-white/40 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {/* Arrow */}
+                <div style={{ position: 'absolute', bottom: '1.25rem', right: '1.25rem', width: '40px', height: '40px', background: 'rgba(255,255,255,0.18)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.28)' }}>
+                    <svg width="18" height="18" fill="none" stroke="white" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
                     </svg>
                 </div>
@@ -107,7 +102,7 @@ export default function CategoriasIndex({ grupos = [] }) {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [processing,   setProcessing]   = useState(false);
     const [pwdError,     setPwdError]     = useState(null);
-    const [currentPage, setCurrentPage]   = useState(1);
+    const [currentPage,  setCurrentPage]  = useState(1);
     const PER_PAGE = 12;
 
     const gruposPaginados = useMemo(
@@ -126,45 +121,40 @@ export default function CategoriasIndex({ grupos = [] }) {
 
     return (
         <AppLayout>
-            <div className="min-h-screen bg-gray-50">
-
-                {/* Header */}
-                <div className="bg-white border-b border-gray-200">
-                    <div className="max-w-7xl mx-auto px-6 py-8">
-                        <div className="flex items-center justify-between">
+            <style>{PAGE_STYLES}</style>
+            <div className="pg-bg">
+                <div className="pg-header">
+                    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.75rem 1.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
                             <div>
-                                <h1 className="text-3xl font-bold text-gray-900">Categorías</h1>
-                                <p className="mt-1 text-sm text-gray-500">
+                                <h1 style={{ fontSize: '1.6rem', fontWeight: '300', color: '#2d1a08', letterSpacing: '-0.03em' }}>Categorías</h1>
+                                <p style={{ marginTop: '0.3rem', fontSize: '0.82rem', color: 'rgba(150,80,20,0.6)' }}>
                                     Haz clic en una categoría para ver sus subcategorías y productos
                                 </p>
                             </div>
-                            <Link
-                                href="/categorias/crear"
-                                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-700 text-white rounded-2xl font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <Link href="/categorias/crear" className="btn-primary">
+                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                                 </svg>
-                                <span>Nueva Categoría</span>
+                                Nueva Categoría
                             </Link>
                         </div>
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-6 py-12">
+                <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1.5rem' }}>
                     {grupos.length === 0 ? (
-                        <div className="text-center py-24">
-                            <div className="w-20 h-20 bg-gray-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                                <svg className="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
-                                          d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        <div style={{ textAlign: 'center', padding: '6rem 2rem' }}>
+                            <div style={{ width: '64px', height: '64px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.65)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', backdropFilter: 'blur(12px)' }}>
+                                <svg width="28" height="28" fill="none" stroke="rgba(180,100,30,0.4)" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                                 </svg>
                             </div>
-                            <p className="text-lg font-medium text-gray-400">No hay categorías todavía</p>
-                            <p className="text-sm text-gray-400 mt-1">Crea tu primera categoría con el botón de arriba</p>
+                            <p style={{ fontSize: '1rem', fontWeight: '500', color: '#2d1a08', marginBottom: '0.4rem' }}>No hay categorías todavía</p>
+                            <p style={{ fontSize: '0.82rem', color: 'rgba(150,80,20,0.55)' }}>Crea tu primera categoría con el botón de arriba</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
                             {gruposPaginados.map((grupo) => (
                                 <GrupoCard
                                     key={grupo.id}
@@ -192,12 +182,7 @@ export default function CategoriasIndex({ grupos = [] }) {
                 processing={processing}
                 error={pwdError}
                 title={`¿Eliminar "${deleteTarget?.nombre}"?`}
-                description={
-                    <span>
-                        Se eliminarán todas las <strong>subcategorías y productos</strong> de esta categoría.<br /><br />
-                        <strong>Podrás recuperarlos desde la papelera durante 30 días.</strong>
-                    </span>
-                }
+                description={<span>Se eliminarán todas las <strong>subcategorías y productos</strong>.<br /><strong>Podrás recuperarlos desde la papelera durante 30 días.</strong></span>}
                 confirmLabel="Sí, eliminar"
             />
         </AppLayout>

@@ -1,13 +1,45 @@
+// ──────────────────────────────────────────────────────────────────────────
+//  CreateSubcat.jsx — glassmorphism water-drop style
+// ──────────────────────────────────────────────────────────────────────────
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
+const GLASS_BG = `
+    radial-gradient(ellipse 75% 60% at 0% 0%, rgba(255,210,170,0.22) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 55% at 100% 100%, rgba(255,195,145,0.18) 0%, transparent 55%),
+    linear-gradient(145deg, #fdf6f0 0%, #fdf3ec 35%, #fef5ef 70%, #fef8f4 100%)
+`;
+
+const STYLES = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+    .pg-bg { min-height:100vh; font-family:'Inter',-apple-system,sans-serif; background:${GLASS_BG}; }
+    .pg-header { background:rgba(255,255,255,0.2); backdrop-filter:blur(32px) saturate(180%); -webkit-backdrop-filter:blur(32px) saturate(180%); border-bottom:1px solid rgba(255,255,255,0.68); box-shadow:0 4px 24px rgba(200,100,30,0.07),inset 0 1px 0 rgba(255,255,255,0.85); }
+    .glass-panel { background:rgba(255,255,255,0.06); backdrop-filter:blur(20px) saturate(150%); -webkit-backdrop-filter:blur(20px) saturate(150%); border:1px solid rgba(255,255,255,0.65); border-radius:20px; box-shadow:0 12px 40px rgba(180,90,20,0.08),inset 0 1.5px 0 rgba(255,255,255,0.85); position:relative; overflow:hidden; padding:1.75rem; }
+    .glass-panel::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.92) 30%,rgba(255,255,255,0.92) 70%,transparent); pointer-events:none; z-index:1; }
+    .panel-title { font-size:0.95rem; font-weight:600; color:#2d1a08; letter-spacing:-0.02em; margin-bottom:1.1rem; }
+    .form-label  { display:block; font-size:0.7rem; font-weight:600; color:rgba(150,80,20,0.7); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.45rem; }
+    .glass-input { width:100%; padding:0.75rem 1rem; background:rgba(255,255,255,0.06); border:1px solid rgba(200,140,80,0.4); border-radius:14px; font-size:0.9rem; color:#2d1a08; font-family:'Inter',sans-serif; outline:none; transition:all 0.2s ease; backdrop-filter:blur(10px); box-shadow:0 3px 12px rgba(160,80,10,0.07),inset 0 1px 0 rgba(255,255,255,0.75); box-sizing:border-box; }
+    .glass-input::placeholder { color:rgba(180,100,30,0.38); }
+    .glass-input:focus { background:rgba(255,255,255,0.12); border-color:rgba(200,140,80,0.65); box-shadow:0 0 0 3px rgba(220,38,38,0.05),inset 0 1px 0 rgba(255,255,255,0.85); }
+    .error-text { margin-top:0.3rem; font-size:0.78rem; color:rgba(185,28,28,0.85); }
+    .upload-area { border:1.5px dashed rgba(200,140,80,0.35); border-radius:16px; padding:1.5rem 1rem; text-align:center; cursor:pointer; transition:all 0.2s; background:rgba(255,255,255,0.04); }
+    .upload-area:hover { border-color:rgba(200,140,80,0.6); background:rgba(255,255,255,0.08); }
+    .btn-ghost { display:inline-flex; align-items:center; justify-content:center; gap:0.4rem; padding:0.7rem 1.1rem; width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.65); border-radius:14px; font-size:0.85rem; font-weight:500; color:rgba(120,60,10,0.8); text-decoration:none; cursor:pointer; transition:all 0.2s; backdrop-filter:blur(10px); box-shadow:0 2px 8px rgba(180,90,20,0.06),inset 0 1px 0 rgba(255,255,255,0.78); font-family:'Inter',sans-serif; }
+    .btn-ghost:hover { background:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.85); color:rgba(90,40,5,0.95); }
+    .btn-primary-violet { display:inline-flex; align-items:center; justify-content:center; gap:0.4rem; padding:0.7rem 1.25rem; width:100%; background:rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.45); border-radius:14px; font-size:0.88rem; font-weight:600; color:rgba(109,40,217,0.95); cursor:pointer; transition:all 0.2s; backdrop-filter:blur(10px); box-shadow:0 4px 16px rgba(139,92,246,0.12),inset 0 1px 0 rgba(200,180,255,0.35); font-family:'Inter',sans-serif; position:relative; overflow:hidden; }
+    .btn-primary-violet::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(200,180,255,0.8) 40%,rgba(200,180,255,0.8) 60%,transparent); }
+    .btn-primary-violet:hover { background:rgba(139,92,246,0.18); border-color:rgba(139,92,246,0.65); transform:translateY(-1px); }
+    .btn-primary-violet:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+    .btn-back { width:34px; height:34px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.65); border-radius:10px; cursor:pointer; text-decoration:none; color:rgba(150,80,20,0.6); transition:all 0.18s; flex-shrink:0; box-shadow:inset 0 1px 0 rgba(255,255,255,0.72); }
+    .btn-back:hover { background:rgba(255,255,255,0.2); color:rgba(120,50,10,0.9); }
+    /* label pill */
+    .label-pill { background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.22); border-radius:14px; padding:0.75rem 1rem; }
+`;
+
 export default function CreateSubcat({ grupo }) {
     const { data, setData, post, processing, errors } = useForm({
-        nombre:      '',
-        descripcion: '',
-        imagen:      null,
-        activo:      true,
+        nombre: '', descripcion: '', imagen: null, activo: true,
     });
 
     const [preview, setPreview] = useState(null);
@@ -26,97 +58,87 @@ export default function CreateSubcat({ grupo }) {
 
     return (
         <AppLayout>
-            <div className="min-h-screen bg-gray-50">
-
-                <div className="bg-white border-b border-gray-200">
-                    <div className="max-w-2xl mx-auto px-6 py-8">
-                        <div className="flex items-center space-x-4">
-                            <Link href={`/categorias/${grupo.id}`}
-                                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <style>{STYLES}</style>
+            <div className="pg-bg">
+                <div className="pg-header">
+                    <div style={{ maxWidth:'680px', margin:'0 auto', padding:'1.5rem' }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:'0.85rem' }}>
+                            <Link href={`/categorias/${grupo.id}`} className="btn-back">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                                 </svg>
                             </Link>
                             <div>
-                                <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">{grupo.nombre}</p>
-                                <h1 className="text-2xl font-bold text-gray-900">Nueva Subcategoría</h1>
+                                <p style={{ fontSize:'0.7rem', fontWeight:'600', color:'rgba(150,80,20,0.5)', letterSpacing:'0.08em', textTransform:'uppercase' }}>
+                                    {grupo.nombre}
+                                </p>
+                                <h1 style={{ fontSize:'1.45rem', fontWeight:'300', color:'#2d1a08', letterSpacing:'-0.03em', lineHeight:1.1 }}>Nueva Subcategoría</h1>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="max-w-2xl mx-auto px-6 py-10">
-                    <form onSubmit={submit} encType="multipart/form-data" className="space-y-6">
+                <div style={{ maxWidth:'680px', margin:'0 auto', padding:'2rem 1.5rem' }}>
+                    <form onSubmit={submit} encType="multipart/form-data" style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
 
-                        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
-                            <h2 className="text-base font-semibold text-gray-900">Información</h2>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Nombre <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={data.nombre}
-                                    onChange={(e) => setData('nombre', e.target.value)}
-                                    placeholder={`Ej: Blusas, Vestidos, Camisas...`}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 transition bg-gray-50"
-                                />
-                                {errors.nombre && <p className="mt-1 text-sm text-red-600">{errors.nombre}</p>}
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label>
-                                <input
-                                    type="text"
-                                    value={data.descripcion}
-                                    onChange={(e) => setData('descripcion', e.target.value)}
-                                    placeholder="Opcional..."
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 transition bg-gray-50"
-                                />
+                        <div className="glass-panel">
+                            <p className="panel-title">Información</p>
+                            <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
+                                <div>
+                                    <label className="form-label">Nombre <span style={{ color:'rgba(185,28,28,0.8)' }}>*</span></label>
+                                    <input type="text" value={data.nombre} onChange={e => setData('nombre', e.target.value)}
+                                           placeholder={`Ej: Blusas, Vestidos, Camisas...`} className="glass-input" />
+                                    {errors.nombre && <p className="error-text">{errors.nombre}</p>}
+                                </div>
+                                <div>
+                                    <label className="form-label">Descripción</label>
+                                    <input type="text" value={data.descripcion} onChange={e => setData('descripcion', e.target.value)}
+                                           placeholder="Opcional..." className="glass-input" />
+                                </div>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-2xl shadow-sm p-6">
-                            <h2 className="text-base font-semibold text-gray-900 mb-4">Imagen</h2>
-                            <label className="cursor-pointer block">
+                        <div className="glass-panel">
+                            <p className="panel-title">Imagen</p>
+                            <label style={{ display:'block' }}>
                                 {preview ? (
-                                    <div className="relative">
-                                        <img src={preview} alt="Preview" className="w-full h-40 object-cover rounded-xl" />
-                                        <div className="absolute inset-0 bg-black/30 rounded-xl flex items-center justify-center opacity-0 hover:opacity-100 transition">
-                                            <span className="text-white text-sm font-medium">Cambiar imagen</span>
+                                    <div style={{ position:'relative' }}>
+                                        <img src={preview} alt="Preview"
+                                             style={{ width:'100%', height:'160px', objectFit:'cover', borderRadius:'14px', border:'1px solid rgba(255,255,255,0.55)' }} />
+                                        <div style={{ position:'absolute', inset:0, borderRadius:'14px', display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0)', fontSize:'0.8rem', color:'white', fontWeight:'500', transition:'background 0.18s' }}
+                                             onMouseOver={e => e.currentTarget.style.background='rgba(0,0,0,0.3)'}
+                                             onMouseOut={e => e.currentTarget.style.background='rgba(0,0,0,0)'}>
+                                            Cambiar imagen
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-violet-400 hover:bg-violet-50 transition">
-                                        <svg className="w-10 h-10 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
-                                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    <div className="upload-area">
+                                        <svg width="28" height="28" fill="none" stroke="rgba(180,100,30,0.35)" viewBox="0 0 24 24" style={{ margin:'0 auto 0.4rem', display:'block' }}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
-                                        <p className="text-sm font-medium text-gray-500">Clic para subir imagen</p>
-                                        <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WEBP hasta 2MB</p>
+                                        <p style={{ fontSize:'0.82rem', color:'rgba(150,80,20,0.6)', marginBottom:'0.15rem' }}>Clic para subir imagen</p>
+                                        <p style={{ fontSize:'0.72rem', color:'rgba(150,80,20,0.4)' }}>JPG, PNG, WEBP hasta 2MB</p>
                                     </div>
                                 )}
-                                <input type="file" accept="image/*" onChange={handleImagen} className="hidden" />
+                                <input type="file" accept="image/*" onChange={handleImagen} style={{ display:'none' }} />
                             </label>
-                            {errors.imagen && <p className="mt-2 text-sm text-red-600">{errors.imagen}</p>}
+                            {errors.imagen && <p className="error-text">{errors.imagen}</p>}
                         </div>
 
-                        {/* Label que se asignará a productos */}
                         {data.nombre && (
-                            <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4">
-                                <p className="text-xs text-violet-600 font-medium">Los productos de esta subcategoría usarán el label:</p>
-                                <p className="text-sm font-bold text-violet-800 mt-1">
-                                    {grupo.nombre} - {data.nombre}
+                            <div className="label-pill">
+                                <p style={{ fontSize:'0.72rem', fontWeight:'600', color:'rgba(109,40,217,0.7)', letterSpacing:'0.04em', marginBottom:'0.2rem' }}>
+                                    Label en productos:
+                                </p>
+                                <p style={{ fontSize:'0.9rem', fontWeight:'700', color:'rgba(109,40,217,0.9)' }}>
+                                    {grupo.nombre} – {data.nombre}
                                 </p>
                             </div>
                         )}
 
-                        <div className="flex space-x-3">
-                            <Link href={`/categorias/${grupo.id}`}
-                                  className="flex-1 text-center py-3 border border-gray-200 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition">
-                                Cancelar
-                            </Link>
-                            <button type="submit" disabled={processing}
-                                    className="flex-1 py-3 bg-gradient-to-r from-violet-600 to-purple-700 text-white rounded-xl font-semibold hover:shadow-lg transition disabled:opacity-50">
+                        <div style={{ display:'flex', gap:'0.65rem' }}>
+                            <Link href={`/categorias/${grupo.id}`} className="btn-ghost">Cancelar</Link>
+                            <button type="submit" disabled={processing} className="btn-primary-violet">
                                 {processing ? 'Guardando...' : 'Crear Subcategoría'}
                             </button>
                         </div>
