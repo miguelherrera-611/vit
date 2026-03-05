@@ -10,76 +10,26 @@ class RoleSeeder extends Seeder
 {
     public function run(): void
     {
-        // Crear roles
-        $superAdminRole = Role::create(['name' => 'super_admin']);
-        $adminRole = Role::create(['name' => 'admin']);
-        $empleadoRole = Role::create(['name' => 'empleado']);
+        // Limpiar caché primero
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Crear permisos
+        // ── Crear roles ──────────────────────────────────────────────
+        $superAdminRole = Role::firstOrCreate(['name' => 'super_admin']);
+        $adminRole      = Role::firstOrCreate(['name' => 'admin']);
+        $empleadoRole   = Role::firstOrCreate(['name' => 'empleado']);
+
+        // ── Crear TODOS los permisos del sistema ─────────────────────
         $permissions = [
-            // Permisos de productos
-            'ver_productos',
-            'crear_productos',
-            'editar_productos',
-            'eliminar_productos',
-
-            // Permisos de ventas
-            'ver_ventas',
-            'crear_ventas',
-            'anular_ventas',
-            'ver_detalle_ventas',
-
-            // Permisos de inventario
-            'ver_inventario',
-            'ajustar_inventario',
-            'ver_movimientos_inventario',
-
-            // Permisos de proveedores
-            'ver_proveedores',
-            'crear_proveedores',
-            'editar_proveedores',
-            'eliminar_proveedores',
-
-            // Permisos de reportes
-            'ver_reportes_ventas',
-            'ver_reportes_inventario',
-            'ver_reportes_financieros',
-            'exportar_reportes',
-
-            // Permisos de usuarios (SOLO SUPER ADMIN)
-            'ver_usuarios',
-            'crear_usuarios',
-            'editar_usuarios',
-            'eliminar_usuarios',
-            'cambiar_contraseñas_usuarios',
-            'activar_desactivar_usuarios',
-            'asignar_roles',
-
-            // Permisos de configuración (SOLO SUPER ADMIN)
-            'ver_configuracion_sistema',
-            'editar_configuracion_sistema',
-            'gestionar_permisos',
-
-            // Dashboard
-            'ver_dashboard_super_admin',
-            'ver_dashboard_admin',
-            'ver_dashboard_empleado',
-        ];
-
-        foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
-        }
-
-        // SUPER ADMIN - Acceso total a TODO
-        $superAdminRole->givePermissionTo(Permission::all());
-
-        // ADMIN - Gestión operativa (sin gestión de usuarios ni roles)
-        $adminRole->givePermissionTo([
             // Productos
             'ver_productos',
             'crear_productos',
             'editar_productos',
             'eliminar_productos',
+
+            // Inventario
+            'ver_inventario',
+            'ajustar_inventario',
+            'ver_movimientos_inventario',
 
             // Ventas
             'ver_ventas',
@@ -87,10 +37,8 @@ class RoleSeeder extends Seeder
             'anular_ventas',
             'ver_detalle_ventas',
 
-            // Inventario
-            'ver_inventario',
-            'ajustar_inventario',
-            'ver_movimientos_inventario',
+            // Clientes
+            'gestionar_clientes',
 
             // Proveedores
             'ver_proveedores',
@@ -104,18 +52,51 @@ class RoleSeeder extends Seeder
             'ver_reportes_financieros',
             'exportar_reportes',
 
+            // Categorías
+            'gestionar_categorias',
+
+            // Papelera
+            'gestionar_papelera',
+
+            // Usuarios (solo admin/super_admin)
+            'ver_usuarios',
+            'crear_usuarios',
+            'editar_usuarios',
+            'eliminar_usuarios',
+            'activar_desactivar_usuarios',
+            'asignar_roles',
+
             // Dashboard
+            'ver_dashboard_super_admin',
+            'ver_dashboard_admin',
+            'ver_dashboard_empleado',
+        ];
+
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+        }
+
+        // ── SUPER ADMIN: acceso total ────────────────────────────────
+        $superAdminRole->syncPermissions(Permission::all());
+
+        // ── ADMIN: acceso operativo completo ─────────────────────────
+        $adminRole->syncPermissions([
+            'ver_productos', 'crear_productos', 'editar_productos', 'eliminar_productos',
+            'ver_inventario', 'ajustar_inventario', 'ver_movimientos_inventario',
+            'ver_ventas', 'crear_ventas', 'anular_ventas', 'ver_detalle_ventas',
+            'gestionar_clientes',
+            'ver_proveedores', 'crear_proveedores', 'editar_proveedores', 'eliminar_proveedores',
+            'ver_reportes_ventas', 'ver_reportes_inventario', 'ver_reportes_financieros', 'exportar_reportes',
+            'gestionar_categorias',
+            'gestionar_papelera',
+            'ver_usuarios', 'crear_usuarios', 'editar_usuarios', 'eliminar_usuarios',
+            'activar_desactivar_usuarios', 'asignar_roles',
             'ver_dashboard_admin',
         ]);
 
-        // EMPLEADO - Acceso limitado solo a operaciones básicas
-        $empleadoRole->givePermissionTo([
-            'ver_productos',
-            'ver_ventas',
-            'crear_ventas',
-            'ver_detalle_ventas',
-            'ver_inventario',
-            'ver_dashboard_empleado',
-        ]);
+        // ── EMPLEADO: SIN permisos por defecto ───────────────────────
+        // Los permisos se asignan individualmente desde el panel de usuarios.
+        // Esto permite control granular total por cada empleado.
+        $empleadoRole->syncPermissions([]);
     }
 }

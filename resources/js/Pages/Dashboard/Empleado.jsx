@@ -1,10 +1,24 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { usePage, Link } from '@inertiajs/react';
 
-// Mapa completo: permiso → módulo
+/**
+ * Mapa de módulos del empleado.
+ * El campo `permiso` DEBE coincidir exactamente con los nombres
+ * de la tabla `permissions` en la base de datos.
+ *
+ * Permisos reales en BD:
+ * ver_productos, crear_productos, editar_productos, eliminar_productos,
+ * ver_inventario, ajustar_inventario,
+ * ver_ventas, crear_ventas, anular_ventas,
+ * gestionar_clientes,
+ * ver_proveedores, crear_proveedores, editar_proveedores,
+ * ver_reportes_ventas, ver_reportes_inventario, ver_reportes_financieros,
+ * gestionar_categorias, gestionar_papelera
+ */
 const MODULOS = [
+    // ── Ventas ──────────────────────────────────────────────────────
     {
-        permiso:     'gestionar_ventas',
+        permiso:     'crear_ventas',
         title:       'Nueva Venta',
         description: 'Registrar una nueva venta',
         href:        '/ventas/crear',
@@ -12,13 +26,15 @@ const MODULOS = [
         icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />,
     },
     {
-        permiso:     'gestionar_ventas',
-        title:       'Historial Ventas',
-        description: 'Ver todas las ventas registradas',
+        permiso:     'ver_ventas',
+        title:       'Historial de Ventas',
+        description: 'Consultar todas las ventas',
         href:        '/ventas',
         color:       'from-emerald-500 to-emerald-600',
         icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />,
     },
+
+    // ── Productos ────────────────────────────────────────────────────
     {
         permiso:     'ver_productos',
         title:       'Productos',
@@ -35,14 +51,26 @@ const MODULOS = [
         color:       'from-sky-500 to-sky-600',
         icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />,
     },
+
+    // ── Inventario ───────────────────────────────────────────────────
     {
-        permiso:     'gestionar_inventario',
+        permiso:     'ver_inventario',
         title:       'Inventario',
-        description: 'Consultar y ajustar stock',
+        description: 'Consultar stock actual',
         href:        '/inventario',
         color:       'from-orange-500 to-orange-600',
         icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />,
     },
+    {
+        permiso:     'ajustar_inventario',
+        title:       'Ajustar Stock',
+        description: 'Realizar ajustes de inventario',
+        href:        '/inventario/ajustar',
+        color:       'from-amber-500 to-amber-600',
+        icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />,
+    },
+
+    // ── Clientes ─────────────────────────────────────────────────────
     {
         permiso:     'gestionar_clientes',
         title:       'Clientes',
@@ -51,34 +79,58 @@ const MODULOS = [
         color:       'from-pink-500 to-pink-600',
         icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />,
     },
+
+    // ── Proveedores ──────────────────────────────────────────────────
     {
-        permiso:     'gestionar_proveedores',
+        permiso:     'ver_proveedores',
         title:       'Proveedores',
-        description: 'Gestionar proveedores',
+        description: 'Consultar proveedores',
         href:        '/proveedores',
         color:       'from-indigo-500 to-indigo-600',
         icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />,
     },
+
+    // ── Reportes ─────────────────────────────────────────────────────
+    {
+        permiso:     'ver_reportes_ventas',
+        title:       'Reportes de Ventas',
+        description: 'Ver estadísticas de ventas',
+        href:        '/reportes/ventas',
+        color:       'from-violet-500 to-violet-600',
+        icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
+    },
+    {
+        permiso:     'ver_reportes_inventario',
+        title:       'Reportes de Inventario',
+        description: 'Ver estado del inventario',
+        href:        '/reportes/inventario',
+        color:       'from-teal-500 to-teal-600',
+        icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
+    },
+    {
+        permiso:     'ver_reportes_financieros',
+        title:       'Reportes Financieros',
+        description: 'Ver reportes financieros',
+        href:        '/reportes/financiero',
+        color:       'from-cyan-500 to-cyan-600',
+        icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />,
+    },
+
+    // ── Categorías ───────────────────────────────────────────────────
     {
         permiso:     'gestionar_categorias',
         title:       'Categorías',
         description: 'Gestionar categorías de productos',
         href:        '/categorias',
-        color:       'from-violet-500 to-violet-600',
+        color:       'from-fuchsia-500 to-fuchsia-600',
         icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />,
     },
-    {
-        permiso:     'ver_reportes',
-        title:       'Reportes',
-        description: 'Ver estadísticas y analíticas',
-        href:        '/reportes',
-        color:       'from-amber-500 to-amber-600',
-        icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
-    },
+
+    // ── Papelera ─────────────────────────────────────────────────────
     {
         permiso:     'gestionar_papelera',
         title:       'Papelera',
-        description: 'Elementos eliminados y restauración',
+        description: 'Restaurar elementos eliminados',
         href:        '/papelera',
         color:       'from-red-400 to-red-500',
         icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />,
@@ -87,9 +139,10 @@ const MODULOS = [
 
 export default function Empleado() {
     const { auth } = usePage().props;
-    const permisos = auth.user.permissions ?? [];
+    const permisos = auth.user?.permissions ?? [];
 
-    // Deduplicar por href para que "gestionar_ventas" no aparezca dos veces con el mismo link
+    // Filtrar módulos según los permisos del usuario
+    // Deduplicar por href para no mostrar el mismo link dos veces
     const vistos = new Set();
     const modulosVisibles = MODULOS.filter(m => {
         if (!permisos.includes(m.permiso)) return false;
@@ -119,7 +172,7 @@ export default function Empleado() {
 
                 <div className="max-w-7xl mx-auto px-6 py-12">
 
-                    {/* Sin permisos */}
+                    {/* Sin permisos asignados */}
                     {modulosVisibles.length === 0 && (
                         <div className="bg-white rounded-2xl p-16 shadow-sm text-center">
                             <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-100 rounded-full mb-4">

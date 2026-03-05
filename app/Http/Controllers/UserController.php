@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Http\Controllers;
 
 use App\Models\User;
@@ -13,21 +12,46 @@ use Spatie\Permission\Models\Permission;
 
 class UserController extends Controller
 {
-    // Lista todos los permisos disponibles en el sistema
+    /**
+     * Permisos disponibles para asignar a empleados.
+     * DEBEN coincidir exactamente con los nombres en la tabla `permissions` de la BD.
+     */
     private function permisosDisponibles(): array
     {
         return [
-            ['key' => 'ver_productos', 'label' => 'Ver Productos'],
-            ['key' => 'crear_productos', 'label' => 'Crear Productos'],
-            ['key' => 'editar_productos', 'label' => 'Editar Productos'],
+            // Productos
+            ['key' => 'ver_productos',      'label' => 'Ver Productos'],
+            ['key' => 'crear_productos',    'label' => 'Crear Productos'],
+            ['key' => 'editar_productos',   'label' => 'Editar Productos'],
             ['key' => 'eliminar_productos', 'label' => 'Eliminar Productos'],
-            ['key' => 'gestionar_inventario', 'label' => 'Gestionar Inventario'],
-            ['key' => 'ver_reportes', 'label' => 'Ver Reportes'],
-            ['key' => 'gestionar_ventas', 'label' => 'Gestionar Ventas'],
-            ['key' => 'gestionar_clientes', 'label' => 'Gestionar Clientes'],
-            ['key' => 'gestionar_proveedores', 'label' => 'Gestionar Proveedores'],
+
+            // Inventario
+            ['key' => 'ver_inventario',     'label' => 'Ver Inventario'],
+            ['key' => 'ajustar_inventario', 'label' => 'Ajustar Inventario'],
+
+            // Ventas
+            ['key' => 'ver_ventas',         'label' => 'Ver Ventas'],
+            ['key' => 'crear_ventas',       'label' => 'Crear Ventas'],
+            ['key' => 'anular_ventas',      'label' => 'Anular Ventas'],
+
+            // Clientes
+            ['key' => 'gestionar_clientes',    'label' => 'Gestionar Clientes'],
+
+            // Proveedores
+            ['key' => 'ver_proveedores',       'label' => 'Ver Proveedores'],
+            ['key' => 'crear_proveedores',     'label' => 'Crear Proveedores'],
+            ['key' => 'editar_proveedores',    'label' => 'Editar Proveedores'],
+
+            // Reportes
+            ['key' => 'ver_reportes_ventas',      'label' => 'Ver Reportes de Ventas'],
+            ['key' => 'ver_reportes_inventario',  'label' => 'Ver Reportes de Inventario'],
+            ['key' => 'ver_reportes_financieros', 'label' => 'Ver Reportes Financieros'],
+
+            // Categorías
             ['key' => 'gestionar_categorias', 'label' => 'Gestionar Categorías'],
-            ['key' => 'gestionar_papelera', 'label' => 'Gestionar Papelera'],
+
+            // Papelera
+            ['key' => 'gestionar_papelera',   'label' => 'Gestionar Papelera'],
         ];
     }
 
@@ -37,11 +61,12 @@ class UserController extends Controller
             ->orderBy('name')
             ->get()
             ->map(fn($u) => [
-                'id' => $u->id,
-                'name' => $u->name,
-                'email' => $u->email,
-                'rol' => $u->roles->first()?->name ?? 'sin_rol',
-                'permisos' => $u->getAllPermissions()->pluck('name')->toArray(),
+                'id'         => $u->id,
+                'name'       => $u->name,
+                'email'      => $u->email,
+                'rol'        => $u->roles->first()?->name ?? 'sin_rol',
+                'permisos'   => $u->getAllPermissions()->pluck('name')->toArray(),
+                'activo'     => $u->activo,
                 'created_at' => $u->created_at->format('d/m/Y'),
             ]);
 
@@ -60,37 +85,39 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
-            'rol' => 'required|in:admin,empleado',
+            'rol'      => 'required|in:admin,empleado',
             'permisos' => 'array',
         ], [
-            'email.unique' => 'Ya existe un usuario con este correo.',
-            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
-            'password.confirmed' => 'Las contraseñas no coinciden.',
+            'email.unique'        => 'Ya existe un usuario con este correo.',
+            'password.min'        => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.confirmed'  => 'Las contraseñas no coinciden.',
         ]);
 
-        // Crear usuario
         $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
+            'name'     => $validated['name'],
+            'email'    => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'activo'   => true,
         ]);
 
-        // Asignar rol
         $user->assignRole($validated['rol']);
 
-        // Asignar permisos granulares (solo aplica a empleados normalmente)
-        if (!empty($validated['permisos'])) {
-            // Asegurarnos que los permisos existen
-            foreach ($validated['permisos'] as $permiso) {
-                Permission::firstOrCreate(
-                    ['name' => $permiso, 'guard_name' => 'web']
-                );
-            }
-            $user->syncPermissions($validated['permisos']);
+        // Asignar permisos solo si es empleado y vienen permisos seleccionados
+        if ($validated['rol'] === 'empleado' && !empty($validated['permisos'])) {
+            // Solo asignar permisos que realmente existen en la BD
+            $permisosValidos = Permission::whereIn('name', $validated['permisos'])
+                ->where('guard_name', 'web')
+                ->pluck('name')
+                ->toArray();
+
+            $user->syncPermissions($permisosValidos);
         }
+
+        // Limpiar caché de permisos de Spatie
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         return redirect()->route('usuarios.index')
             ->with('success', "Usuario \"{$user->name}\" creado exitosamente.");
@@ -100,14 +127,12 @@ class UserController extends Controller
     {
         $user = User::with('roles', 'permissions')->findOrFail($id);
 
-        // No permitir editar al propio usuario autenticado desde aquí
-        // (para evitar que se quite sus propios permisos)
         return Inertia::render('Usuarios/Edit', [
             'usuario' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'rol' => $user->roles->first()?->name ?? 'empleado',
+                'id'       => $user->id,
+                'name'     => $user->name,
+                'email'    => $user->email,
+                'rol'      => $user->roles->first()?->name ?? 'empleado',
                 'permisos' => $user->getDirectPermissions()->pluck('name')->toArray(),
             ],
             'permisos_disponibles' => $this->permisosDisponibles(),
@@ -119,24 +144,23 @@ class UserController extends Controller
         $user = User::findOrFail($id);
 
         $rules = [
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $id,
-            'rol' => 'required|in:admin,empleado',
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|email|unique:users,email,' . $id,
+            'rol'      => 'required|in:admin,empleado',
             'permisos' => 'array',
         ];
 
-        // Contraseña opcional en edición
         if ($request->filled('password')) {
             $rules['password'] = 'string|min:8|confirmed';
         }
 
         $validated = $request->validate($rules, [
-            'email.unique' => 'Ya existe un usuario con este correo.',
-            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'email.unique'       => 'Ya existe un usuario con este correo.',
+            'password.min'       => 'La contraseña debe tener al menos 8 caracteres.',
             'password.confirmed' => 'Las contraseñas no coinciden.',
         ]);
 
-        $user->name = $validated['name'];
+        $user->name  = $validated['name'];
         $user->email = $validated['email'];
 
         if ($request->filled('password')) {
@@ -144,20 +168,28 @@ class UserController extends Controller
         }
 
         $user->save();
-
-        // Actualizar rol
         $user->syncRoles([$validated['rol']]);
 
         // Actualizar permisos
-        $permisos = $validated['permisos'] ?? [];
-        if (!empty($permisos)) {
-            foreach ($permisos as $permiso) {
-                Permission::firstOrCreate(
-                    ['name' => $permiso, 'guard_name' => 'web']
-                );
+        if ($validated['rol'] === 'empleado') {
+            $permisos = $validated['permisos'] ?? [];
+
+            if (!empty($permisos)) {
+                $permisosValidos = Permission::whereIn('name', $permisos)
+                    ->where('guard_name', 'web')
+                    ->pluck('name')
+                    ->toArray();
+                $user->syncPermissions($permisosValidos);
+            } else {
+                $user->syncPermissions([]);
             }
+        } else {
+            // Si es admin, quitarle permisos directos (ya tiene todo por rol)
+            $user->syncPermissions([]);
         }
-        $user->syncPermissions($permisos);
+
+        // Limpiar caché de permisos de Spatie
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         return redirect()->route('usuarios.index')
             ->with('success', "Usuario \"{$user->name}\" actualizado exitosamente.");
@@ -171,12 +203,11 @@ class UserController extends Controller
             return back()->withErrors(['password' => 'Contraseña incorrecta.']);
         }
 
-        // No permitir eliminar al propio usuario
         if (auth()->id() == $id) {
             return back()->withErrors(['password' => 'No puedes eliminar tu propio usuario.']);
         }
 
-        $user = User::findOrFail($id);
+        $user   = User::findOrFail($id);
         $nombre = $user->name;
         $user->delete();
 
@@ -184,18 +215,13 @@ class UserController extends Controller
             ->with('success', "Usuario \"{$nombre}\" eliminado permanentemente.");
     }
 
-    // Activar / Desactivar usuario (toggle)
     public function toggleActivo(string $id)
     {
         if (auth()->id() == $id) {
             return back()->withErrors(['error' => 'No puedes desactivarte a ti mismo.']);
         }
 
-        $user = User::findOrFail($id);
-
-        // Usamos el campo activo si existe, si no lo simulamos con banned_at
-        // Como tu modelo usa campo simple, lo manejamos con un scope futuro
-        // Por ahora usamos un campo en users — asegúrate de tenerlo en la migración
+        $user         = User::findOrFail($id);
         $user->activo = !($user->activo ?? true);
         $user->save();
 

@@ -1,28 +1,52 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { useForm, Link } from '@inertiajs/react';
 
+/**
+ * Iconos y descripciones para los permisos.
+ * Las keys DEBEN coincidir con los nombres reales en la BD.
+ */
 const PERMISOS_INFO = {
-    ver_productos:         { icon: '👁', desc: 'Ver el catálogo de productos' },
-    crear_productos:       { icon: '➕', desc: 'Crear nuevos productos' },
-    editar_productos:      { icon: '✏️', desc: 'Editar productos existentes' },
-    eliminar_productos:    { icon: '🗑', desc: 'Eliminar productos' },
-    gestionar_inventario:  { icon: '📦', desc: 'Ajustes y control de stock' },
-    ver_reportes:          { icon: '📊', desc: 'Ver reportes y estadísticas' },
-    gestionar_ventas:      { icon: '💰', desc: 'Registrar y gestionar ventas' },
-    gestionar_clientes:    { icon: '👥', desc: 'Gestionar base de clientes' },
-    gestionar_proveedores: { icon: '🏭', desc: 'Gestionar proveedores' },
-    gestionar_categorias:  { icon: '🏷', desc: 'Gestionar categorías' },
-    gestionar_papelera:    { icon: '♻️', desc: 'Restaurar elementos eliminados' },
+    // Productos
+    ver_productos:            { icon: '👁',  desc: 'Ver el catálogo de productos' },
+    crear_productos:          { icon: '➕', desc: 'Crear nuevos productos' },
+    editar_productos:         { icon: '✏️', desc: 'Editar productos existentes' },
+    eliminar_productos:       { icon: '🗑',  desc: 'Eliminar productos' },
+
+    // Inventario
+    ver_inventario:           { icon: '📦', desc: 'Consultar stock actual' },
+    ajustar_inventario:       { icon: '🔧', desc: 'Realizar ajustes de inventario' },
+
+    // Ventas
+    ver_ventas:               { icon: '🧾', desc: 'Ver historial de ventas' },
+    crear_ventas:             { icon: '💰', desc: 'Registrar nuevas ventas' },
+    anular_ventas:            { icon: '❌', desc: 'Anular ventas registradas' },
+
+    // Clientes
+    gestionar_clientes:       { icon: '👥', desc: 'Gestionar base de clientes' },
+
+    // Proveedores
+    ver_proveedores:          { icon: '🏭', desc: 'Ver listado de proveedores' },
+    crear_proveedores:        { icon: '🏗',  desc: 'Agregar nuevos proveedores' },
+    editar_proveedores:       { icon: '📝', desc: 'Editar proveedores existentes' },
+
+    // Reportes
+    ver_reportes_ventas:      { icon: '📊', desc: 'Ver reportes de ventas' },
+    ver_reportes_inventario:  { icon: '📈', desc: 'Ver reportes de inventario' },
+    ver_reportes_financieros: { icon: '💹', desc: 'Ver reportes financieros' },
+
+    // Categorías y Papelera
+    gestionar_categorias:     { icon: '🏷',  desc: 'Gestionar categorías' },
+    gestionar_papelera:       { icon: '♻️', desc: 'Restaurar elementos eliminados' },
 };
 
 export default function UsuariosCreate({ permisos_disponibles }) {
     const { data, setData, post, processing, errors } = useForm({
-        name:                 '',
-        email:                '',
-        password:             '',
-        password_confirmation:'',
-        rol:                  'empleado',
-        permisos:             [],
+        name:                  '',
+        email:                 '',
+        password:              '',
+        password_confirmation: '',
+        rol:                   'empleado',
+        permisos:              [],
     });
 
     const togglePermiso = (key) => {
@@ -30,6 +54,14 @@ export default function UsuariosCreate({ permisos_disponibles }) {
             ? data.permisos.filter(p => p !== key)
             : [...data.permisos, key]
         );
+    };
+
+    const seleccionarTodos = () => {
+        setData('permisos', permisos_disponibles.map(p => p.key));
+    };
+
+    const quitarTodos = () => {
+        setData('permisos', []);
     };
 
     const submit = (e) => {
@@ -61,7 +93,8 @@ export default function UsuariosCreate({ permisos_disponibles }) {
 
                 <div className="max-w-4xl mx-auto px-6 py-10">
                     <form onSubmit={submit} className="space-y-8">
-                        {/* Datos básicos */}
+
+                        {/* ── Paso 1: Datos básicos ── */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
                             <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                                 <span className="w-8 h-8 bg-red-100 text-red-600 rounded-lg flex items-center justify-center text-sm font-bold">1</span>
@@ -70,51 +103,39 @@ export default function UsuariosCreate({ permisos_disponibles }) {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Nombre completo *</label>
-                                    <input
-                                        type="text"
-                                        value={data.name}
-                                        onChange={e => setData('name', e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 bg-gray-50"
-                                        placeholder="Ej: María González"
-                                    />
+                                    <input type="text" value={data.name}
+                                           onChange={e => setData('name', e.target.value)}
+                                           className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 bg-gray-50"
+                                           placeholder="Ej: María González" />
                                     {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Correo electrónico *</label>
-                                    <input
-                                        type="email"
-                                        value={data.email}
-                                        onChange={e => setData('email', e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 bg-gray-50"
-                                        placeholder="correo@ejemplo.com"
-                                    />
+                                    <input type="email" value={data.email}
+                                           onChange={e => setData('email', e.target.value)}
+                                           className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 bg-gray-50"
+                                           placeholder="correo@ejemplo.com" />
                                     {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña *</label>
-                                    <input
-                                        type="password"
-                                        value={data.password}
-                                        onChange={e => setData('password', e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 bg-gray-50"
-                                        placeholder="Mínimo 8 caracteres"
-                                    />
+                                    <input type="password" value={data.password}
+                                           onChange={e => setData('password', e.target.value)}
+                                           className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 bg-gray-50"
+                                           placeholder="Mínimo 8 caracteres" />
                                     {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Confirmar contraseña *</label>
-                                    <input
-                                        type="password"
-                                        value={data.password_confirmation}
-                                        onChange={e => setData('password_confirmation', e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 bg-gray-50"
-                                        placeholder="Repite la contraseña"
-                                    />
+                                    <input type="password" value={data.password_confirmation}
+                                           onChange={e => setData('password_confirmation', e.target.value)}
+                                           className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 bg-gray-50"
+                                           placeholder="Repite la contraseña" />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Rol */}
+                        {/* ── Paso 2: Rol ── */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
                             <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                                 <span className="w-8 h-8 bg-red-100 text-red-600 rounded-lg flex items-center justify-center text-sm font-bold">2</span>
@@ -122,11 +143,9 @@ export default function UsuariosCreate({ permisos_disponibles }) {
                             </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Admin */}
-                                <button
-                                    type="button"
-                                    onClick={() => { setData('rol', 'admin'); setData('permisos', []); }}
-                                    className={`p-6 rounded-xl border-2 text-left transition ${data.rol === 'admin' ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}
-                                >
+                                <button type="button"
+                                        onClick={() => { setData('rol', 'admin'); setData('permisos', []); }}
+                                        className={`p-6 rounded-xl border-2 text-left transition ${data.rol === 'admin' ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
                                     <div className="flex items-center gap-3 mb-3">
                                         <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
                                             <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -142,11 +161,9 @@ export default function UsuariosCreate({ permisos_disponibles }) {
                                 </button>
 
                                 {/* Empleado */}
-                                <button
-                                    type="button"
-                                    onClick={() => setData('rol', 'empleado')}
-                                    className={`p-6 rounded-xl border-2 text-left transition ${data.rol === 'empleado' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
-                                >
+                                <button type="button"
+                                        onClick={() => setData('rol', 'empleado')}
+                                        className={`p-6 rounded-xl border-2 text-left transition ${data.rol === 'empleado' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
                                     <div className="flex items-center gap-3 mb-3">
                                         <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
                                             <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,34 +175,42 @@ export default function UsuariosCreate({ permisos_disponibles }) {
                                             {data.rol === 'empleado' && <span className="text-xs text-blue-600 font-medium">✓ Seleccionado</span>}
                                         </div>
                                     </div>
-                                    <p className="text-sm text-gray-500">Acceso limitado. Puede registrar ventas y consultar catálogo. Los permisos se configuran abajo.</p>
+                                    <p className="text-sm text-gray-500">Acceso limitado. Los permisos se configuran en el paso 3.</p>
                                 </button>
                             </div>
                             {errors.rol && <p className="mt-2 text-xs text-red-600">{errors.rol}</p>}
                         </div>
 
-                        {/* Permisos granulares — solo para empleados */}
+                        {/* ── Paso 3: Permisos (solo empleados) ── */}
                         {!esAdmin && (
                             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-                                <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                                    <span className="w-8 h-8 bg-red-100 text-red-600 rounded-lg flex items-center justify-center text-sm font-bold">3</span>
-                                    Permisos del Empleado
-                                </h2>
+                                <div className="flex items-center justify-between mb-2">
+                                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                        <span className="w-8 h-8 bg-red-100 text-red-600 rounded-lg flex items-center justify-center text-sm font-bold">3</span>
+                                        Permisos del Empleado
+                                    </h2>
+                                    <div className="flex gap-2">
+                                        <button type="button" onClick={seleccionarTodos}
+                                                className="text-xs px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition font-medium">
+                                            Seleccionar todos
+                                        </button>
+                                        <button type="button" onClick={quitarTodos}
+                                                className="text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition font-medium">
+                                            Quitar todos
+                                        </button>
+                                    </div>
+                                </div>
                                 <p className="text-sm text-gray-500 mb-6 ml-10">Selecciona qué secciones puede ver y usar este empleado.</p>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     {permisos_disponibles.map(({ key, label }) => {
-                                        const info = PERMISOS_INFO[key] || {};
+                                        const info   = PERMISOS_INFO[key] || { icon: '🔑', desc: '' };
                                         const activo = data.permisos.includes(key);
                                         return (
-                                            <button
-                                                key={key}
-                                                type="button"
-                                                onClick={() => togglePermiso(key)}
-                                                className={`flex items-center gap-4 p-4 rounded-xl border-2 text-left transition ${activo ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}
-                                            >
+                                            <button key={key} type="button" onClick={() => togglePermiso(key)}
+                                                    className={`flex items-center gap-4 p-4 rounded-xl border-2 text-left transition ${activo ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
                                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 ${activo ? 'bg-green-100' : 'bg-gray-100'}`}>
-                                                    {info.icon || '🔑'}
+                                                    {info.icon}
                                                 </div>
                                                 <div className="flex-1">
                                                     <p className="text-sm font-medium text-gray-900">{label}</p>
@@ -204,9 +229,9 @@ export default function UsuariosCreate({ permisos_disponibles }) {
                                 </div>
 
                                 {data.permisos.length > 0 && (
-                                    <div className="mt-4 p-3 bg-green-50 rounded-xl">
+                                    <div className="mt-4 p-3 bg-green-50 rounded-xl border border-green-200">
                                         <p className="text-sm text-green-700 font-medium">
-                                            ✓ {data.permisos.length} permiso(s) seleccionado(s): {data.permisos.join(', ')}
+                                            ✓ {data.permisos.length} permiso(s) seleccionado(s)
                                         </p>
                                     </div>
                                 )}
@@ -220,7 +245,7 @@ export default function UsuariosCreate({ permisos_disponibles }) {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                     <p className="text-sm text-red-700">
-                                        <strong>Administrador:</strong> Este rol tiene acceso total a todas las secciones del sistema. No requiere configuración de permisos adicional.
+                                        <strong>Administrador:</strong> Este rol tiene acceso total. No requiere configuración de permisos.
                                     </p>
                                 </div>
                             </div>
@@ -228,14 +253,12 @@ export default function UsuariosCreate({ permisos_disponibles }) {
 
                         {/* Botones */}
                         <div className="flex gap-4">
-                            <Link href="/usuarios" className="flex-1 px-6 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition font-medium text-center">
+                            <Link href="/usuarios"
+                                  className="flex-1 px-6 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition font-medium text-center">
                                 Cancelar
                             </Link>
-                            <button
-                                type="submit"
-                                disabled={processing}
-                                className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition disabled:opacity-50"
-                            >
+                            <button type="submit" disabled={processing}
+                                    className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition disabled:opacity-50">
                                 {processing ? 'Creando...' : 'Crear Usuario'}
                             </button>
                         </div>
