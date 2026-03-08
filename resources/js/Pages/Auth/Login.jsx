@@ -1,7 +1,7 @@
-import { useForm } from '@inertiajs/react';
+import { useForm, Link, Head } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function Login({ status }) {
+export default function Login({ status, canResetPassword }) {
     const { data, setData, post, processing, errors } = useForm({
         email: '',
         password: '',
@@ -17,6 +17,7 @@ export default function Login({ status }) {
 
     return (
         <>
+            <Head title="Iniciar Sesión" />
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
                 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,7 +45,6 @@ export default function Login({ status }) {
                     50%     { box-shadow: 0 16px 52px rgba(220,38,38,0.38), 0 6px 18px rgba(220,38,38,0.22), inset 0 1px 0 rgba(255,255,255,0.25); }
                 }
 
-                /* ── Background — same warm orange as Admin ── */
                 .login-bg {
                     min-height: 100vh;
                     display: flex;
@@ -63,7 +63,6 @@ export default function Login({ status }) {
                         linear-gradient(145deg, #fdf6f0 0%, #fdf3ec 35%, #fef5ef 70%, #fef8f4 100%);
                 }
 
-                /* ── Floating bg deco shapes ── */
                 .gdeco {
                     position: absolute;
                     pointer-events: none;
@@ -80,7 +79,6 @@ export default function Login({ status }) {
                 .gd5 { width: 52px; height: 52px; border-radius:18px; bottom:25%;left:15%;  animation: floatC 9s  ease-in-out infinite 1.5s; transform: rotate(20deg); }
                 .gd6 { width:155px; height: 48px; border-radius:40px; top: 4%;   left:28%;  animation: floatB 11s ease-in-out infinite 2s; }
 
-                /* ── Wrapper ── */
                 .login-wrapper {
                     width: 100%;
                     max-width: 420px;
@@ -89,7 +87,6 @@ export default function Login({ status }) {
                     z-index: 10;
                 }
 
-                /* ── Logo ── */
                 .logo-area { text-align: center; margin-bottom: 1.75rem; }
                 .logo-icon {
                     display: inline-flex;
@@ -108,10 +105,9 @@ export default function Login({ status }) {
                     border-radius: 22px;
                     background: linear-gradient(145deg, rgba(255,255,255,0.22) 0%, transparent 60%);
                 }
-                .logo-title { font-size: 2rem; font-weight: 300; color: '#2d1a08'; letter-spacing: -0.03em; line-height: 1; margin-bottom: 0.3rem; color: #1a0f04; }
+                .logo-title { font-size: 2rem; font-weight: 300; color: #1a0f04; letter-spacing: -0.03em; line-height: 1; margin-bottom: 0.3rem; }
                 .logo-sub   { font-size: 0.85rem; color: rgba(120,55,10,0.75); font-weight: 400; letter-spacing: 0.04em; }
 
-                /* ── WATER DROP CARD ── */
                 .glass-card {
                     background: rgba(255,255,255,0.04);
                     backdrop-filter: blur(22px) saturate(150%);
@@ -129,7 +125,6 @@ export default function Login({ status }) {
                     position: relative;
                     overflow: hidden;
                 }
-                /* top edge highlight */
                 .glass-card::before {
                     content: '';
                     position: absolute;
@@ -138,7 +133,6 @@ export default function Login({ status }) {
                     pointer-events: none;
                     z-index: 1;
                 }
-                /* top-left refraction shine */
                 .glass-card::after {
                     content: '';
                     position: absolute;
@@ -153,7 +147,6 @@ export default function Login({ status }) {
                     text-align: center; margin-bottom: 2rem; letter-spacing: -0.02em;
                 }
 
-                /* ── Alerts ── */
                 .alert-success {
                     margin-bottom: 1.25rem; padding: 0.85rem 1rem;
                     background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.22);
@@ -165,7 +158,6 @@ export default function Login({ status }) {
                     border-radius: 16px; color: #dc2626; font-size: 0.85rem;
                 }
 
-                /* ── Form ── */
                 .form-group { margin-bottom: 1.1rem; }
                 .form-label {
                     display: block; font-size: 0.7rem; font-weight: 600;
@@ -173,7 +165,6 @@ export default function Login({ status }) {
                     text-transform: uppercase; margin-bottom: 0.5rem;
                 }
 
-                /* ── WATER DROP INPUT ── */
                 .glass-input {
                     width: 100%;
                     padding: 0.9rem 1.1rem;
@@ -191,7 +182,6 @@ export default function Login({ status }) {
                         0 1px 4px rgba(160,80,10,0.08),
                         inset 0 1px 0 rgba(255,255,255,0.8),
                         inset 0 -1px 0 rgba(180,90,20,0.03);
-                    position: relative;
                 }
                 .glass-input::placeholder { color: rgba(130,65,10,0.55); }
                 .glass-input:focus {
@@ -213,12 +203,19 @@ export default function Login({ status }) {
                 }
                 .eye-btn:hover { color: rgba(150,70,10,0.75); }
 
-                /* Remember */
-                .remember-row { display: flex; align-items: center; gap: 0.55rem; margin-bottom: 1.5rem; margin-top: 0.25rem; }
-                .remember-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #dc2626; cursor: pointer; }
-                .remember-row label { font-size: 0.875rem; color: rgba(120,55,10,0.85); cursor: pointer; user-select: none; }
+                .bottom-row {
+                    display: flex; align-items: center; justify-content: space-between;
+                    margin-bottom: 1.5rem; margin-top: 0.25rem; flex-wrap: wrap; gap: 0.5rem;
+                }
+                .remember-wrap { display: flex; align-items: center; gap: 0.55rem; }
+                .remember-wrap input[type="checkbox"] { width: 16px; height: 16px; accent-color: #dc2626; cursor: pointer; }
+                .remember-wrap label { font-size: 0.875rem; color: rgba(120,55,10,0.85); cursor: pointer; user-select: none; }
+                .forgot-link {
+                    font-size: 0.82rem; color: rgba(185,28,28,0.75);
+                    text-decoration: none; font-weight: 500; transition: color 0.15s;
+                }
+                .forgot-link:hover { color: rgba(185,28,28,1); }
 
-                /* ── WATER DROP SUBMIT BUTTON ── */
                 .glass-btn {
                     width: 100%;
                     padding: 0.95rem;
@@ -230,7 +227,6 @@ export default function Login({ status }) {
                     transition: all 0.28s cubic-bezier(0.16,1,0.3,1);
                     position: relative;
                     overflow: hidden;
-                    /* Water drop red — transparent inside, border carries the form */
                     background: rgba(220,38,38,0.08);
                     color: rgba(185,28,28,0.95);
                     border: 1px solid rgba(220,38,38,0.45);
@@ -242,7 +238,6 @@ export default function Login({ status }) {
                     backdrop-filter: blur(12px);
                     -webkit-backdrop-filter: blur(12px);
                 }
-                /* top shine */
                 .glass-btn::before {
                     content: '';
                     position: absolute;
@@ -250,7 +245,6 @@ export default function Login({ status }) {
                     background: linear-gradient(90deg, transparent, rgba(255,150,150,0.8) 40%, rgba(255,150,150,0.8) 60%, transparent);
                     pointer-events: none;
                 }
-                /* shimmer on hover */
                 .glass-btn::after {
                     content: '';
                     position: absolute;
@@ -304,7 +298,6 @@ export default function Login({ status }) {
                                 <label className="form-label">Correo Electrónico</label>
                                 <input
                                     className="glass-input"
-                                    id="email"
                                     type="email"
                                     value={data.email}
                                     onChange={(e) => setData('email', e.target.value)}
@@ -321,7 +314,6 @@ export default function Login({ status }) {
                                     <input
                                         className="glass-input"
                                         style={{ paddingRight: '3rem' }}
-                                        id="password"
                                         type={showPassword ? 'text' : 'password'}
                                         value={data.password}
                                         onChange={(e) => setData('password', e.target.value)}
@@ -345,14 +337,21 @@ export default function Login({ status }) {
                                 {errors.password && <p style={{ marginTop:'0.4rem', fontSize:'0.8rem', color:'#dc2626' }}>{errors.password}</p>}
                             </div>
 
-                            <div className="remember-row">
-                                <input
-                                    type="checkbox"
-                                    id="remember"
-                                    checked={data.remember}
-                                    onChange={(e) => setData('remember', e.target.checked)}
-                                />
-                                <label htmlFor="remember">Recordarme</label>
+                            <div className="bottom-row">
+                                <div className="remember-wrap">
+                                    <input
+                                        type="checkbox"
+                                        id="remember"
+                                        checked={data.remember}
+                                        onChange={(e) => setData('remember', e.target.checked)}
+                                    />
+                                    <label htmlFor="remember">Recordarme</label>
+                                </div>
+                                {canResetPassword && (
+                                    <Link href="/forgot-password" className="forgot-link">
+                                        ¿Olvidaste tu contraseña?
+                                    </Link>
+                                )}
                             </div>
 
                             <button type="submit" className="glass-btn" disabled={processing}>
