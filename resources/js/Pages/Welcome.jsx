@@ -197,7 +197,7 @@ export default function Welcome({ canLogin }) {
                                     <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                                 </svg>
                             </div>
-                            <span className="logo-text">VitaliStore</span>
+                            <span className="logo-text">Vitali Store</span>
                         </div>
                         {canLogin && (
                             <Link href="/login" className="glass-login-btn">
@@ -216,7 +216,7 @@ export default function Welcome({ canLogin }) {
                             </svg>
                         </div>
 
-                        <h1 className="hero-title">VitaliStore</h1>
+                        <h1 className="hero-title">Vitali Store</h1>
                         <p className="hero-sub">
                             Sistema integral de gestión para control de inventario,<br/>
                             ventas y administración de tu negocio.

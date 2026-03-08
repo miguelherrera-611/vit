@@ -137,6 +137,15 @@ const FORM_STYLES = `
         box-shadow:inset 0 1px 0 rgba(255,255,255,0.72);
     }
     .btn-back:hover { background:rgba(255,255,255,0.2); color:rgba(120,50,10,0.9); }
+
+    /* readonly stock input */
+    .glass-input-readonly {
+        width:100%; padding:0.75rem 1rem;
+        background:rgba(180,90,20,0.04); border:1px solid rgba(200,140,80,0.22); border-radius:14px;
+        font-size:0.9rem; color:rgba(100,55,10,0.45); font-family:'Inter',sans-serif; outline:none;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,0.55);
+        box-sizing:border-box; cursor:not-allowed;
+    }
 `;
 
 export default function ProductosCreate({ categorias = [] }) {
@@ -258,9 +267,14 @@ export default function ProductosCreate({ categorias = [] }) {
                                         )}
 
                                         <div>
-                                            <label className="form-label">Stock Inicial <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span></label>
-                                            <input type="number" value={data.stock} onChange={(e) => setData('stock', e.target.value)} className="glass-input" min="0" />
-                                            {errors.stock && <p className="error-text">{errors.stock}</p>}
+                                            <label className="form-label">Stock Inicial</label>
+                                            <input
+                                                type="number"
+                                                value={0}
+                                                readOnly
+                                                className="glass-input-readonly"
+                                            />
+                                            <p className="hint-text">El stock se gestiona desde el módulo de Inventario</p>
                                         </div>
                                         <div>
                                             <label className="form-label">Stock Mínimo <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span></label>

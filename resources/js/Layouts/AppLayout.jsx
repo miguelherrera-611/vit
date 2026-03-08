@@ -6,6 +6,14 @@ export default function AppLayout({ children }) {
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
     const dropdownRef = useRef(null);
 
+    // Apuntar al dashboard correcto según rol, sin pasar por el redirect de /dashboard
+    const roles = auth.user?.roles ?? [];
+    const dashboardHref = roles.includes('admin')
+        ? '/dashboard/admin'
+        : roles.includes('empleado')
+            ? '/dashboard/empleado'
+            : '/dashboard';
+
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -76,7 +84,6 @@ export default function AppLayout({ children }) {
                     background: rgba(255,255,255,0.35);
                 }
 
-                /* user pill */
                 .user-pill {
                     display: flex; align-items: center; gap: 0.6rem;
                     padding: 0.35rem 0.85rem 0.35rem 0.4rem;
@@ -108,7 +115,6 @@ export default function AppLayout({ children }) {
                     letter-spacing: -0.01em;
                 }
 
-                /* dropdown */
                 .nav-dropdown {
                     position: absolute; top: calc(100% + 10px); right: 0;
                     min-width: 180px;
@@ -156,7 +162,7 @@ export default function AppLayout({ children }) {
 
                         {/* Left: logo + links */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1.75rem' }}>
-                            <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', textDecoration: 'none' }}>
+                            <Link href={dashboardHref} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', textDecoration: 'none' }}>
                                 <div className="nav-logo-icon">
                                     <svg width="20" height="20" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                                         <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -166,7 +172,7 @@ export default function AppLayout({ children }) {
                             </Link>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <Link href="/dashboard" className="nav-link">Dashboard</Link>
+                                <Link href={dashboardHref} className="nav-link">Dashboard</Link>
                             </div>
                         </div>
 

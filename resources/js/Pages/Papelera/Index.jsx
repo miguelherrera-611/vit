@@ -1,51 +1,246 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { useState, useMemo, useEffect } from 'react';
 import Pagination from '@/Components/Pagination';
 import PasswordConfirmModal from '@/Components/PasswordConfirmModal';
 
-// ── Config de tipos ──────────────────────────────────────────────────────────
 const TIPOS = {
-    producto:  { label: 'Productos',   color: 'blue',   emoji: '📦' },
-    cliente:   { label: 'Clientes',    color: 'rose',   emoji: '👤' },
-    proveedor: { label: 'Proveedores', color: 'indigo', emoji: '🏭' },
-    venta:     { label: 'Ventas',      color: 'green',  emoji: '🧾' },
-    categoria: { label: 'Categorías',  color: 'violet', emoji: '🏷️' },
+    producto:  { label: 'Productos',   emoji: '📦', accent: 'rgba(59,130,246,0.8)',  accentBg: 'rgba(59,130,246,0.08)'  },
+    cliente:   { label: 'Clientes',    emoji: '👤', accent: 'rgba(236,72,153,0.8)',  accentBg: 'rgba(236,72,153,0.08)'  },
+    proveedor: { label: 'Proveedores', emoji: '🏭', accent: 'rgba(99,102,241,0.8)',  accentBg: 'rgba(99,102,241,0.08)'  },
+    venta:     { label: 'Ventas',      emoji: '🧾', accent: 'rgba(16,185,129,0.8)',  accentBg: 'rgba(16,185,129,0.08)'  },
+    categoria: { label: 'Categorías',  emoji: '🏷️', accent: 'rgba(139,92,246,0.8)', accentBg: 'rgba(139,92,246,0.08)' },
 };
 
 const URGENCIA = (dias) => {
-    if (dias <= 3)  return { bg: 'bg-red-100',    text: 'text-red-700',    label: `${dias}d — urgente` };
-    if (dias <= 10) return { bg: 'bg-orange-100', text: 'text-orange-700', label: `${dias} días` };
-    return              { bg: 'bg-gray-100',    text: 'text-gray-600',   label: `${dias} días` };
+    if (dias <= 3)  return { bg: 'rgba(220,38,38,0.08)',   border: 'rgba(220,38,38,0.25)',   color: 'rgba(185,28,28,0.9)',   label: `${dias}d — urgente` };
+    if (dias <= 10) return { bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.28)',  color: 'rgba(146,64,14,0.9)',  label: `${dias} días` };
+    return              { bg: 'rgba(180,90,20,0.06)',   border: 'rgba(200,140,80,0.22)',  color: 'rgba(120,60,10,0.65)', label: `${dias} días` };
 };
 
-// ── Componente principal ─────────────────────────────────────────────────────
+const STYLES = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    @keyframes staggerUp {
+        from { opacity:0; transform:translateY(16px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+    @keyframes floatA {
+        0%,100% { transform:translateY(0) translateX(0) rotate(0deg); }
+        33%     { transform:translateY(-20px) translateX(12px) rotate(3deg); }
+        66%     { transform:translateY(12px) translateX(-8px) rotate(-3deg); }
+    }
+    @keyframes floatB {
+        0%,100% { transform:translateY(0) translateX(0); }
+        50%     { transform:translateY(-14px) translateX(8px); }
+    }
+
+    .papelera-bg {
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, sans-serif;
+        position: relative;
+    }
+
+    /* Deco shapes */
+    .bg-deco {
+        position: fixed; pointer-events: none; z-index: 0;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.6);
+        backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        box-shadow: 0 6px 24px rgba(200,100,30,0.05), inset 0 1px 0 rgba(255,255,255,0.75);
+    }
+    .bd1 { width:120px; height:120px; border-radius:28px; top:8%;    right:4%;   animation:floatA 16s ease-in-out infinite 1s;   transform:rotate(14deg); }
+    .bd2 { width: 72px; height: 72px; border-radius:50%;  top:55%;   left:1%;    animation:floatB 11s ease-in-out infinite 3s; }
+    .bd3 { width:180px; height: 52px; border-radius:40px; bottom:10%;right:3%;   animation:floatA 14s ease-in-out infinite 0.5s; }
+    .bd4 { width: 50px; height:140px; border-radius:40px; top:30%;   left:0.5%;  animation:floatB 15s ease-in-out infinite 4s; transform:rotate(-6deg); }
+
+    /* Header glassmorphism */
+    .pap-header {
+        position: relative; z-index: 10;
+        background: rgba(255,255,255,0.08);
+        backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%);
+        border-bottom: 1px solid rgba(255,255,255,0.65);
+        box-shadow: 0 4px 24px rgba(200,100,30,0.07), inset 0 1px 0 rgba(255,255,255,0.85);
+    }
+
+    /* Back button */
+    .back-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 36px; height: 36px;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.6);
+        border-radius: 12px;
+        color: rgba(150,80,20,0.7);
+        cursor: pointer; text-decoration: none;
+        transition: all 0.2s ease;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+        flex-shrink: 0;
+    }
+    .back-btn:hover {
+        background: rgba(255,255,255,0.18);
+        color: rgba(120,50,10,0.95);
+        transform: translateX(-2px);
+    }
+
+    /* Filtro tabs */
+    .filter-tab {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 0.4rem 1rem; border-radius: 20px;
+        font-size: 0.8rem; font-weight: 500;
+        cursor: pointer; border: none; font-family: 'Inter', sans-serif;
+        transition: all 0.2s ease;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.5);
+        color: rgba(150,80,20,0.7);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
+    }
+    .filter-tab:hover {
+        background: rgba(255,255,255,0.14);
+        color: rgba(120,50,10,0.9);
+    }
+    .filter-tab.active {
+        background: rgba(45,26,8,0.88);
+        border-color: rgba(45,26,8,0.5);
+        color: rgba(255,240,220,0.95);
+        box-shadow: 0 4px 14px rgba(45,26,8,0.18), inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+
+    /* Vaciar button */
+    .btn-vaciar {
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        padding: 0.65rem 1.25rem;
+        background: rgba(220,38,38,0.10);
+        border: 1px solid rgba(220,38,38,0.38);
+        border-radius: 14px;
+        font-size: 0.85rem; font-weight: 600;
+        color: rgba(185,28,28,0.95);
+        cursor: pointer; font-family: 'Inter', sans-serif;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 14px rgba(220,38,38,0.08), inset 0 1px 0 rgba(255,120,120,0.2);
+        position: relative; overflow: hidden;
+    }
+    .btn-vaciar::after {
+        content: '';
+        position: absolute; top: 0; left: -120%; width: 80%; height: 100%;
+        background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.18) 50%, transparent 80%);
+        transition: left 0.5s ease;
+    }
+    .btn-vaciar:hover::after { left: 130%; }
+    .btn-vaciar:hover {
+        background: rgba(220,38,38,0.16);
+        transform: translateY(-1px);
+        box-shadow: 0 8px 20px rgba(220,38,38,0.14);
+    }
+
+    /* Item row card */
+    .item-card {
+        background: rgba(255,255,255,0.05);
+        backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%);
+        border: 1px solid rgba(255,255,255,0.62);
+        border-radius: 18px;
+        padding: 1rem 1.25rem;
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        position: relative; overflow: hidden;
+        transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+        box-shadow: 0 4px 20px rgba(180,90,20,0.06), inset 0 1px 0 rgba(255,255,255,0.82);
+    }
+    .item-card::before {
+        content: '';
+        position: absolute; top: 0; left: 0; right: 0; height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.92) 30%, rgba(255,255,255,0.92) 70%, transparent);
+        pointer-events: none;
+    }
+    .item-card:hover {
+        background: rgba(255,255,255,0.10);
+        border-color: rgba(255,255,255,0.82);
+        transform: translateY(-1px);
+        box-shadow: 0 8px 32px rgba(180,90,20,0.09), inset 0 1px 0 rgba(255,255,255,0.9);
+    }
+
+    /* Urgencia badge */
+    .urgencia-badge {
+        font-size: 0.72rem; font-weight: 600;
+        padding: 0.28rem 0.7rem; border-radius: 20px;
+        white-space: nowrap;
+        border: 1px solid;
+    }
+
+    /* Action buttons */
+    .btn-restore {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 0.45rem 0.85rem; border-radius: 10px;
+        font-size: 0.78rem; font-weight: 600;
+        background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.28);
+        color: rgba(4,120,87,0.9);
+        cursor: pointer; font-family: 'Inter', sans-serif;
+        transition: all 0.18s ease;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+    }
+    .btn-restore:hover {
+        background: rgba(16,185,129,0.15);
+        transform: translateY(-1px);
+    }
+
+    .btn-delete-perm {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 34px; height: 34px; border-radius: 10px;
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(200,140,80,0.22);
+        color: rgba(150,80,20,0.5);
+        cursor: pointer; font-family: 'Inter', sans-serif;
+        transition: all 0.18s ease;
+    }
+    .btn-delete-perm:hover {
+        background: rgba(220,38,38,0.08);
+        border-color: rgba(220,38,38,0.28);
+        color: rgba(185,28,28,0.85);
+    }
+
+    /* Empty state */
+    .empty-card {
+        background: rgba(255,255,255,0.05);
+        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.62);
+        border-radius: 28px;
+        padding: 5rem 2rem;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(180,90,20,0.06), inset 0 1px 0 rgba(255,255,255,0.82);
+    }
+
+    .anim-1 { animation: staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
+    .anim-2 { animation: staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.10s both; }
+    .anim-3 { animation: staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.15s both; }
+    .anim-4 { animation: staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.20s both; }
+    .anim-5 { animation: staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.25s both; }
+`;
+
 export default function PapeleraIndex({ items, conteos, filtro }) {
-    const [modal, setModal]         = useState(null); // { tipo: 'restore'|'delete'|'vaciar', item? }
-    const [processing, setProcessing] = useState(false);
-    const [pwdError, setPwdError]   = useState(null);
+    const { auth } = usePage().props;
+    const [modal, setModal]             = useState(null);
+    const [processing, setProcessing]   = useState(false);
+    const [pwdError, setPwdError]       = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const PER_PAGE = 15;
 
-    const openModal = (tipo, item = null) => {
-        setModal({ tipo, item });
-        setPwdError(null);
-    };
+    // Dashboard correcto según rol
+    const roles = auth.user?.roles ?? [];
+    const dashboardHref = roles.includes('admin')
+        ? '/dashboard/admin'
+        : roles.includes('empleado')
+            ? '/dashboard/empleado'
+            : '/dashboard';
+
+    const openModal = (tipo, item = null) => { setModal({ tipo, item }); setPwdError(null); };
 
     const handleConfirm = (password) => {
         if (!modal) return;
         setProcessing(true);
-
         const onSuccess = () => { setModal(null); setProcessing(false); setPwdError(null); };
         const onError   = (errs) => { setPwdError(errs.password || 'Error.'); setProcessing(false); };
 
-        if (modal.tipo === 'restore') {
-            router.post(`/papelera/${modal.item.id}/restore`, { password }, { onSuccess, onError });
-        } else if (modal.tipo === 'delete') {
-            router.delete(`/papelera/${modal.item.id}`, { data: { password }, onSuccess, onError });
-        } else if (modal.tipo === 'vaciar') {
-            router.post('/papelera/vaciar', { password }, { onSuccess, onError });
-        }
+        if (modal.tipo === 'restore')      router.post(`/papelera/${modal.item.id}/restore`, { password }, { onSuccess, onError });
+        else if (modal.tipo === 'delete')  router.delete(`/papelera/${modal.item.id}`, { data: { password }, onSuccess, onError });
+        else if (modal.tipo === 'vaciar')  router.post('/papelera/vaciar', { password }, { onSuccess, onError });
     };
 
     const setFiltro = (tipo) => {
@@ -53,8 +248,6 @@ export default function PapeleraIndex({ items, conteos, filtro }) {
     };
 
     const datos = items.data || [];
-
-    // Reset page when filter changes
     useEffect(() => { setCurrentPage(1); }, [filtro]);
 
     const datosPaginados = useMemo(
@@ -64,150 +257,154 @@ export default function PapeleraIndex({ items, conteos, filtro }) {
 
     return (
         <AppLayout>
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+            <style>{STYLES}</style>
 
-                {/* ── Header ── */}
-                <div className="bg-white border-b border-gray-200">
-                    <div className="max-w-7xl mx-auto px-6 py-8">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                                <Link href="/productos"
-                                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            <div className="papelera-bg">
+                {/* Deco shapes */}
+                <div className="bg-deco bd1"/><div className="bg-deco bd2"/>
+                <div className="bg-deco bd3"/><div className="bg-deco bd4"/>
+
+                {/* ── HEADER ─────────────────────────────────────────── */}
+                <div className="pap-header">
+                    <div style={{maxWidth:'1280px', margin:'0 auto', padding:'1.5rem'}}>
+                        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:'1rem', flexWrap:'wrap'}}>
+
+                            {/* Título + back */}
+                            <div style={{display:'flex', alignItems:'center', gap:'1rem'}}>
+                                <Link href={dashboardHref} className="back-btn">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                                        <path d="M15 19l-7-7 7-7"/>
                                     </svg>
                                 </Link>
-                                <div>
-                                    <h1 className="text-3xl font-light text-gray-900 flex items-center space-x-3">
-                                        <svg className="w-7 h-7 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
-                                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                <div style={{display:'flex', alignItems:'center', gap:'0.75rem'}}>
+                                    <div style={{
+                                        width:'44px', height:'44px', borderRadius:'14px',
+                                        background:'rgba(220,38,38,0.08)', border:'1px solid rgba(220,38,38,0.18)',
+                                        display:'flex', alignItems:'center', justifyContent:'center',
+                                    }}>
+                                        <svg width="22" height="22" fill="none" stroke="rgba(185,28,28,0.8)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                         </svg>
-                                        <span>Papelera</span>
-                                    </h1>
-                                    <p className="mt-1 text-sm text-gray-500">
-                                        Los elementos se eliminan automáticamente después de 30 días
-                                    </p>
+                                    </div>
+                                    <div>
+                                        <h1 style={{fontSize:'1.5rem', fontWeight:'300', color:'#2d1a08', letterSpacing:'-0.03em', lineHeight:1}}>
+                                            Papelera
+                                        </h1>
+                                        <p style={{fontSize:'0.78rem', color:'rgba(150,80,20,0.55)', marginTop:'0.2rem'}}>
+                                            Los elementos se eliminan automáticamente después de 30 días
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
+                            {/* Botón vaciar */}
                             {conteos.total > 0 && (
-                                <button
-                                    onClick={() => openModal('vaciar')}
-                                    className="flex items-center space-x-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-medium transition"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                <button className="btn-vaciar" onClick={() => openModal('vaciar')}>
+                                    <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                     </svg>
-                                    <span>Vaciar papelera</span>
+                                    Vaciar papelera
                                 </button>
                             )}
                         </div>
 
-                        {/* Filtros por tipo */}
-                        <div className="mt-6 flex flex-wrap gap-2">
+                        {/* Filtros */}
+                        <div style={{display:'flex', flexWrap:'wrap', gap:'0.5rem', marginTop:'1.25rem'}}>
                             <button
+                                className={`filter-tab${!filtro ? ' active' : ''}`}
                                 onClick={() => setFiltro('')}
-                                className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
-                                    !filtro
-                                        ? 'bg-gray-900 text-white'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
                             >
                                 Todos ({conteos.total})
                             </button>
-                            {Object.entries(TIPOS).map(([key, cfg]) => (
-                                conteos[key] > 0 && (
-                                    <button
-                                        key={key}
-                                        onClick={() => setFiltro(key)}
-                                        className={`px-4 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-1.5 ${
-                                            filtro === key
-                                                ? 'bg-gray-900 text-white'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
-                                    >
-                                        <span>{cfg.emoji}</span>
-                                        <span>{cfg.label} ({conteos[key]})</span>
-                                    </button>
-                                )
-                            ))}
+                            {Object.entries(TIPOS).map(([key, cfg]) =>
+                                    conteos[key] > 0 && (
+                                        <button
+                                            key={key}
+                                            className={`filter-tab${filtro === key ? ' active' : ''}`}
+                                            onClick={() => setFiltro(key)}
+                                        >
+                                            <span>{cfg.emoji}</span>
+                                            <span>{cfg.label} ({conteos[key]})</span>
+                                        </button>
+                                    )
+                            )}
                         </div>
                     </div>
                 </div>
 
-                {/* ── Content ── */}
-                <div className="max-w-7xl mx-auto px-6 py-10">
+                {/* ── CONTENIDO ──────────────────────────────────────── */}
+                <div style={{maxWidth:'1280px', margin:'0 auto', padding:'2rem 1.5rem', position:'relative', zIndex:2}}>
 
                     {datos.length === 0 ? (
-                        // Papelera vacía
-                        <div className="bg-white rounded-2xl shadow-sm p-20 text-center">
-                            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <svg className="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
-                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <div className="empty-card anim-1">
+                            <div style={{
+                                width:'72px', height:'72px', borderRadius:'50%',
+                                background:'rgba(200,140,80,0.08)', border:'1px solid rgba(200,140,80,0.18)',
+                                display:'flex', alignItems:'center', justifyContent:'center',
+                                margin:'0 auto 1.5rem',
+                            }}>
+                                <svg width="32" height="32" fill="none" stroke="rgba(150,80,20,0.35)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                 </svg>
                             </div>
-                            <h2 className="text-xl font-semibold text-gray-700 mb-2">La papelera está vacía</h2>
-                            <p className="text-gray-400 text-sm">
+                            <h2 style={{fontSize:'1.1rem', fontWeight:'500', color:'#2d1a08', marginBottom:'0.5rem'}}>
+                                La papelera está vacía
+                            </h2>
+                            <p style={{fontSize:'0.82rem', color:'rgba(150,80,20,0.5)', lineHeight:1.6, maxWidth:'340px', margin:'0 auto'}}>
                                 Los elementos eliminados aparecerán aquí durante 30 días antes de borrarse definitivamente.
                             </p>
                         </div>
                     ) : (
                         <>
-                            <div className="space-y-3">
-                                {datosPaginados.map((item) => {
-                                    const cfg      = TIPOS[item.tipo] || { label: item.tipo, emoji: '📄' };
+                            <div style={{display:'flex', flexDirection:'column', gap:'0.65rem'}}>
+                                {datosPaginados.map((item, i) => {
+                                    const cfg      = TIPOS[item.tipo] || { label: item.tipo, emoji: '📄', accent: 'rgba(150,80,20,0.7)', accentBg: 'rgba(150,80,20,0.07)' };
                                     const urgencia = URGENCIA(item.dias_restantes);
+                                    const animClass = `anim-${Math.min(i + 1, 5)}`;
 
                                     return (
-                                        <div
-                                            key={item.id}
-                                            className="bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-4 flex items-center justify-between gap-4"
-                                        >
+                                        <div key={item.id} className={`item-card ${animClass}`}>
                                             {/* Tipo + nombre */}
-                                            <div className="flex items-center space-x-4 min-w-0">
-                                                <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+                                            <div style={{display:'flex', alignItems:'center', gap:'1rem', minWidth:0}}>
+                                                <div style={{
+                                                    width:'42px', height:'42px', borderRadius:'13px', flexShrink:0,
+                                                    background: cfg.accentBg,
+                                                    border:`1px solid ${cfg.accent.replace(/[\d.]+\)$/, '0.2)')}`,
+                                                    display:'flex', alignItems:'center', justifyContent:'center',
+                                                    fontSize:'1.15rem',
+                                                }}>
                                                     {cfg.emoji}
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <p className="font-medium text-gray-900 truncate">{item.nombre_display}</p>
-                                                    <p className="text-xs text-gray-400 mt-0.5">
+                                                <div style={{minWidth:0}}>
+                                                    <p style={{fontWeight:'600', color:'#2d1a08', fontSize:'0.9rem', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+                                                        {item.nombre_display}
+                                                    </p>
+                                                    <p style={{fontSize:'0.72rem', color:'rgba(150,80,20,0.5)', marginTop:'0.2rem'}}>
                                                         {cfg.label} · Eliminado el {item.eliminado_at}
                                                         {item.eliminado_por && ` por ${item.eliminado_por}`}
                                                     </p>
                                                 </div>
                                             </div>
 
-                                            {/* Días restantes + acciones */}
-                                            <div className="flex items-center space-x-3 flex-shrink-0">
-                                            <span className={`text-xs font-semibold px-3 py-1 rounded-full ${urgencia.bg} ${urgencia.text}`}>
-                                                {urgencia.label}
-                                            </span>
-
-                                                {/* Restaurar */}
-                                                <button
-                                                    onClick={() => openModal('restore', item)}
-                                                    className="flex items-center space-x-1.5 px-3 py-2 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-xl transition"
-                                                    title="Restaurar"
+                                            {/* Urgencia + acciones */}
+                                            <div style={{display:'flex', alignItems:'center', gap:'0.65rem', flexShrink:0}}>
+                                                <span
+                                                    className="urgencia-badge"
+                                                    style={{background:urgencia.bg, borderColor:urgencia.border, color:urgencia.color}}
                                                 >
-                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                                                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    {urgencia.label}
+                                                </span>
+
+                                                <button className="btn-restore" onClick={() => openModal('restore', item)}>
+                                                    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                                                        <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                                                     </svg>
-                                                    <span>Restaurar</span>
+                                                    Restaurar
                                                 </button>
 
-                                                {/* Eliminar permanente */}
-                                                <button
-                                                    onClick={() => openModal('delete', item)}
-                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
-                                                    title="Eliminar permanentemente"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                                                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                <button className="btn-delete-perm" onClick={() => openModal('delete', item)} title="Eliminar permanentemente">
+                                                    <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                                                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                     </svg>
                                                 </button>
                                             </div>
@@ -215,6 +412,7 @@ export default function PapeleraIndex({ items, conteos, filtro }) {
                                     );
                                 })}
                             </div>
+
                             <Pagination
                                 currentPage={currentPage}
                                 totalItems={datos.length}

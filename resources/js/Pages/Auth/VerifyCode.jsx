@@ -359,7 +359,7 @@ export default function VerifyCode({ email }) {
                         </div>
                     </div>
 
-                    <p className="footer-text">© {new Date().getFullYear()} VitaliStore. Todos los derechos reservados.</p>
+                    <p className="footer-text">© {new Date().getFullYear()} Vitali Store. Todos los derechos reservados.</p>
                 </div>
             </div>
         </>

@@ -25,7 +25,7 @@ class VerificationCodeMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Código de Verificación - VitaliStore',
+            subject: 'Código de Verificación - Vitali Store',
         );
     }
 
