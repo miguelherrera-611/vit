@@ -45,6 +45,13 @@ class Producto extends Model
         return (float) ($this->precio - ($this->precio_compra ?? 0));
     }
 
+    // ── Relaciones ───────────────────────────────────────────────
+
+    public function proveedores()
+    {
+        return $this->belongsToMany(Proveedor::class, 'producto_proveedor');
+    }
+
     // ── Scopes ──────────────────────────────────────────────────
 
     public function scopeActivos($query)

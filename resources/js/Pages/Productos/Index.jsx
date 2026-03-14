@@ -234,10 +234,18 @@ const PAGE_STYLES = `
         display:flex; align-items:center; justify-content:center;
         flex-shrink:0;
     }
+
+    /* proveedor tag en tabla */
+    .prov-tag-table {
+        display:inline-block; padding:0.15rem 0.55rem; border-radius:20px;
+        background:rgba(220,38,38,0.07); border:1px solid rgba(220,38,38,0.18);
+        font-size:0.74rem; font-weight:500; color:rgba(185,28,28,0.82);
+        white-space:nowrap;
+    }
 `;
 
 // ─── Filter Dropdown ────────────────────────────────────────────────────────
-function FilterDropdown({ label, icon, value, options, onChange, accentColor = 'blue' }) {
+function FilterDropdown({ label, icon, value, options, onChange }) {
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
     useClickOutside(ref, () => setOpen(false));
@@ -252,11 +260,7 @@ function FilterDropdown({ label, icon, value, options, onChange, accentColor = '
 
     return (
         <div ref={ref} style={{ position: 'relative' }}>
-            <button
-                onClick={() => setOpen(!open)}
-                className="btn-ghost"
-                style={accentStyle}
-            >
+            <button onClick={() => setOpen(!open)} className="btn-ghost" style={accentStyle}>
                 {isActive && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'rgba(194,105,42,0.8)', flexShrink: 0 }} />}
                 {icon}
                 <span>{isActive ? activeOption?.label : label}</span>
@@ -291,13 +295,13 @@ function FilterDropdown({ label, icon, value, options, onChange, accentColor = '
 
 // ─── Main ───────────────────────────────────────────────────────────────────
 export default function ProductosIndex({ productos = [] }) {
-    const [busqueda, setBusqueda]             = useState('');
+    const [busqueda, setBusqueda]               = useState('');
     const [filtroCategoria, setFiltroCategoria] = useState('');
-    const [filtroStock, setFiltroStock]       = useState('');
-    const [confirmDelete, setConfirmDelete]   = useState(null);
-    const [delProcessing, setDelProcessing]   = useState(false);
-    const [delError, setDelError]             = useState(null);
-    const [currentPage, setCurrentPage]       = useState(1);
+    const [filtroStock, setFiltroStock]         = useState('');
+    const [confirmDelete, setConfirmDelete]     = useState(null);
+    const [delProcessing, setDelProcessing]     = useState(false);
+    const [delError, setDelError]               = useState(null);
+    const [currentPage, setCurrentPage]         = useState(1);
     const PER_PAGE = 15;
 
     const opcionesCategorias = useMemo(() => {
@@ -481,6 +485,7 @@ export default function ProductosIndex({ productos = [] }) {
                                     <tr>
                                         <th>Producto</th>
                                         <th>Categoría</th>
+                                        <th>Proveedor</th>
                                         <th style={{ textAlign: 'right' }}>Precio</th>
                                         <th style={{ textAlign: 'right' }}>Stock</th>
                                         <th style={{ textAlign: 'center' }}>Estado</th>
@@ -517,23 +522,38 @@ export default function ProductosIndex({ productos = [] }) {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td><span style={{ fontSize: '0.85rem', color: 'rgba(120,60,10,0.72)' }}>{producto.categoria || '—'}</span></td>
+                                                <td>
+                                                    <span style={{ fontSize: '0.85rem', color: 'rgba(120,60,10,0.72)' }}>{producto.categoria || '—'}</span>
+                                                </td>
+                                                {/* ── PROVEEDORES ── */}
+                                                <td>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                                                        {(producto.proveedores ?? []).length === 0
+                                                            ? <span style={{ fontSize: '0.8rem', color: 'rgba(150,80,20,0.4)' }}>—</span>
+                                                            : producto.proveedores.map(p => (
+                                                                <span key={p.id} className="prov-tag-table">
+                                                                    {p.empresa || p.nombre}
+                                                                </span>
+                                                            ))
+                                                        }
+                                                    </div>
+                                                </td>
                                                 <td style={{ textAlign: 'right' }}>
                                                     <span style={{ fontWeight: '600', color: '#2d1a08', fontSize: '0.9rem' }}>{formatCurrency(producto.precio)}</span>
                                                 </td>
                                                 <td style={{ textAlign: 'right' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
-                                                            <span style={{ fontWeight: '600', color: agotado ? 'rgba(185,28,28,0.85)' : bajo ? 'rgba(180,100,0,0.85)' : '#2d1a08' }}>
-                                                                {producto.stock}
-                                                            </span>
+                                                        <span style={{ fontWeight: '600', color: agotado ? 'rgba(185,28,28,0.85)' : bajo ? 'rgba(180,100,0,0.85)' : '#2d1a08' }}>
+                                                            {producto.stock}
+                                                        </span>
                                                         {agotado && <span className="badge-red">Agotado</span>}
                                                         {bajo    && <span className="badge-yellow">Bajo</span>}
                                                     </div>
                                                 </td>
                                                 <td style={{ textAlign: 'center' }}>
-                                                        <span className={producto.activo ? 'badge-green' : 'badge-gray'}>
-                                                            {producto.activo ? 'Activo' : 'Inactivo'}
-                                                        </span>
+                                                    <span className={producto.activo ? 'badge-green' : 'badge-gray'}>
+                                                        {producto.activo ? 'Activo' : 'Inactivo'}
+                                                    </span>
                                                 </td>
                                                 <td>
                                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.2rem' }}>

@@ -205,6 +205,18 @@ const STYLES = `
     .badge-red    { background:rgba(220,38,38,0.08);   border:1px solid rgba(220,38,38,0.22);   color:rgba(185,28,28,0.9); }
     .badge-yellow { background:rgba(245,158,11,0.09);  border:1px solid rgba(245,158,11,0.26);  color:rgba(174,95,0,0.9); }
 
+    /* ── proveedor pill en Show ── */
+    .prov-pill-show {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        padding: 0.22rem 0.7rem;
+        border-radius: 20px;
+        background: rgba(220,38,38,0.07);
+        border: 1px solid rgba(220,38,38,0.18);
+        font-size: 0.8rem; font-weight: 500;
+        color: rgba(185,28,28,0.82);
+        white-space: nowrap;
+    }
+
     /* ── botones ── */
     .btn-back {
         width: 36px; height: 36px;
@@ -302,6 +314,8 @@ export default function ProductosShow({ producto }) {
     const margenPct = producto.precio_compra > 0
         ? (((producto.precio - producto.precio_compra) / producto.precio_compra) * 100).toFixed(1)
         : null;
+
+    const proveedores = producto.proveedores ?? [];
 
     return (
         <AppLayout>
@@ -501,6 +515,33 @@ export default function ProductosShow({ producto }) {
                                         <div style={{ flex: 1 }}>
                                             <p className="info-label">Categoría</p>
                                             <p className="info-value">{producto.categoria || '—'}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* ── PROVEEDORES ── */}
+                                    <div className="info-row">
+                                        <div className="info-icon">
+                                            <svg width="15" height="15" fill="none" stroke="rgba(150,80,20,0.52)" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                            </svg>
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <p className="info-label">Proveedor{proveedores.length !== 1 ? 'es' : ''}</p>
+                                            {proveedores.length === 0 ? (
+                                                <p className="info-value" style={{ color: 'rgba(150,80,20,0.4)' }}>—</p>
+                                            ) : (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.2rem' }}>
+                                                    {proveedores.map(p => (
+                                                        <span key={p.id} className="prov-pill-show">
+                                                            {p.empresa || p.nombre}
+                                                            {p.empresa && p.nombre !== p.empresa && (
+                                                                <span style={{ fontSize: '0.72rem', opacity: 0.65 }}>· {p.nombre}</span>
+                                                            )}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 

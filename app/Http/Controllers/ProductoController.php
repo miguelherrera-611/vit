@@ -14,11 +14,6 @@ class ProductoController extends Controller
 {
     /**
      * Genera la lista de categorías agrupadas dinámicamente desde la DB.
-     * Formato para el select: [
-     *   { grupo: 'Dama', opciones: ['Dama - Blusas', 'Dama - Vestidos', ...] },
-     *   { grupo: 'Caballero', opciones: [...] },
-     *   ...
-     * ]
      */
     private function getCategorias(): array
     {
@@ -42,7 +37,7 @@ class ProductoController extends Controller
 
     public function index(): Response
     {
-        $productos = Producto::orderBy('nombre')->get();
+        $productos = Producto::with('proveedores')->orderBy('nombre')->get();
 
         return Inertia::render('Productos/Index', [
             'productos' => $productos,
@@ -72,6 +67,10 @@ class ProductoController extends Controller
             'codigo_barras'  => 'nullable|string|unique:productos',
             'imagen'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'activo'         => 'boolean',
+
+            // proveedores
+            'proveedores'   => 'required|array|min:1',
+            'proveedores.*' => 'exists:proveedores,id',
         ]);
 
         if ($request->hasFile('imagen')) {
@@ -80,7 +79,10 @@ class ProductoController extends Controller
 
         $validated['activo'] = $request->boolean('activo', true);
 
-        Producto::create($validated);
+        $producto = Producto::create($validated);
+
+        // guardar proveedores
+        $producto->proveedores()->sync($validated['proveedores']);
 
         return redirect()->route('productos.index')
             ->with('success', 'Producto creado exitosamente.');
@@ -88,7 +90,7 @@ class ProductoController extends Controller
 
     public function show(string $id): Response
     {
-        $producto = Producto::findOrFail($id);
+        $producto = Producto::with('proveedores')->findOrFail($id);
 
         return Inertia::render('Productos/Show', [
             'producto' => $producto,
@@ -97,7 +99,7 @@ class ProductoController extends Controller
 
     public function edit(string $id): Response
     {
-        $producto    = Producto::findOrFail($id);
+        $producto    = Producto::with('proveedores')->findOrFail($id);
         $proveedores = Proveedor::activos()->orderBy('nombre')->get();
 
         return Inertia::render('Productos/Edit', [
@@ -122,18 +124,26 @@ class ProductoController extends Controller
             'codigo_barras'  => 'nullable|string|unique:productos,codigo_barras,' . $id,
             'imagen'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'activo'         => 'boolean',
+
+            // proveedores
+            'proveedores'   => 'required|array|min:1',
+            'proveedores.*' => 'exists:proveedores,id',
         ]);
 
         if ($request->hasFile('imagen')) {
             if ($producto->imagen) {
                 Storage::disk('public')->delete($producto->imagen);
             }
+
             $validated['imagen'] = $request->file('imagen')->store('productos', 'public');
         }
 
         $validated['activo'] = $request->boolean('activo', true);
 
         $producto->update($validated);
+
+        // actualizar proveedores
+        $producto->proveedores()->sync($validated['proveedores']);
 
         return redirect()->route('productos.index')
             ->with('success', 'Producto actualizado exitosamente.');

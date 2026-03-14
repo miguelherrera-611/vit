@@ -127,7 +127,7 @@ export default function Admin() {
                                         Panel Administrativo
                                     </h1>
                                     <p style={{marginTop:'0.3rem',fontSize:'0.85rem',color:'rgba(150,80,20,0.65)'}}>
-                                        Bienvenido, {auth.user.name}
+                                        Bienvenid@, {auth.user.name}
                                     </p>
                                 </div>
                             </div>

@@ -1,5 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 
 const GLASS_BG = `
     radial-gradient(ellipse 75% 60% at 0% 0%, rgba(255,210,170,0.22) 0%, transparent 55%),
@@ -32,9 +33,9 @@ const FORM_STYLES = `
     .margin-panel.negative { background:rgba(220,38,38,0.05); border:1px solid rgba(220,38,38,0.18); }
     .toggle-track { width:46px; height:24px; border-radius:12px; position:relative; transition:background 0.2s; cursor:pointer; flex-shrink:0; border:1px solid rgba(255,255,255,0.5); }
     .toggle-track.on  { background:rgba(220,38,38,0.22); border-color:rgba(220,38,38,0.35); }
-    .toggle-track.off { background:rgba(180,90,20,0.1);  border-color:rgba(180,90,20,0.2); }
+    .toggle-track.off { background:rgba(180,90,20,0.1); border-color:rgba(180,90,20,0.2); }
     .toggle-thumb { position:absolute; top:2px; width:18px; height:18px; border-radius:50%; background:white; box-shadow:0 2px 6px rgba(0,0,0,0.15); transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1); }
-    .toggle-track.on .toggle-thumb  { transform:translateX(22px); }
+    .toggle-track.on .toggle-thumb { transform:translateX(22px); }
     .toggle-track.off .toggle-thumb { transform:translateX(2px); }
     .upload-area { border:1.5px dashed rgba(200,140,80,0.35); border-radius:16px; padding:1.5rem 1rem; text-align:center; cursor:pointer; transition:all 0.2s ease; background:rgba(255,255,255,0.04); }
     .upload-area:hover { border-color:rgba(200,140,80,0.6); background:rgba(255,255,255,0.08); }
@@ -46,25 +47,45 @@ const FORM_STYLES = `
     .btn-primary:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
     .btn-back { width:34px; height:34px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.65); border-radius:10px; cursor:pointer; text-decoration:none; color:rgba(150,80,20,0.6); transition:all 0.18s; flex-shrink:0; box-shadow:inset 0 1px 0 rgba(255,255,255,0.72); }
     .btn-back:hover { background:rgba(255,255,255,0.2); color:rgba(120,50,10,0.9); }
-
-    /* readonly stock input */
-    .glass-input-readonly {
-        width:100%; padding:0.75rem 1rem;
-        background:rgba(180,90,20,0.04); border:1px solid rgba(200,140,80,0.22); border-radius:14px;
-        font-size:0.9rem; color:rgba(100,55,10,0.45); font-family:'Inter',sans-serif; outline:none;
-        box-shadow:inset 0 1px 0 rgba(255,255,255,0.55);
-        box-sizing:border-box; cursor:not-allowed;
-    }
+    .glass-input-readonly { width:100%; padding:0.75rem 1rem; background:rgba(180,90,20,0.04); border:1px solid rgba(200,140,80,0.22); border-radius:14px; font-size:0.9rem; color:rgba(100,55,10,0.45); font-family:'Inter',sans-serif; outline:none; box-shadow:inset 0 1px 0 rgba(255,255,255,0.55); box-sizing:border-box; cursor:not-allowed; }
+    .prov-list { display:flex; flex-direction:column; gap:0.5rem; max-height:220px; overflow-y:auto; padding-right:0.25rem; }
+    .prov-list::-webkit-scrollbar { width:4px; }
+    .prov-list::-webkit-scrollbar-track { background:transparent; }
+    .prov-list::-webkit-scrollbar-thumb { background:rgba(200,140,80,0.3); border-radius:4px; }
+    .prov-item { display:flex; align-items:center; gap:0.75rem; padding:0.6rem 0.85rem; border-radius:12px; cursor:pointer; transition:background 0.15s; border:1px solid transparent; }
+    .prov-item:hover { background:rgba(255,255,255,0.12); }
+    .prov-item.selected { background:rgba(220,38,38,0.05); border-color:rgba(220,38,38,0.2); }
+    .prov-checkbox { width:18px; height:18px; border-radius:6px; flex-shrink:0; border:1.5px solid rgba(200,140,80,0.45); background:rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+    .prov-item.selected .prov-checkbox { background:rgba(220,38,38,0.12); border-color:rgba(220,38,38,0.45); }
+    .prov-name { font-size:0.875rem; font-weight:500; color:#2d1a08; }
+    .prov-empresa { font-size:0.74rem; color:rgba(150,80,20,0.55); margin-top:0.05rem; }
+    .prov-empty { font-size:0.82rem; color:rgba(150,80,20,0.5); text-align:center; padding:1rem 0; }
 `;
 
-export default function ProductosEdit({ producto, categorias = [] }) {
+export default function ProductosEdit({ producto, categorias = [], proveedores = [] }) {
+    const proveedoresIniciales = (producto.proveedores || []).map(p => p.id);
+
     const { data, setData, post, processing, errors } = useForm({
         nombre: producto.nombre || '', descripcion: producto.descripcion || '',
         codigo_barras: producto.codigo_barras || '', categoria: producto.categoria || '',
         precio: producto.precio || '', precio_compra: producto.precio_compra || '',
         stock: producto.stock || '0', stock_minimo: producto.stock_minimo || '5',
-        imagen: null, activo: producto.activo ?? true, _method: 'PUT',
+        imagen: null, activo: producto.activo ?? true,
+        proveedores: proveedoresIniciales,
+        _method: 'PUT',
     });
+
+    const [buscarProv, setBuscarProv] = useState('');
+
+    const proveedoresFiltrados = proveedores.filter(p =>
+        p.nombre.toLowerCase().includes(buscarProv.toLowerCase()) ||
+        (p.empresa || '').toLowerCase().includes(buscarProv.toLowerCase())
+    );
+
+    const toggleProveedor = (id) => {
+        const actual = data.proveedores;
+        setData('proveedores', actual.includes(id) ? actual.filter(x => x !== id) : [...actual, id]);
+    };
 
     const formatCurrency = (value) => {
         const num = parseFloat(value) || 0;
@@ -170,12 +191,7 @@ export default function ProductosEdit({ producto, categorias = [] }) {
 
                                         <div>
                                             <label className="form-label">Stock Actual</label>
-                                            <input
-                                                type="number"
-                                                value={producto.stock ?? 0}
-                                                readOnly
-                                                className="glass-input-readonly"
-                                            />
+                                            <input type="number" value={producto.stock ?? 0} readOnly className="glass-input-readonly" />
                                             <p className="hint-text">Para ajustar stock usa el módulo de Inventario</p>
                                         </div>
                                         <div>
@@ -184,6 +200,61 @@ export default function ProductosEdit({ producto, categorias = [] }) {
                                             {errors.stock_minimo && <p className="error-text">{errors.stock_minimo}</p>}
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Proveedores */}
+                                <div className="glass-panel">
+                                    <p className="panel-title">
+                                        Proveedores <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span>
+                                        {data.proveedores.length > 0 && (
+                                            <span style={{
+                                                marginLeft: '0.6rem', fontSize: '0.72rem', fontWeight: '600',
+                                                background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.22)',
+                                                color: 'rgba(185,28,28,0.85)', padding: '0.15rem 0.55rem', borderRadius: '20px',
+                                            }}>
+                                                {data.proveedores.length} seleccionado{data.proveedores.length > 1 ? 's' : ''}
+                                            </span>
+                                        )}
+                                    </p>
+
+                                    {proveedores.length > 5 && (
+                                        <div style={{ position: 'relative', marginBottom: '0.85rem' }}>
+                                            <svg style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(180,100,30,0.4)', pointerEvents: 'none' }}
+                                                 width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                            <input type="text" value={buscarProv} onChange={e => setBuscarProv(e.target.value)}
+                                                   className="glass-input" style={{ paddingLeft: '2.2rem', paddingTop: '0.6rem', paddingBottom: '0.6rem' }}
+                                                   placeholder="Buscar proveedor..." />
+                                        </div>
+                                    )}
+
+                                    {proveedoresFiltrados.length === 0 ? (
+                                        <p className="prov-empty">No hay proveedores registrados</p>
+                                    ) : (
+                                        <div className="prov-list"
+                                             style={{ border: errors.proveedores ? '1px solid rgba(220,38,38,0.3)' : 'none', borderRadius: '12px', padding: errors.proveedores ? '0.5rem' : '0' }}>
+                                            {proveedoresFiltrados.map(prov => {
+                                                const sel = data.proveedores.includes(prov.id);
+                                                return (
+                                                    <div key={prov.id} className={`prov-item ${sel ? 'selected' : ''}`} onClick={() => toggleProveedor(prov.id)}>
+                                                        <div className="prov-checkbox">
+                                                            {sel && (
+                                                                <svg width="11" height="11" fill="none" stroke="rgba(185,28,28,0.85)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                                                                    <path d="M20 6L9 17l-5-5" />
+                                                                </svg>
+                                                            )}
+                                                        </div>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <p className="prov-name">{prov.nombre}</p>
+                                                            {prov.empresa && <p className="prov-empresa">{prov.empresa}</p>}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                    {errors.proveedores && <p className="error-text">{errors.proveedores}</p>}
                                 </div>
                             </div>
 
