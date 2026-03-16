@@ -319,13 +319,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('forceDelete');
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Registros de actividad
-    // ─────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+// Registros de actividad
+// ─────────────────────────────────────────────────────────────────────────────
     Route::prefix('registros')->name('registros.')->group(function () {
         Route::get('/', [RegistroController::class, 'index'])
             ->middleware('role_or_permission:admin|ver_registros')
             ->name('index');
+        Route::post('/solicitar-eliminacion', [RegistroController::class, 'solicitarEliminacion'])
+            ->middleware('role:admin')
+            ->name('solicitarEliminacion');
+        Route::post('/confirmar-eliminacion', [RegistroController::class, 'confirmarEliminacion'])
+            ->middleware('role:admin')
+            ->name('confirmarEliminacion');
+        Route::post('/cancelar-eliminacion', [RegistroController::class, 'cancelarEliminacion'])
+            ->middleware('role:admin')
+            ->name('cancelarEliminacion');
     });
 });
 

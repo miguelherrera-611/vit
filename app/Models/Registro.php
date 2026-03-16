@@ -1,9 +1,9 @@
 <?php
-// app/Models/Registro.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class Registro extends Model
 {
@@ -21,53 +21,40 @@ class Registro extends Model
         'datos_anteriores',
         'datos_nuevos',
         'ip',
+        'delete_code',
+        'delete_code_expires_at',
     ];
 
+    // Dejar que Eloquent maneje created_at/updated_at como Carbon normalmente
+    // NO castear datos_anteriores/datos_nuevos aquí — los decodificamos manualmente en el controller
     protected $casts = [
-        'datos_anteriores' => 'array',
-        'datos_nuevos'     => 'array',
+        'delete_code_expires_at' => 'datetime',
     ];
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    // ── Scopes ──────────────────────────────────────────────────
-
-    public function scopePorModulo($query, string $modulo)
-    {
-        return $query->where('modulo', $modulo);
-    }
-
-    public function scopePorAccion($query, string $accion)
-    {
-        return $query->where('accion', $accion);
-    }
-
-    // ── Helper estático para registrar desde cualquier lugar ──
-
+    /**
+     * Helper estático para registrar acciones fácilmente desde cualquier controller.
+     */
     public static function registrar(
-        string  $accion,
-        string  $modulo,
-        string  $descripcion,
-        ?Model  $modelo        = null,
-        ?array  $datosAnteriores = null,
-        ?array  $datosNuevos   = null
+        string $accion,
+        string $modulo,
+        string $descripcion,
+               $modelo = null,
+               $datosAnteriores = null,
+               $datosNuevos = null
     ): self {
-        $user = auth()->user();
+        $user = Auth::user();
 
         return self::create([
             'user_id'          => $user?->id,
             'user_name'        => $user?->name ?? 'Sistema',
-            'user_rol'         => $user?->roles->first()?->name ?? 'desconocido',
+            'user_rol'         => $user?->getRoleNames()->first() ?? 'sin rol',
             'accion'           => $accion,
             'modulo'           => $modulo,
             'descripcion'      => $descripcion,
             'modelo_tipo'      => $modelo ? class_basename($modelo) : null,
             'modelo_id'        => $modelo?->id,
-            'datos_anteriores' => $datosAnteriores,
-            'datos_nuevos'     => $datosNuevos,
+            'datos_anteriores' => $datosAnteriores ? json_encode($datosAnteriores, JSON_UNESCAPED_UNICODE) : null,
+            'datos_nuevos'     => $datosNuevos     ? json_encode($datosNuevos,     JSON_UNESCAPED_UNICODE) : null,
             'ip'               => request()->ip(),
         ]);
     }
