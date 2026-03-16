@@ -1,8 +1,10 @@
 <?php
+// app/Http/Controllers/UserController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Registro;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
@@ -52,6 +54,9 @@ class UserController extends Controller
 
             // Papelera
             ['key' => 'gestionar_papelera',   'label' => 'Gestionar Papelera'],
+
+            // Registros
+            ['key' => 'ver_registros',        'label' => 'Ver Registros de Actividad'],
         ];
     }
 
@@ -119,6 +124,14 @@ class UserController extends Controller
         // Limpiar caché de permisos de Spatie
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
+        // ── Auditoría ────────────────────────────────────────────
+        Registro::registrar(
+            'crear',
+            'usuarios',
+            "Usuario \"{$user->name}\" ({$validated['rol']}) creado por " . auth()->user()->name,
+            $user
+        );
+
         return redirect()->route('usuarios.index')
             ->with('success', "Usuario \"{$user->name}\" creado exitosamente.");
     }
@@ -141,7 +154,8 @@ class UserController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $user = User::findOrFail($id);
+        $user     = User::findOrFail($id);
+        $anterior = ['name' => $user->name, 'email' => $user->email, 'rol' => $user->roles->first()?->name];
 
         $rules = [
             'name'     => 'required|string|max:255',
@@ -191,6 +205,15 @@ class UserController extends Controller
         // Limpiar caché de permisos de Spatie
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
+        // ── Auditoría ────────────────────────────────────────────
+        Registro::registrar(
+            'editar',
+            'usuarios',
+            "Usuario \"{$user->name}\" editado por " . auth()->user()->name,
+            $user,
+            $anterior
+        );
+
         return redirect()->route('usuarios.index')
             ->with('success', "Usuario \"{$user->name}\" actualizado exitosamente.");
     }
@@ -209,6 +232,14 @@ class UserController extends Controller
 
         $user   = User::findOrFail($id);
         $nombre = $user->name;
+
+        // ── Auditoría ────────────────────────────────────────────
+        Registro::registrar(
+            'eliminar',
+            'usuarios',
+            "Usuario \"{$nombre}\" eliminado permanentemente por " . auth()->user()->name
+        );
+
         $user->delete();
 
         return redirect()->route('usuarios.index')
@@ -226,6 +257,15 @@ class UserController extends Controller
         $user->save();
 
         $estado = $user->activo ? 'activado' : 'desactivado';
+
+        // ── Auditoría ────────────────────────────────────────────
+        Registro::registrar(
+            $estado,
+            'usuarios',
+            "Usuario \"{$user->name}\" {$estado} por " . auth()->user()->name,
+            $user
+        );
+
         return back()->with('success', "Usuario \"{$user->name}\" {$estado}.");
     }
 }

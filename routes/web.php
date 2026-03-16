@@ -1,4 +1,5 @@
 <?php
+// routes/web.php
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
@@ -6,9 +7,11 @@ use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\VentaController;
+use App\Http\Controllers\AbonoController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\GrupoCategoriaController;
 use App\Http\Controllers\PapeleraController;
+use App\Http\Controllers\RegistroController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\ReporteController;
@@ -181,6 +184,32 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [VentaController::class, 'store'])
             ->middleware('role_or_permission:admin|crear_ventas')
             ->name('store');
+
+        // ── Nuevas rutas ──────────────────────────────────────────
+        Route::get('/cartera', [VentaController::class, 'cartera'])
+            ->middleware('role:admin')
+            ->name('cartera');
+        Route::patch('/{venta}/anular', [VentaController::class, 'anular'])
+            ->middleware('role:admin')
+            ->name('anular');
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Abonos
+    // ─────────────────────────────────────────────────────────────────────────
+    Route::prefix('abonos')->name('abonos.')->group(function () {
+        Route::get('/', [AbonoController::class, 'index'])
+            ->middleware('role_or_permission:admin|crear_ventas')
+            ->name('index');
+        Route::post('/', [AbonoController::class, 'store'])
+            ->middleware('role_or_permission:admin|crear_ventas')
+            ->name('store');
+        Route::get('/{venta}/historial', [AbonoController::class, 'historial'])
+            ->middleware('role_or_permission:admin|ver_ventas')
+            ->name('historial');
+        Route::patch('/{venta}/extender-plazo', [AbonoController::class, 'extenderPlazo'])
+            ->middleware('role:admin')
+            ->name('extenderPlazo');
     });
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -288,6 +317,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/{item}', [PapeleraController::class, 'forceDelete'])
             ->middleware('role:admin')
             ->name('forceDelete');
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Registros de actividad
+    // ─────────────────────────────────────────────────────────────────────────
+    Route::prefix('registros')->name('registros.')->group(function () {
+        Route::get('/', [RegistroController::class, 'index'])
+            ->middleware('role_or_permission:admin|ver_registros')
+            ->name('index');
     });
 });
 

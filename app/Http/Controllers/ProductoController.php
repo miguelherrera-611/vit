@@ -1,10 +1,12 @@
 <?php
+// app/Http/Controllers/ProductoController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\Producto;
 use App\Models\Proveedor;
 use App\Models\GrupoCategoria;
+use App\Models\Registro;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -84,6 +86,14 @@ class ProductoController extends Controller
         // guardar proveedores
         $producto->proveedores()->sync($validated['proveedores']);
 
+        // ── Auditoría ────────────────────────────────────────────
+        Registro::registrar(
+            'crear',
+            'productos',
+            "Producto \"{$producto->nombre}\" creado por " . auth()->user()->name,
+            $producto
+        );
+
         return redirect()->route('productos.index')
             ->with('success', 'Producto creado exitosamente.');
     }
@@ -111,7 +121,8 @@ class ProductoController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $producto = Producto::findOrFail($id);
+        $producto  = Producto::findOrFail($id);
+        $anterior  = $producto->toArray(); // snapshot antes de editar
 
         $validated = $request->validate([
             'nombre'         => 'required|string|max:255',
@@ -145,6 +156,16 @@ class ProductoController extends Controller
         // actualizar proveedores
         $producto->proveedores()->sync($validated['proveedores']);
 
+        // ── Auditoría ────────────────────────────────────────────
+        Registro::registrar(
+            'editar',
+            'productos',
+            "Producto \"{$producto->nombre}\" editado por " . auth()->user()->name,
+            $producto,
+            $anterior,
+            $producto->fresh()->toArray()
+        );
+
         return redirect()->route('productos.index')
             ->with('success', 'Producto actualizado exitosamente.');
     }
@@ -164,6 +185,14 @@ class ProductoController extends Controller
             $producto,
             $producto->nombre,
             auth()->user()->name
+        );
+
+        // ── Auditoría ────────────────────────────────────────────
+        Registro::registrar(
+            'eliminar',
+            'productos',
+            "Producto \"{$producto->nombre}\" movido a papelera por " . auth()->user()->name,
+            $producto
         );
 
         $producto->delete();

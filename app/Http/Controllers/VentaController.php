@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/VentaController.php
 
 namespace App\Http\Controllers;
 
@@ -6,10 +7,13 @@ use App\Models\Venta;
 use App\Models\VentaDetalle;
 use App\Models\Producto;
 use App\Models\Cliente;
+use App\Models\Abono;
+use App\Models\Registro;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Carbon\Carbon;
 
 class VentaController extends Controller
 {
@@ -42,17 +46,25 @@ class VentaController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'cliente_id'  => 'nullable|exists:clientes,id',
-            'tipo_venta'  => 'required|in:Contado,Separado,Crédito',
-            'metodo_pago' => 'required|in:Efectivo,Tarjeta,Transferencia,Mixto',
-            'pagado'      => 'required|numeric|min:0',
-            'descuento'   => 'nullable|numeric|min:0',
-            'notas'       => 'nullable|string',
-            'items'       => 'required|array|min:1',
+            'cliente_id'              => 'nullable|exists:clientes,id',
+            'tipo_venta'              => 'required|in:Contado,Separado,Crédito',
+            'metodo_pago'             => 'required|in:Efectivo,Tarjeta,Transferencia,Mixto',
+            'pagado'                  => 'required|numeric|min:0',
+            'descuento'               => 'nullable|numeric|min:0',
+            'notas'                   => 'nullable|string',
+            'fecha_limite'            => 'nullable|date|after:today',
+            'items'                   => 'required|array|min:1',
             'items.*.producto_id'     => 'required|exists:productos,id',
             'items.*.cantidad'        => 'required|integer|min:1',
             'items.*.precio_unitario' => 'required|numeric|min:0',
+        ], [
+            'fecha_limite.after' => 'La fecha límite debe ser posterior a hoy.',
         ]);
+
+        // Crédito y Separado requieren cliente
+        if (in_array($validated['tipo_venta'], ['Separado', 'Crédito']) && empty($validated['cliente_id'])) {
+            return back()->withErrors(['cliente_id' => 'Las ventas a crédito o separado requieren un cliente registrado.']);
+        }
 
         DB::beginTransaction();
 
@@ -64,17 +76,22 @@ class VentaController extends Controller
                 $subtotal += $item['cantidad'] * $item['precio_unitario'];
             }
 
-            $total           = $subtotal - $descuento;
-            $pagado          = $validated['pagado'];
-            $saldoPendiente  = max(0, $total - $pagado);
+            $total          = $subtotal - $descuento;
+            $pagado         = $validated['pagado'];
+            $saldoPendiente = max(0, $total - $pagado);
 
-            // Determinar estado
             $estado = 'Completada';
-            if ($saldoPendiente > 0) {
-                $estado = $pagado > 0 ? 'Pendiente' : 'Pendiente';
+            if ($validated['tipo_venta'] === 'Separado' || $validated['tipo_venta'] === 'Crédito') {
+                $estado = $saldoPendiente > 0 ? 'Pendiente' : 'Completada';
             }
 
-            // Generar número de venta
+            $fechaLimite = $validated['fecha_limite'] ?? null;
+            if (!$fechaLimite && $validated['tipo_venta'] === 'Separado') {
+                $fechaLimite = Carbon::now()->addDays(30)->toDateString();
+            } elseif (!$fechaLimite && $validated['tipo_venta'] === 'Crédito') {
+                $fechaLimite = Carbon::now()->addDays(60)->toDateString();
+            }
+
             $ultimo = Venta::orderBy('id', 'desc')->first();
             $numero = 'V-' . str_pad(($ultimo ? $ultimo->id + 1 : 1), 6, '0', STR_PAD_LEFT);
 
@@ -93,8 +110,11 @@ class VentaController extends Controller
                 'saldo_pendiente' => $saldoPendiente,
                 'estado'          => $estado,
                 'notas'           => $validated['notas'] ?? null,
+                'fecha_limite'    => $fechaLimite,
             ]);
 
+            // Guardar detalles y descontar stock
+            $productosVendidos = [];
             foreach ($validated['items'] as $item) {
                 VentaDetalle::create([
                     'venta_id'        => $venta->id,
@@ -104,29 +124,177 @@ class VentaController extends Controller
                     'subtotal'        => $item['cantidad'] * $item['precio_unitario'],
                 ]);
 
-                // Descontar stock
                 $producto = Producto::find($item['producto_id']);
                 $producto->decrement('stock', $item['cantidad']);
+
+                $productosVendidos[] = [
+                    'nombre'          => $producto->nombre,
+                    'cantidad'        => $item['cantidad'],
+                    'precio_unitario' => $item['precio_unitario'],
+                    'subtotal'        => $item['cantidad'] * $item['precio_unitario'],
+                ];
             }
 
-            // Si hay abono inicial en separado/crédito
-            if ($pagado > 0 && in_array($validated['tipo_venta'], ['Separado', 'Crédito'])) {
+            // Abono inicial
+            if ($pagado > 0) {
                 $venta->abonos()->create([
-                    'monto'       => $pagado,
-                    'forma_pago'  => $validated['metodo_pago'],
-                    'empleado_id' => auth()->id(),
+                    'monto'         => $pagado,
+                    'forma_pago'    => $validated['metodo_pago'],
+                    'empleado_id'   => auth()->id(),
                     'observaciones' => 'Pago inicial',
                 ]);
             }
 
             DB::commit();
 
+            // ── Registro detallado ───────────────────────────────
+            $cliente = $validated['cliente_id']
+                ? Cliente::find($validated['cliente_id'])?->nombre ?? 'Desconocido'
+                : 'Cliente general';
+
+            $descripcion = "Venta {$numero} registrada por " . auth()->user()->name
+                . " | Cliente: {$cliente}"
+                . " | Tipo: {$validated['tipo_venta']}"
+                . " | Método de pago: {$validated['metodo_pago']}"
+                . " | Subtotal: $" . number_format($subtotal, 0, ',', '.')
+                . ($descuento > 0 ? " | Descuento: $" . number_format($descuento, 0, ',', '.') : '')
+                . " | Total: $" . number_format($total, 0, ',', '.')
+                . " | Pagado: $" . number_format($pagado, 0, ',', '.')
+                . ($saldoPendiente > 0 ? " | Saldo pendiente: $" . number_format($saldoPendiente, 0, ',', '.') : '')
+                . ($fechaLimite ? " | Fecha límite: {$fechaLimite}" : '')
+                . " | Estado: {$estado}"
+                . (! empty($validated['notas']) ? " | Notas: {$validated['notas']}" : '');
+
+            Registro::registrar(
+                'crear',
+                'ventas',
+                $descripcion,
+                $venta,
+                null,
+                [
+                    'numero_venta'     => $numero,
+                    'cliente'          => $cliente,
+                    'tipo_venta'       => $validated['tipo_venta'],
+                    'metodo_pago'      => $validated['metodo_pago'],
+                    'subtotal'         => $subtotal,
+                    'descuento'        => $descuento,
+                    'total'            => $total,
+                    'pagado'           => $pagado,
+                    'saldo_pendiente'  => $saldoPendiente,
+                    'estado'           => $estado,
+                    'fecha_limite'     => $fechaLimite,
+                    'notas'            => $validated['notas'] ?? null,
+                    'productos'        => $productosVendidos,
+                ]
+            );
+
             return redirect()->route('ventas.index')
-                ->with('success', 'Venta registrada exitosamente. Número: ' . $numero);
+                ->with('success', 'Venta registrada. Número: ' . $numero);
 
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Error al registrar la venta: ' . $e->getMessage()]);
         }
+    }
+
+    // ── ANULAR VENTA (solo admin) ─────────────────────────────────
+
+    public function anular(Request $request, string $id)
+    {
+        $request->validate(['password' => 'required|string']);
+
+        if (! \Hash::check($request->password, auth()->user()->password)) {
+            return back()->withErrors(['password' => 'Contraseña incorrecta.']);
+        }
+
+        $venta = Venta::with('detalles.producto', 'cliente')->findOrFail($id);
+
+        if ($venta->estado === 'Cancelada') {
+            return back()->withErrors(['error' => 'Esta venta ya está anulada.']);
+        }
+
+        DB::beginTransaction();
+        try {
+            $productosRestaurados = [];
+            foreach ($venta->detalles as $detalle) {
+                $producto = Producto::find($detalle->producto_id);
+                if ($producto) {
+                    $producto->increment('stock', $detalle->cantidad);
+                    $productosRestaurados[] = [
+                        'nombre'   => $producto->nombre,
+                        'cantidad' => $detalle->cantidad,
+                    ];
+                }
+            }
+
+            $estadoAnterior = $venta->estado;
+            $venta->update(['estado' => 'Cancelada']);
+
+            DB::commit();
+
+            $descripcion = "Venta {$venta->numero_venta} ANULADA por " . auth()->user()->name
+                . " | Cliente: " . ($venta->cliente?->nombre ?? 'Cliente general')
+                . " | Estado anterior: {$estadoAnterior}"
+                . " | Total: $" . number_format($venta->total, 0, ',', '.')
+                . " | Stock restaurado para " . count($productosRestaurados) . " producto(s)";
+
+            Registro::registrar(
+                'anular',
+                'ventas',
+                $descripcion,
+                $venta,
+                ['estado' => $estadoAnterior],
+                [
+                    'estado'               => 'Cancelada',
+                    'productos_restaurados' => $productosRestaurados,
+                ]
+            );
+
+            return back()->with('success', "Venta {$venta->numero_venta} anulada. Stock restaurado.");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Error al anular: ' . $e->getMessage()]);
+        }
+    }
+
+    // ── CARTERA (solo admin) ──────────────────────────────────────
+
+    public function cartera(): Response
+    {
+        $ventas = Venta::with(['cliente', 'abonos'])
+            ->whereIn('estado', ['Pendiente'])
+            ->orderBy('fecha_limite')
+            ->get()
+            ->map(function ($v) {
+                $vencida  = $v->fecha_limite && Carbon::parse($v->fecha_limite)->isPast();
+                $diasMora = $v->fecha_limite ? max(0, (int) Carbon::parse($v->fecha_limite)->diffInDays(now(), false)) : 0;
+                return [
+                    'id'              => $v->id,
+                    'numero_venta'    => $v->numero_venta,
+                    'tipo_venta'      => $v->tipo_venta,
+                    'cliente'         => $v->cliente?->nombre ?? 'Sin cliente',
+                    'cliente_tel'     => $v->cliente?->telefono,
+                    'total'           => $v->total,
+                    'pagado'          => $v->pagado,
+                    'saldo_pendiente' => $v->saldo_pendiente,
+                    'fecha_limite'    => $v->fecha_limite,
+                    'estado'          => $v->estado,
+                    'vencida'         => $vencida,
+                    'dias_mora'       => $diasMora,
+                    'created_at'      => $v->created_at->format('d/m/Y'),
+                ];
+            });
+
+        $kpis = [
+            'total_cartera'   => $ventas->sum('saldo_pendiente'),
+            'clientes_deuda'  => $ventas->unique('cliente')->count(),
+            'deudas_vencidas' => $ventas->where('vencida', true)->count(),
+            'num_pendientes'  => $ventas->count(),
+        ];
+
+        return Inertia::render('Ventas/Cartera', [
+            'ventas' => $ventas,
+            'kpis'   => $kpis,
+        ]);
     }
 }

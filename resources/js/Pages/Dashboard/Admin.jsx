@@ -1,3 +1,4 @@
+// resources/js/Pages/Dashboard/Admin.jsx
 import AppLayout from '@/Layouts/AppLayout';
 import { usePage, Link } from '@inertiajs/react';
 
@@ -111,6 +112,9 @@ export default function Admin() {
                 .anim-7 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.35s both; }
                 .anim-8 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.40s both; }
                 .anim-9 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.45s both; }
+                .anim-10 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.50s both; }
+                .anim-11 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.55s both; }
+                .anim-12 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.60s both; }
             `}</style>
 
             <div className="admin-bg">
@@ -157,14 +161,18 @@ export default function Admin() {
                         </p>
 
                         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:'1.25rem'}}>
-                            <div className="anim-1"><ActionCard title="Productos"   description="Gestionar catálogo e inventario"             icon="box"       accent="rgba(59,130,246,0.75)"  href="/productos"  /></div>
-                            <div className="anim-2"><ActionCard title="Ventas"      description="Registrar y consultar ventas"                icon="cart"      accent="rgba(16,185,129,0.75)"  href="/ventas"     /></div>
-                            <div className="anim-3"><ActionCard title="Reportes"    description="Analíticas y estadísticas"                   icon="chart"     accent="rgba(139,92,246,0.75)"  href="/reportes"   /></div>
-                            <div className="anim-4"><ActionCard title="Inventario"  description="Control de stock y almacén"                  icon="warehouse" accent="rgba(249,115,22,0.8)"   href="/inventario" /></div>
-                            <div className="anim-5"><ActionCard title="Clientes"    description="Gestionar base de clientes"                  icon="users"     accent="rgba(236,72,153,0.75)"  href="/clientes"   /></div>
-                            <div className="anim-6"><ActionCard title="Proveedores" description="Administrar proveedores"                     icon="building"  accent="rgba(99,102,241,0.75)"  href="/proveedores"/></div>
-                            <div className="anim-8"><ActionCard title="Papelera"    description="Elementos eliminados · se purgan en 30 días" icon="trash"     accent="rgba(220,38,38,0.75)"   href="/papelera"   /></div>
-                            <div className="anim-9"><ActionCard title="Usuarios"    description="Crear usuarios, asignar roles y permisos"    icon="users-cog" accent="rgba(220,38,38,0.75)"   href="/usuarios"   /></div>
+                            <div className="anim-1"><ActionCard title="Productos"   description="Gestionar catálogo e inventario"             icon="box"       accent="rgba(59,130,246,0.75)"  href="/productos"      /></div>
+                            <div className="anim-2"><ActionCard title="Ventas"      description="Registrar y consultar ventas"                icon="cart"      accent="rgba(16,185,129,0.75)"  href="/ventas"         /></div>
+                            <div className="anim-3"><ActionCard title="Abonos"      description="Gestionar abonos de créditos y separados"   icon="credit"    accent="rgba(168,85,247,0.75)"  href="/abonos"         /></div>
+                            <div className="anim-4"><ActionCard title="Cartera"     description="Deudas activas y clientes con saldo"        icon="wallet"    accent="rgba(245,158,11,0.8)"   href="/ventas/cartera" /></div>
+                            <div className="anim-5"><ActionCard title="Reportes"    description="Analíticas y estadísticas"                  icon="chart"     accent="rgba(139,92,246,0.75)"  href="/reportes"       /></div>
+                            <div className="anim-6"><ActionCard title="Inventario"  description="Control de stock y almacén"                 icon="warehouse" accent="rgba(249,115,22,0.8)"   href="/inventario"     /></div>
+                            <div className="anim-7"><ActionCard title="Clientes"    description="Gestionar base de clientes"                 icon="users"     accent="rgba(236,72,153,0.75)"  href="/clientes"       /></div>
+                            <div className="anim-8"><ActionCard title="Proveedores" description="Administrar proveedores"                    icon="building"  accent="rgba(99,102,241,0.75)"  href="/proveedores"    /></div>
+                            <div className="anim-9"><ActionCard title="Categorías"  description="Grupos y subcategorías de productos"        icon="tag"       accent="rgba(20,184,166,0.75)"  href="/categorias"     /></div>
+                            <div className="anim-10"><ActionCard title="Papelera"   description="Elementos eliminados · se purgan en 30 días" icon="trash"    accent="rgba(220,38,38,0.75)"   href="/papelera"       /></div>
+                            <div className="anim-11"><ActionCard title="Usuarios"   description="Crear usuarios, asignar roles y permisos"   icon="users-cog" accent="rgba(220,38,38,0.75)"   href="/usuarios"       /></div>
+                            <div className="anim-12"><ActionCard title="Registros"  description="Historial de actividad del sistema"         icon="log"       accent="rgba(71,85,105,0.8)"    href="/registros"      /></div>
                         </div>
                     </div>
                 </div>
@@ -207,6 +215,10 @@ function ActionCard({ title, description, icon, accent, href }) {
         building:  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />,
         trash:     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />,
         'users-cog': <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />,
+        credit:    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />,
+        wallet:    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />,
+        tag:       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />,
+        log:       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />,
     };
     return (
         <div className="glass-card" style={{padding:'1.75rem'}}>

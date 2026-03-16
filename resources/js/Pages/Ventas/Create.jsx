@@ -7,13 +7,14 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
     const [items, setItems] = useState([]);
 
     const { data, setData, post, processing, errors } = useForm({
-        cliente_id: '',
-        tipo_venta: 'Contado',
-        metodo_pago: 'Efectivo',
-        pagado: '',
-        descuento: '0',
-        notas: '',
-        items: [],
+        cliente_id:   '',
+        tipo_venta:   'Contado',
+        metodo_pago:  'Efectivo',
+        pagado:       '',
+        descuento:    '0',
+        notas:        '',
+        fecha_limite: '',
+        items:        [],
     });
 
     const productosFiltrados = productos.filter(p =>
@@ -33,11 +34,11 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
             setData('items', nuevosItems);
         } else {
             const nuevosItems = [...items, {
-                producto_id: producto.id,
-                nombre: producto.nombre,
+                producto_id:     producto.id,
+                nombre:          producto.nombre,
                 precio_unitario: producto.precio,
-                cantidad: 1,
-                stock_max: producto.stock,
+                cantidad:        1,
+                stock_max:       producto.stock,
             }];
             setItems(nuevosItems);
             setData('items', nuevosItems);
@@ -71,17 +72,41 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
         setData('items', nuevosItems);
     };
 
-    const subtotal = items.reduce((acc, i) => acc + (i.cantidad * i.precio_unitario), 0);
+    const cambiarTipoVenta = (tipo) => {
+        setData('tipo_venta', tipo);
+        // Al cambiar a Contado limpiar fecha_limite
+        if (tipo === 'Contado') {
+            setData('fecha_limite', '');
+        }
+    };
+
+    const subtotal  = items.reduce((acc, i) => acc + (i.cantidad * i.precio_unitario), 0);
     const descuento = parseFloat(data.descuento) || 0;
-    const total = subtotal - descuento;
+    const total     = subtotal - descuento;
 
     const formatCurrency = (v) =>
         new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
+
+    // Fecha mínima: mañana
+    const fechaMinima = () => {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        return d.toISOString().split('T')[0];
+    };
+
+    // Fecha sugerida por defecto según tipo
+    const fechaSugerida = (tipo) => {
+        const d = new Date();
+        d.setDate(d.getDate() + (tipo === 'Separado' ? 30 : 60));
+        return d.toISOString().split('T')[0];
+    };
 
     const submit = (e) => {
         e.preventDefault();
         post('/ventas');
     };
+
+    const esCreditoOSeparado = data.tipo_venta === 'Crédito' || data.tipo_venta === 'Separado';
 
     return (
         <AppLayout>
@@ -105,8 +130,10 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                 <div className="max-w-7xl mx-auto px-6 py-8">
                     <form onSubmit={submit}>
                         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+
                             {/* Panel izquierdo: productos */}
                             <div className="lg:col-span-3 space-y-6">
+
                                 {/* Buscador de productos */}
                                 <div className="bg-white rounded-2xl shadow-sm p-6">
                                     <h2 className="text-lg font-semibold text-gray-900 mb-4">Agregar Productos</h2>
@@ -238,6 +265,7 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
 
                             {/* Panel derecho: resumen y pago */}
                             <div className="lg:col-span-2 space-y-6">
+
                                 {/* Cliente */}
                                 <div className="bg-white rounded-2xl shadow-sm p-6">
                                     <h2 className="text-lg font-semibold text-gray-900 mb-4">Cliente</h2>
@@ -262,13 +290,50 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                             <button
                                                 key={tipo}
                                                 type="button"
-                                                onClick={() => setData('tipo_venta', tipo)}
-                                                className={`py-2.5 rounded-xl text-sm font-medium transition ${data.tipo_venta === tipo ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                                onClick={() => cambiarTipoVenta(tipo)}
+                                                className={'py-2.5 rounded-xl text-sm font-medium transition ' + (data.tipo_venta === tipo ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
                                             >
                                                 {tipo}
                                             </button>
                                         ))}
                                     </div>
+
+                                    {/* ── Fecha límite: solo para Separado y Crédito ── */}
+                                    {esCreditoOSeparado && (
+                                        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                                <label className="text-sm font-medium text-amber-800">
+                                                    Fecha límite de pago
+                                                    {data.tipo_venta === 'Separado' ? ' (separado)' : ' (crédito)'}
+                                                </label>
+                                            </div>
+                                            <input
+                                                type="date"
+                                                value={data.fecha_limite}
+                                                onChange={(e) => setData('fecha_limite', e.target.value)}
+                                                min={fechaMinima()}
+                                                className="w-full px-4 py-2.5 border border-amber-300 rounded-xl focus:outline-none focus:border-amber-500 bg-white text-sm"
+                                            />
+                                            <div className="flex gap-2 mt-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setData('fecha_limite', fechaSugerida(data.tipo_venta))}
+                                                    className="text-xs text-amber-700 underline hover:text-amber-900"
+                                                >
+                                                    {data.tipo_venta === 'Separado' ? 'Sugerir 30 días' : 'Sugerir 60 días'}
+                                                </button>
+                                            </div>
+                                            {errors.fecha_limite && <p className="mt-1 text-xs text-red-600">{errors.fecha_limite}</p>}
+                                            <p className="mt-2 text-xs text-amber-600">
+                                                {data.tipo_venta === 'Separado'
+                                                    ? 'El producto quedará reservado hasta esta fecha.'
+                                                    : 'El producto se entrega ahora. El cliente tiene hasta esta fecha para pagar.'}
+                                            </p>
+                                        </div>
+                                    )}
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Método de Pago</label>
@@ -361,7 +426,7 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                     disabled={processing || items.length === 0}
                                     className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                                 >
-                                    {processing ? 'Procesando...' : `Registrar Venta • ${formatCurrency(total)}`}
+                                    {processing ? 'Procesando...' : 'Registrar Venta • ' + formatCurrency(total)}
                                 </button>
                             </div>
                         </div>
