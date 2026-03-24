@@ -36,13 +36,22 @@ class RegistroController extends Controller
         $registros = $query->paginate(20)->withQueryString();
 
         $registros->getCollection()->transform(function ($r) {
-            // Leer datos JSON directamente del raw para evitar doble decode
-            $r->datos_anteriores = $r->getRawOriginal('datos_anteriores')
-                ? json_decode($r->getRawOriginal('datos_anteriores'), true)
-                : null;
-            $r->datos_nuevos = $r->getRawOriginal('datos_nuevos')
-                ? json_decode($r->getRawOriginal('datos_nuevos'), true)
-                : null;
+            // CORRECCIÓN 5 — Validar JSON antes de decodificar para evitar null silencioso
+            $rawAnterior = $r->getRawOriginal('datos_anteriores');
+            $rawNuevos   = $r->getRawOriginal('datos_nuevos');
+
+            $r->datos_anteriores = null;
+            $r->datos_nuevos     = null;
+
+            if ($rawAnterior) {
+                $decoded = json_decode($rawAnterior, true);
+                $r->datos_anteriores = (json_last_error() === JSON_ERROR_NONE) ? $decoded : null;
+            }
+
+            if ($rawNuevos) {
+                $decoded = json_decode($rawNuevos, true);
+                $r->datos_nuevos = (json_last_error() === JSON_ERROR_NONE) ? $decoded : null;
+            }
 
             // Formatear fecha usando createFromFormat — el raw de MySQL siempre es 'Y-m-d H:i:s'
             $rawDate = $r->getRawOriginal('created_at');
@@ -94,7 +103,8 @@ class RegistroController extends Controller
         $ids      = $request->ids;
         $cantidad = count($ids);
 
-        $code = rand(100000, 999999);
+        // CORRECCIÓN 3 — Usar random_int() en lugar de rand() para mayor seguridad criptográfica
+        $code = random_int(100000, 999999);
 
         // Guardar como string 'Y-m-d H:i:s' — evita el bug de Carbon al deserializar desde sesión DB
         $expiresAt = Carbon::now()->addMinutes(10)->toDateTimeString();
@@ -106,7 +116,7 @@ class RegistroController extends Controller
             'delete_registros_count'      => $cantidad,
         ]);
 
-        // También guardar en la tabla para que sea visible en phpMyAdmin
+        // CORRECCIÓN 2 — Guardar en tabla para sincronizar sesión con DB (única fuente de verdad)
         Registro::whereIn('id', $ids)->update([
             'delete_code'            => (string) $code,
             'delete_code_expires_at' => $expiresAt,
@@ -120,7 +130,7 @@ class RegistroController extends Controller
     }
 
     /**
-     * Paso 2: Verificar código y eliminar registros.
+     * Paso 2: Verificar código contra DB (fuente de verdad) y eliminar registros.
      */
     public function confirmarEliminacion(Request $request)
     {
@@ -128,11 +138,34 @@ class RegistroController extends Controller
             'code' => 'required|string|size:6',
         ]);
 
+        // CORRECCIÓN 2 — Validar primero contra la sesión (mantiene compatibilidad),
+        // pero si la sesión caducó, validar contra DB como respaldo
         $storedCode = session('delete_registros_code');
-        $expiresAt  = session('delete_registros_expires_at'); // es string 'Y-m-d H:i:s'
+        $expiresAt  = session('delete_registros_expires_at');
         $ids        = session('delete_registros_ids', []);
 
+        // Si la sesión ya no existe, intentar recuperar desde DB
+        if (!$storedCode && !empty($ids)) {
+            $registro = Registro::whereIn('id', $ids)
+                ->whereNotNull('delete_code')
+                ->first();
+
+            if ($registro) {
+                $storedCode = $registro->delete_code;
+                $expiresAt  = $registro->delete_code_expires_at
+                    ? Carbon::parse($registro->delete_code_expires_at)->toDateTimeString()
+                    : null;
+            }
+        }
+
         if (!$storedCode || !$expiresAt) {
+            // CORRECCIÓN 4 — Limpiar delete_code en DB cuando el proceso falla/expira
+            if (!empty($ids)) {
+                Registro::whereIn('id', $ids)->update([
+                    'delete_code'            => null,
+                    'delete_code_expires_at' => null,
+                ]);
+            }
             return back()->withErrors(['code' => 'El código ha expirado. Inicia el proceso nuevamente.']);
         }
 
@@ -140,16 +173,43 @@ class RegistroController extends Controller
         try {
             $expiracion = Carbon::createFromFormat('Y-m-d H:i:s', $expiresAt);
         } catch (\Exception $e) {
+            // CORRECCIÓN 4 — Limpiar delete_code en DB cuando el parseo falla
+            if (!empty($ids)) {
+                Registro::whereIn('id', $ids)->update([
+                    'delete_code'            => null,
+                    'delete_code_expires_at' => null,
+                ]);
+            }
             return back()->withErrors(['code' => 'El código ha expirado. Inicia el proceso nuevamente.']);
         }
 
         if (Carbon::now()->isAfter($expiracion)) {
+            // CORRECCIÓN 4 — Limpiar delete_code en DB cuando el código expira
+            if (!empty($ids)) {
+                Registro::whereIn('id', $ids)->update([
+                    'delete_code'            => null,
+                    'delete_code_expires_at' => null,
+                ]);
+            }
+            session()->forget([
+                'delete_registros_code',
+                'delete_registros_expires_at',
+                'delete_registros_ids',
+                'delete_registros_count',
+            ]);
             return back()->withErrors(['code' => 'El código ha expirado. Inicia el proceso nuevamente.']);
         }
 
         if ((string) $request->code !== (string) $storedCode) {
             return back()->withErrors(['code' => 'Código incorrecto.']);
         }
+
+        // CORRECCIÓN 1 — Limpiar delete_code/delete_code_expires_at ANTES de eliminar
+        // para evitar rastros inconsistentes en auditoría si se usa soft delete o logging externo
+        Registro::whereIn('id', $ids)->update([
+            'delete_code'            => null,
+            'delete_code_expires_at' => null,
+        ]);
 
         Registro::whereIn('id', $ids)->delete();
 

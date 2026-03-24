@@ -66,24 +66,29 @@ class VentaController extends Controller
             return back()->withErrors(['cliente_id' => 'Las ventas a crédito o separado requieren un cliente registrado.']);
         }
 
+        // ── Calcular totales anticipado para poder validar ────────
+        $subtotal  = 0;
+        $descuento = $validated['descuento'] ?? 0;
+        foreach ($validated['items'] as $item) {
+            $subtotal += $item['cantidad'] * $item['precio_unitario'];
+        }
+        $total          = $subtotal - $descuento;
+        $pagado         = $validated['pagado'];
+        $saldoPendiente = max(0, $total - $pagado);
+
+        // CORRECCIÓN BACKEND — Cliente general (sin cuenta) + Contado no puede
+        // quedar con saldo pendiente porque no hay a quién cobrarle la deuda.
+        if (empty($validated['cliente_id']) && $validated['tipo_venta'] === 'Contado' && $saldoPendiente > 0) {
+            return back()->withErrors([
+                'pagado' => 'El cliente general debe pagar el total (' . number_format($total, 0, ',', '.') . ') en ventas de contado. Registra al cliente, cambia a Separado, o ajusta el monto recibido.',
+            ]);
+        }
+
         DB::beginTransaction();
 
         try {
-            $subtotal  = 0;
-            $descuento = $validated['descuento'] ?? 0;
-
-            foreach ($validated['items'] as $item) {
-                $subtotal += $item['cantidad'] * $item['precio_unitario'];
-            }
-
-            $total          = $subtotal - $descuento;
-            $pagado         = $validated['pagado'];
-            $saldoPendiente = max(0, $total - $pagado);
-
-            $estado = 'Completada';
-            if ($validated['tipo_venta'] === 'Separado' || $validated['tipo_venta'] === 'Crédito') {
-                $estado = $saldoPendiente > 0 ? 'Pendiente' : 'Completada';
-            }
+            // El estado siempre refleja el saldo real
+            $estado = $saldoPendiente > 0 ? 'Pendiente' : 'Completada';
 
             $fechaLimite = $validated['fecha_limite'] ?? null;
             if (!$fechaLimite && $validated['tipo_venta'] === 'Separado') {
@@ -92,8 +97,9 @@ class VentaController extends Controller
                 $fechaLimite = Carbon::now()->addDays(60)->toDateString();
             }
 
-            $ultimo = Venta::orderBy('id', 'desc')->first();
-            $numero = 'V-' . str_pad(($ultimo ? $ultimo->id + 1 : 1), 6, '0', STR_PAD_LEFT);
+            // Generar número de venta dentro de la transacción con LOCK para evitar duplicados
+            $maxId = DB::table('ventas')->lockForUpdate()->max('id') ?? 0;
+            $numero = 'V-' . str_pad($maxId + 1, 6, '0', STR_PAD_LEFT);
 
             $venta = Venta::create([
                 'cliente_id'      => $validated['cliente_id'],

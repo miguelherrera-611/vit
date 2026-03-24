@@ -44,6 +44,8 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
+        // CORRECCIÓN 8 — Usar random_int() en lugar de rand() para mayor
+        // seguridad criptográfica en el código de verificación 2FA
         $code = random_int(100000, 999999);
         $user->verification_code = $code;
         $user->code_expires_at   = Carbon::now()->addMinutes(10);
@@ -87,9 +89,15 @@ class AuthenticatedSessionController extends Controller
         }
 
         if (Carbon::now()->greaterThan($user->code_expires_at)) {
+            // CORRECCIÓN 9 — Limpiar el código expirado de la DB aunque falle la verificación
+            $user->verification_code = null;
+            $user->code_expires_at   = null;
+            $user->save();
+
             return back()->withErrors(['code' => 'El código ha expirado. Por favor, inicia sesión nuevamente.']);
         }
 
+        // CORRECCIÓN 9 — Limpiar el código verificado de la DB para que no persista
         $user->verification_code = null;
         $user->code_expires_at   = null;
         $user->save();

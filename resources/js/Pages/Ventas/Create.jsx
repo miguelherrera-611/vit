@@ -6,6 +6,9 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
     const [busquedaProducto, setBusquedaProducto] = useState('');
     const [items, setItems] = useState([]);
 
+    // CORRECCIÓN FRONTEND — nuevo estado para el aviso de cliente general sin pago completo
+    const [avisoClienteGeneral, setAvisoClienteGeneral] = useState(false);
+
     const { data, setData, post, processing, errors } = useForm({
         cliente_id:   '',
         tipo_venta:   'Contado',
@@ -74,15 +77,25 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
 
     const cambiarTipoVenta = (tipo) => {
         setData('tipo_venta', tipo);
-        // Al cambiar a Contado limpiar fecha_limite
+        // Al cambiar a Contado limpiar fecha_limite y cerrar el aviso si estaba abierto
         if (tipo === 'Contado') {
             setData('fecha_limite', '');
         }
+        setAvisoClienteGeneral(false);
     };
 
     const subtotal  = items.reduce((acc, i) => acc + (i.cantidad * i.precio_unitario), 0);
     const descuento = parseFloat(data.descuento) || 0;
     const total     = subtotal - descuento;
+    const pagado    = parseFloat(data.pagado) || 0;
+    const saldoPendiente = Math.max(0, total - pagado);
+
+    // CORRECCIÓN FRONTEND — detectar si la situación genera el aviso:
+    // Cliente general (sin cuenta) + Contado + pago incompleto + hay productos
+    const esClienteGeneral   = !data.cliente_id;
+    const esContado          = data.tipo_venta === 'Contado';
+    const pagoInsuficiente   = data.pagado !== '' && pagado < total && total > 0;
+    const mostrarAvisoDeuda  = esClienteGeneral && esContado && pagoInsuficiente && items.length > 0;
 
     const formatCurrency = (v) =>
         new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
@@ -101,8 +114,26 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
         return d.toISOString().split('T')[0];
     };
 
+    // CORRECCIÓN FRONTEND — cambiar tipo a Separado desde el aviso
+    const cambiarASeparado = () => {
+        setData('tipo_venta', 'Separado');
+        setData('fecha_limite', fechaSugerida('Separado'));
+        setAvisoClienteGeneral(false);
+    };
+
     const submit = (e) => {
         e.preventDefault();
+
+        // CORRECCIÓN FRONTEND — bloquear envío si es cliente general + contado + pago incompleto
+        if (esClienteGeneral && esContado && pagado < total && total > 0) {
+            setAvisoClienteGeneral(true);
+            // Hacer scroll suave al aviso
+            setTimeout(() => {
+                document.getElementById('aviso-cliente-general')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 50);
+            return;
+        }
+
         post('/ventas');
     };
 
@@ -271,7 +302,10 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                     <h2 className="text-lg font-semibold text-gray-900 mb-4">Cliente</h2>
                                     <select
                                         value={data.cliente_id}
-                                        onChange={(e) => setData('cliente_id', e.target.value)}
+                                        onChange={(e) => {
+                                            setData('cliente_id', e.target.value);
+                                            setAvisoClienteGeneral(false);
+                                        }}
                                         className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition bg-gray-50 text-sm"
                                     >
                                         <option value="">Cliente general (sin cuenta)</option>
@@ -387,27 +421,118 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                             <input
                                                 type="number"
                                                 value={data.pagado}
-                                                onChange={(e) => setData('pagado', e.target.value)}
-                                                className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition bg-gray-50 text-lg font-semibold"
+                                                onChange={(e) => {
+                                                    setData('pagado', e.target.value);
+                                                    // Ocultar aviso si empieza a corregir el monto
+                                                    if (avisoClienteGeneral) setAvisoClienteGeneral(false);
+                                                }}
+                                                className={
+                                                    'w-full pl-8 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition bg-gray-50 text-lg font-semibold ' +
+                                                    (mostrarAvisoDeuda
+                                                        ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                                                        : 'border-gray-200 focus:border-blue-500 focus:ring-blue-100')
+                                                }
                                                 placeholder="0"
                                                 min="0"
                                             />
                                         </div>
-                                        {data.pagado && parseFloat(data.pagado) >= total && (
+
+                                        {/* Cambio (pago suficiente) */}
+                                        {data.pagado !== '' && pagado >= total && total > 0 && (
                                             <div className="mt-2 p-2 bg-green-50 rounded-lg flex justify-between">
                                                 <span className="text-sm text-green-700">Cambio:</span>
-                                                <span className="text-sm font-semibold text-green-700">{formatCurrency(parseFloat(data.pagado) - total)}</span>
+                                                <span className="text-sm font-semibold text-green-700">{formatCurrency(pagado - total)}</span>
                                             </div>
                                         )}
-                                        {data.pagado && parseFloat(data.pagado) < total && (
+
+                                        {/* Saldo pendiente normal (cliente con cuenta o tipo crédito/separado) */}
+                                        {data.pagado !== '' && pagado < total && total > 0 && !mostrarAvisoDeuda && (
                                             <div className="mt-2 p-2 bg-amber-50 rounded-lg flex justify-between">
                                                 <span className="text-sm text-amber-700">Saldo pendiente:</span>
-                                                <span className="text-sm font-semibold text-amber-700">{formatCurrency(total - parseFloat(data.pagado))}</span>
+                                                <span className="text-sm font-semibold text-amber-700">{formatCurrency(saldoPendiente)}</span>
                                             </div>
                                         )}
+
                                         {errors.pagado && <p className="mt-1 text-sm text-red-600">{errors.pagado}</p>}
                                     </div>
                                 </div>
+
+                                {/* ── AVISO CLIENTE GENERAL SIN PAGO COMPLETO ── */}
+                                {mostrarAvisoDeuda && (
+                                    <div
+                                        id="aviso-cliente-general"
+                                        className="bg-red-50 border border-red-300 rounded-2xl p-5 shadow-sm"
+                                    >
+                                        <div className="flex items-start gap-3 mb-3">
+                                            <div className="w-9 h-9 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-red-800 text-sm">
+                                                    ¿A quién le cobras la deuda?
+                                                </p>
+                                                <p className="text-red-700 text-sm mt-1">
+                                                    El cliente general no tiene cuenta registrada. Si queda con un saldo de{' '}
+                                                    <span className="font-bold">{formatCurrency(saldoPendiente)}</span>{' '}
+                                                    pendiente, no habrá a quién cobrarle.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2 mt-4">
+                                            <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-2">¿Qué deseas hacer?</p>
+
+                                            {/* Opción 1: completar el pago */}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData('pagado', total.toString());
+                                                    setAvisoClienteGeneral(false);
+                                                }}
+                                                className="w-full flex items-center gap-3 px-4 py-3 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition text-left"
+                                            >
+                                                <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-800">Completar el pago ahora</p>
+                                                    <p className="text-xs text-gray-500">Ajustar a {formatCurrency(total)} y continuar</p>
+                                                </div>
+                                            </button>
+
+                                            {/* Opción 2: cambiar a separado */}
+                                            <button
+                                                type="button"
+                                                onClick={cambiarASeparado}
+                                                className="w-full flex items-center gap-3 px-4 py-3 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition text-left"
+                                            >
+                                                <svg className="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-800">Cambiar a Separado</p>
+                                                    <p className="text-xs text-gray-500">El producto se reserva con abono parcial</p>
+                                                </div>
+                                            </button>
+
+                                            {/* Opción 3: registrar cliente */}
+                                            <Link
+                                                href="/clientes/crear"
+                                                className="w-full flex items-center gap-3 px-4 py-3 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition text-left"
+                                            >
+                                                <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                                </svg>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-800">Registrar al cliente</p>
+                                                    <p className="text-xs text-gray-500">Crear cuenta y volver a registrar la venta</p>
+                                                </div>
+                                            </Link>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Notas */}
                                 <div className="bg-white rounded-2xl shadow-sm p-6">
@@ -423,8 +548,13 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
 
                                 <button
                                     type="submit"
-                                    disabled={processing || items.length === 0}
-                                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                    disabled={processing || items.length === 0 || mostrarAvisoDeuda}
+                                    className={
+                                        'w-full py-4 px-6 rounded-xl font-semibold text-lg transition duration-200 ' +
+                                        (mostrarAvisoDeuda
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none')
+                                    }
                                 >
                                     {processing ? 'Procesando...' : 'Registrar Venta • ' + formatCurrency(total)}
                                 </button>
