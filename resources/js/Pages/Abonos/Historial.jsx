@@ -8,6 +8,14 @@ export default function AbonosHistorial({ venta }) {
     const estadoColor = (e) =>
         ({ Completada: 'bg-green-100 text-green-800', Pendiente: 'bg-yellow-100 text-yellow-800', Cancelada: 'bg-red-100 text-red-800' }[e] ?? 'bg-gray-100 text-gray-700');
 
+    // Badge según tipo de movimiento
+    const tipoBadge = (abono) => {
+        if (abono.es_ajuste) {
+            return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">Ajuste</span>;
+        }
+        return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Abono</span>;
+    };
+
     const porcentajePagado = venta.total > 0 ? Math.min(100, Math.round((venta.pagado / venta.total) * 100)) : 0;
 
     return (
@@ -32,6 +40,7 @@ export default function AbonosHistorial({ venta }) {
 
                 <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
 
+                    {/* Resumen de la venta */}
                     <div className="bg-white rounded-2xl shadow-sm p-6">
                         <div className="flex items-start justify-between mb-4">
                             <div>
@@ -84,6 +93,7 @@ export default function AbonosHistorial({ venta }) {
                         )}
                     </div>
 
+                    {/* Productos */}
                     {venta.detalles && venta.detalles.length > 0 && (
                         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                             <div className="px-6 py-4 border-b border-gray-100">
@@ -103,10 +113,11 @@ export default function AbonosHistorial({ venta }) {
                         </div>
                     )}
 
+                    {/* Abonos */}
                     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                             <h2 className="text-lg font-semibold text-gray-900">Abonos registrados</h2>
-                            <span className="text-sm text-gray-500">{venta.abonos.length} abono{venta.abonos.length !== 1 ? 's' : ''}</span>
+                            <span className="text-sm text-gray-500">{venta.abonos.length} movimiento{venta.abonos.length !== 1 ? 's' : ''}</span>
                         </div>
 
                         {venta.abonos.length === 0 ? (
@@ -121,15 +132,20 @@ export default function AbonosHistorial({ venta }) {
                         ) : (
                             <div className="divide-y divide-gray-50">
                                 {venta.abonos.map((abono, i) => (
-                                    <div key={abono.id} className="px-6 py-4">
+                                    <div key={abono.id} className={'px-6 py-4 ' + (abono.es_ajuste ? 'bg-orange-50/40' : '')}>
                                         <div className="flex items-start justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-green-50 rounded-full flex items-center justify-center flex-shrink-0">
-                                                    <span className="text-xs font-semibold text-green-700">{i + 1}</span>
+                                                {/* Número con color según tipo */}
+                                                <div className={'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ' + (abono.es_ajuste ? 'bg-orange-100' : 'bg-green-50')}>
+                                                    <span className={'text-xs font-semibold ' + (abono.es_ajuste ? 'text-orange-700' : 'text-green-700')}>{i + 1}</span>
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-semibold text-gray-800">{fmt(abono.monto)}</p>
-                                                    <p className="text-xs text-gray-400">{abono.created_at}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm font-semibold text-gray-800">{fmt(abono.monto)}</p>
+                                                        {/* Badge tipo */}
+                                                        {tipoBadge(abono)}
+                                                    </div>
+                                                    <p className="text-xs text-gray-400 mt-0.5">{abono.created_at}</p>
                                                 </div>
                                             </div>
                                             <div className="text-right">

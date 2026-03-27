@@ -27,13 +27,12 @@ class AuthenticatedSessionController extends Controller
 
     public function store(LoginRequest $request): RedirectResponse
     {
-        $credentials = $request->only('email', 'password');
-
-        if (!Auth::validate($credentials)) {
-            return back()->withErrors([
-                'email' => 'Las credenciales proporcionadas son incorrectas.',
-            ]);
-        }
+        // LoginRequest::authenticate() ya maneja:
+        // - RateLimiter de Laravel
+        // - Bloqueo persistente en DB (intentos_fallidos / bloqueado_hasta)
+        // - Incremento de intentos fallidos
+        // - Limpieza de intentos al tener éxito
+        $request->authenticate();
 
         $user = User::where('email', $request->email)->first();
 
@@ -44,8 +43,7 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
-        // CORRECCIÓN 8 — Usar random_int() en lugar de rand() para mayor
-        // seguridad criptográfica en el código de verificación 2FA
+        // Generar y enviar código 2FA
         $code = random_int(100000, 999999);
         $user->verification_code = $code;
         $user->code_expires_at   = Carbon::now()->addMinutes(10);
@@ -89,7 +87,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         if (Carbon::now()->greaterThan($user->code_expires_at)) {
-            // CORRECCIÓN 9 — Limpiar el código expirado de la DB aunque falle la verificación
+            // Limpiar código expirado de la DB
             $user->verification_code = null;
             $user->code_expires_at   = null;
             $user->save();
@@ -97,7 +95,7 @@ class AuthenticatedSessionController extends Controller
             return back()->withErrors(['code' => 'El código ha expirado. Por favor, inicia sesión nuevamente.']);
         }
 
-        // CORRECCIÓN 9 — Limpiar el código verificado de la DB para que no persista
+        // Limpiar código verificado de la DB
         $user->verification_code = null;
         $user->code_expires_at   = null;
         $user->save();

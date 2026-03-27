@@ -2,6 +2,23 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
+// Motivos separados por tipo
+const MOTIVOS = {
+    incremento: [
+        { value: 'Ingreso mercancía',  label: 'Ingreso de mercancía' },
+        { value: 'Devolución',         label: 'Devolución de cliente' },
+        { value: 'Error conteo',       label: 'Error de conteo' },
+        { value: 'Otro',               label: 'Otro' },
+    ],
+    decremento: [
+        { value: 'Daño',         label: 'Daño' },
+        { value: 'Robo',         label: 'Robo' },
+        { value: 'Devolución',   label: 'Devolución a proveedor' },
+        { value: 'Error conteo', label: 'Error de conteo' },
+        { value: 'Otro',         label: 'Otro' },
+    ],
+};
+
 export default function InventarioAjustar({ productos = [] }) {
     const [productoSeleccionado, setProductoSeleccionado] = useState(null);
 
@@ -19,6 +36,11 @@ export default function InventarioAjustar({ productos = [] }) {
         setProductoSeleccionado(p || null);
     };
 
+    // Al cambiar tipo, resetea el motivo para evitar que quede uno inválido
+    const handleTipoChange = (tipo) => {
+        setData(prev => ({ ...prev, tipo_ajuste: tipo, motivo: '' }));
+    };
+
     const submit = (e) => {
         e.preventDefault();
         post('/inventario/ajustar');
@@ -33,6 +55,7 @@ export default function InventarioAjustar({ productos = [] }) {
     };
 
     const resultado = stockResultado();
+    const motivosActuales = MOTIVOS[data.tipo_ajuste];
 
     return (
         <AppLayout>
@@ -98,7 +121,7 @@ export default function InventarioAjustar({ productos = [] }) {
                                 <div className="grid grid-cols-2 gap-4 mb-6">
                                     <button
                                         type="button"
-                                        onClick={() => setData('tipo_ajuste', 'incremento')}
+                                        onClick={() => handleTipoChange('incremento')}
                                         className={`p-4 rounded-xl border-2 transition text-center ${data.tipo_ajuste === 'incremento' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}
                                     >
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 ${data.tipo_ajuste === 'incremento' ? 'bg-green-500' : 'bg-gray-200'}`}>
@@ -111,7 +134,7 @@ export default function InventarioAjustar({ productos = [] }) {
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => setData('tipo_ajuste', 'decremento')}
+                                        onClick={() => handleTipoChange('decremento')}
                                         className={`p-4 rounded-xl border-2 transition text-center ${data.tipo_ajuste === 'decremento' ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}
                                     >
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 ${data.tipo_ajuste === 'decremento' ? 'bg-red-500' : 'bg-gray-200'}`}>
@@ -148,12 +171,9 @@ export default function InventarioAjustar({ productos = [] }) {
                                             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition bg-gray-50"
                                         >
                                             <option value="">Selecciona un motivo...</option>
-                                            <option value="Daño">Daño</option>
-                                            <option value="Robo">Robo</option>
-                                            <option value="Devolución">Devolución</option>
-                                            <option value="Error conteo">Error de conteo</option>
-                                            <option value="Ingreso mercancía">Ingreso de mercancía</option>
-                                            <option value="Otro">Otro</option>
+                                            {motivosActuales.map(m => (
+                                                <option key={m.value} value={m.value}>{m.label}</option>
+                                            ))}
                                         </select>
                                         {errors.motivo && <p className="mt-1 text-sm text-red-600">{errors.motivo}</p>}
                                     </div>

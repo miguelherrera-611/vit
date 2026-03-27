@@ -9,6 +9,7 @@ use App\Models\Producto;
 use App\Models\Cliente;
 use App\Models\Abono;
 use App\Models\Registro;
+use App\Models\MovimientoInventario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -61,12 +62,10 @@ class VentaController extends Controller
             'fecha_limite.after' => 'La fecha límite debe ser posterior a hoy.',
         ]);
 
-        // Crédito y Separado requieren cliente
         if (in_array($validated['tipo_venta'], ['Separado', 'Crédito']) && empty($validated['cliente_id'])) {
             return back()->withErrors(['cliente_id' => 'Las ventas a crédito o separado requieren un cliente registrado.']);
         }
 
-        // ── Calcular totales anticipado para poder validar ────────
         $subtotal  = 0;
         $descuento = $validated['descuento'] ?? 0;
         foreach ($validated['items'] as $item) {
@@ -76,8 +75,6 @@ class VentaController extends Controller
         $pagado         = $validated['pagado'];
         $saldoPendiente = max(0, $total - $pagado);
 
-        // CORRECCIÓN BACKEND — Cliente general (sin cuenta) + Contado no puede
-        // quedar con saldo pendiente porque no hay a quién cobrarle la deuda.
         if (empty($validated['cliente_id']) && $validated['tipo_venta'] === 'Contado' && $saldoPendiente > 0) {
             return back()->withErrors([
                 'pagado' => 'El cliente general debe pagar el total (' . number_format($total, 0, ',', '.') . ') en ventas de contado. Registra al cliente, cambia a Separado, o ajusta el monto recibido.',
@@ -87,7 +84,31 @@ class VentaController extends Controller
         DB::beginTransaction();
 
         try {
-            // El estado siempre refleja el saldo real
+            // Verificar stock suficiente con lockForUpdate
+            $erroresStock          = [];
+            $productosEnTransaccion = [];
+
+            foreach ($validated['items'] as $item) {
+                $producto = Producto::lockForUpdate()->find($item['producto_id']);
+
+                if (!$producto) {
+                    $erroresStock[] = "Uno de los productos ya no existe en el sistema.";
+                    continue;
+                }
+
+                if ($producto->stock < $item['cantidad']) {
+                    $erroresStock[] = "Stock insuficiente para \"{$producto->nombre}\": "
+                        . "disponible {$producto->stock}, solicitado {$item['cantidad']}.";
+                }
+
+                $productosEnTransaccion[$item['producto_id']] = $producto;
+            }
+
+            if (!empty($erroresStock)) {
+                DB::rollBack();
+                return back()->withErrors(['items' => implode(' | ', $erroresStock)]);
+            }
+
             $estado = $saldoPendiente > 0 ? 'Pendiente' : 'Completada';
 
             $fechaLimite = $validated['fecha_limite'] ?? null;
@@ -97,8 +118,7 @@ class VentaController extends Controller
                 $fechaLimite = Carbon::now()->addDays(60)->toDateString();
             }
 
-            // Generar número de venta dentro de la transacción con LOCK para evitar duplicados
-            $maxId = DB::table('ventas')->lockForUpdate()->max('id') ?? 0;
+            $maxId  = DB::table('ventas')->lockForUpdate()->max('id') ?? 0;
             $numero = 'V-' . str_pad($maxId + 1, 6, '0', STR_PAD_LEFT);
 
             $venta = Venta::create([
@@ -119,7 +139,6 @@ class VentaController extends Controller
                 'fecha_limite'    => $fechaLimite,
             ]);
 
-            // Guardar detalles y descontar stock
             $productosVendidos = [];
             foreach ($validated['items'] as $item) {
                 VentaDetalle::create([
@@ -130,8 +149,21 @@ class VentaController extends Controller
                     'subtotal'        => $item['cantidad'] * $item['precio_unitario'],
                 ]);
 
-                $producto = Producto::find($item['producto_id']);
+                $producto      = $productosEnTransaccion[$item['producto_id']];
+                $stockAnterior = $producto->stock;
                 $producto->decrement('stock', $item['cantidad']);
+                $stockNuevo = $producto->fresh()->stock;
+
+                // NUEVO — registrar movimiento en kardex por cada producto vendido
+                MovimientoInventario::registrar(
+                    producto:      $producto,
+                    stockAnterior: $stockAnterior,
+                    stockNuevo:    $stockNuevo,
+                    tipo:          'venta',
+                    motivo:        "Venta {$numero}",
+                    observaciones: null,
+                    referencia:    $venta,
+                );
 
                 $productosVendidos[] = [
                     'nombre'          => $producto->nombre,
@@ -141,7 +173,6 @@ class VentaController extends Controller
                 ];
             }
 
-            // Abono inicial
             if ($pagado > 0) {
                 $venta->abonos()->create([
                     'monto'         => $pagado,
@@ -153,7 +184,6 @@ class VentaController extends Controller
 
             DB::commit();
 
-            // ── Registro detallado ───────────────────────────────
             $cliente = $validated['cliente_id']
                 ? Cliente::find($validated['cliente_id'])?->nombre ?? 'Desconocido'
                 : 'Cliente general';
@@ -178,24 +208,26 @@ class VentaController extends Controller
                 $venta,
                 null,
                 [
-                    'numero_venta'     => $numero,
-                    'cliente'          => $cliente,
-                    'tipo_venta'       => $validated['tipo_venta'],
-                    'metodo_pago'      => $validated['metodo_pago'],
-                    'subtotal'         => $subtotal,
-                    'descuento'        => $descuento,
-                    'total'            => $total,
-                    'pagado'           => $pagado,
-                    'saldo_pendiente'  => $saldoPendiente,
-                    'estado'           => $estado,
-                    'fecha_limite'     => $fechaLimite,
-                    'notas'            => $validated['notas'] ?? null,
-                    'productos'        => $productosVendidos,
+                    'numero_venta'    => $numero,
+                    'cliente'         => $cliente,
+                    'tipo_venta'      => $validated['tipo_venta'],
+                    'metodo_pago'     => $validated['metodo_pago'],
+                    'subtotal'        => $subtotal,
+                    'descuento'       => $descuento,
+                    'total'           => $total,
+                    'pagado'          => $pagado,
+                    'saldo_pendiente' => $saldoPendiente,
+                    'estado'          => $estado,
+                    'fecha_limite'    => $fechaLimite,
+                    'notas'           => $validated['notas'] ?? null,
+                    'productos'       => $productosVendidos,
                 ]
             );
 
-            return redirect()->route('ventas.index')
-                ->with('success', 'Venta registrada. Número: ' . $numero);
+            return back()->with('success', 'Venta registrada. Número: ' . $numero)
+                ->with('numero_venta', $numero)
+                ->with('tipo_venta', $validated['tipo_venta'])
+                ->with('total_venta', $total);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -203,7 +235,7 @@ class VentaController extends Controller
         }
     }
 
-    // ── ANULAR VENTA (solo admin) ─────────────────────────────────
+    // ── ANULAR VENTA ─────────────────────────────────────────────
 
     public function anular(Request $request, string $id)
     {
@@ -225,7 +257,21 @@ class VentaController extends Controller
             foreach ($venta->detalles as $detalle) {
                 $producto = Producto::find($detalle->producto_id);
                 if ($producto) {
+                    $stockAnterior = $producto->stock;
                     $producto->increment('stock', $detalle->cantidad);
+                    $stockNuevo = $producto->fresh()->stock;
+
+                    // NUEVO — registrar reingreso en kardex por anulación
+                    MovimientoInventario::registrar(
+                        producto:      $producto,
+                        stockAnterior: $stockAnterior,
+                        stockNuevo:    $stockNuevo,
+                        tipo:          'anulacion',
+                        motivo:        "Anulación venta {$venta->numero_venta}",
+                        observaciones: null,
+                        referencia:    $venta,
+                    );
+
                     $productosRestaurados[] = [
                         'nombre'   => $producto->nombre,
                         'cantidad' => $detalle->cantidad,
@@ -251,7 +297,7 @@ class VentaController extends Controller
                 $venta,
                 ['estado' => $estadoAnterior],
                 [
-                    'estado'               => 'Cancelada',
+                    'estado'                => 'Cancelada',
                     'productos_restaurados' => $productosRestaurados,
                 ]
             );
@@ -263,7 +309,7 @@ class VentaController extends Controller
         }
     }
 
-    // ── CARTERA (solo admin) ──────────────────────────────────────
+    // ── CARTERA ───────────────────────────────────────────────────
 
     public function cartera(): Response
     {
@@ -273,7 +319,9 @@ class VentaController extends Controller
             ->get()
             ->map(function ($v) {
                 $vencida  = $v->fecha_limite && Carbon::parse($v->fecha_limite)->isPast();
-                $diasMora = $v->fecha_limite ? max(0, (int) Carbon::parse($v->fecha_limite)->diffInDays(now(), false)) : 0;
+                $diasMora = $v->fecha_limite
+                    ? max(0, (int) Carbon::parse($v->fecha_limite)->diffInDays(now(), false))
+                    : 0;
                 return [
                     'id'              => $v->id,
                     'numero_venta'    => $v->numero_venta,

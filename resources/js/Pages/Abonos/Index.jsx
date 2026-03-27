@@ -1,17 +1,21 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function AbonosIndex({ clientes = [], busqueda = '' }) {
-    const [busquedaLocal, setBusquedaLocal] = useState(busqueda);
+    const { auth } = usePage().props;
+    const esAdmin = auth?.user?.roles?.some(r => r.name === 'admin') ?? false;
+
+    const [busquedaLocal, setBusquedaLocal]         = useState(busqueda);
     const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
     const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
-        venta_id: '',
-        monto: '',
-        forma_pago: 'Efectivo',
-        observaciones: '',
+        venta_id:         '',
+        monto:            '',
+        forma_pago:       'Efectivo',
+        observaciones:    '',
+        tipo_movimiento:  'abono_normal',
     });
 
     const buscar = (e) => {
@@ -22,7 +26,7 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
     const seleccionarVenta = (venta, cliente) => {
         setVentaSeleccionada(venta);
         setClienteSeleccionado(cliente);
-        setData({ venta_id: venta.id, monto: '', forma_pago: 'Efectivo', observaciones: '' });
+        setData({ venta_id: venta.id, monto: '', forma_pago: 'Efectivo', observaciones: '', tipo_movimiento: 'abono_normal' });
     };
 
     const registrarAbono = (e) => {
@@ -42,6 +46,11 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
     const estadoColor = (e) =>
         ({ Completada: 'bg-green-100 text-green-800', Pendiente: 'bg-yellow-100 text-yellow-800', Cancelada: 'bg-red-100 text-red-800' }[e] ?? 'bg-gray-100 text-gray-700');
 
+    // Badge para la lista de abonos previos de cada venta
+    const tipoBadgeMini = (a) => a.es_ajuste
+        ? <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">Ajuste</span>
+        : <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Abono</span>;
+
     return (
         <AppLayout>
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -55,6 +64,7 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                 <div className="max-w-7xl mx-auto px-6 py-8">
                     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
 
+                        {/* ── Panel izquierdo: búsqueda y lista ── */}
                         <div className="lg:col-span-3 space-y-6">
                             <div className="bg-white rounded-2xl shadow-sm p-6">
                                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Buscar Cliente</h2>
@@ -138,14 +148,18 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                                                         <p className="text-xs text-gray-400 mb-3">Fecha límite: <span className="font-medium text-gray-600">{venta.fecha_limite}</span></p>
                                                     )}
 
+                                                    {/* Lista de abonos previos con badge */}
                                                     {venta.abonos && venta.abonos.length > 0 && (
                                                         <div className="mb-3 bg-gray-50 rounded-xl p-3">
-                                                            <p className="text-xs font-medium text-gray-500 mb-2">Abonos registrados</p>
+                                                            <p className="text-xs font-medium text-gray-500 mb-2">Movimientos registrados</p>
                                                             <div className="space-y-1">
                                                                 {venta.abonos.map((a) => (
-                                                                    <div key={a.id} className="flex justify-between text-xs">
-                                                                        <span className="text-gray-500">{a.created_at} — {a.forma_pago}</span>
-                                                                        <span className="font-medium text-green-700">+{fmt(a.monto)}</span>
+                                                                    <div key={a.id} className="flex items-center justify-between text-xs gap-2">
+                                                                        <div className="flex items-center gap-1.5 min-w-0">
+                                                                            {tipoBadgeMini(a)}
+                                                                            <span className="text-gray-500 truncate">{a.created_at} — {a.forma_pago}</span>
+                                                                        </div>
+                                                                        <span className="font-medium text-green-700 flex-shrink-0">+{fmt(a.monto)}</span>
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -164,6 +178,7 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                             ))}
                         </div>
 
+                        {/* ── Panel derecho: formulario ── */}
                         <div className="lg:col-span-2">
                             {!ventaSeleccionada ? (
                                 <div className="bg-white rounded-2xl shadow-sm p-8 text-center sticky top-6">
@@ -193,6 +208,34 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                                             <span className="text-red-600">{fmt(ventaSeleccionada.saldo_pendiente)}</span>
                                         </div>
                                     </div>
+
+                                    {/* Tipo de movimiento — solo admin */}
+                                    {esAdmin && (
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de movimiento</label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setData('tipo_movimiento', 'abono_normal')}
+                                                    className={'py-2 rounded-xl text-sm font-medium transition ' + (data.tipo_movimiento === 'abono_normal' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
+                                                >
+                                                    Abono normal
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setData('tipo_movimiento', 'ajuste')}
+                                                    className={'py-2 rounded-xl text-sm font-medium transition ' + (data.tipo_movimiento === 'ajuste' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
+                                                >
+                                                    Ajuste
+                                                </button>
+                                            </div>
+                                            {data.tipo_movimiento === 'ajuste' && (
+                                                <p className="mt-1.5 text-xs text-orange-600 bg-orange-50 rounded-lg px-3 py-1.5">
+                                                    Los ajustes quedan registrados con auditoría completa.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div className="mb-4">
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Monto del abono <span className="text-red-500">*</span></label>
@@ -228,13 +271,15 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                                     </div>
 
                                     <div className="mb-5">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Observaciones (opcional)</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Observaciones {data.tipo_movimiento === 'ajuste' ? <span className="text-red-500">*</span> : <span className="text-gray-400">(opcional)</span>}
+                                        </label>
                                         <textarea
                                             value={data.observaciones}
                                             onChange={(e) => setData('observaciones', e.target.value)}
                                             rows={2}
                                             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition bg-gray-50 resize-none text-sm"
-                                            placeholder="Nota sobre el abono..."
+                                            placeholder={data.tipo_movimiento === 'ajuste' ? 'Describe el motivo del ajuste...' : 'Nota sobre el abono...'}
                                         />
                                     </div>
 
@@ -244,8 +289,12 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                                         <button type="button" onClick={() => { setVentaSeleccionada(null); reset(); }} className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 transition text-sm">
                                             Cancelar
                                         </button>
-                                        <button type="submit" disabled={processing || !data.monto} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                                            {processing ? 'Guardando...' : 'Confirmar Abono'}
+                                        <button
+                                            type="submit"
+                                            disabled={processing || !data.monto}
+                                            className={'flex-1 py-3 text-white rounded-xl font-medium transition text-sm disabled:opacity-50 disabled:cursor-not-allowed ' + (data.tipo_movimiento === 'ajuste' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-600 hover:bg-blue-700')}
+                                        >
+                                            {processing ? 'Guardando...' : data.tipo_movimiento === 'ajuste' ? 'Confirmar Ajuste' : 'Confirmar Abono'}
                                         </button>
                                     </div>
                                 </form>

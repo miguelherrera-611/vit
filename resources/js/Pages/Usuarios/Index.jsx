@@ -4,12 +4,21 @@ import { useState } from 'react';
 
 export default function UsuariosIndex({ usuarios }) {
     const { flash } = usePage().props;
-    const [eliminando, setEliminando] = useState(null);
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    const [eliminando, setEliminando]   = useState(null);
+    const [password, setPassword]       = useState('');
+    const [error, setError]             = useState('');
+    // NUEVO — estado para confirmar desbloqueo
+    const [desbloqueando, setDesbloqueando] = useState(null);
 
     const toggleActivo = (id) => {
         router.patch(`/usuarios/${id}/toggle`);
+    };
+
+    // NUEVO — llamada al endpoint de desbloqueo
+    const ejecutarDesbloquear = () => {
+        router.patch(`/usuarios/${desbloqueando.id}/desbloquear`, {}, {
+            onSuccess: () => setDesbloqueando(null),
+        });
     };
 
     const confirmarEliminar = (usuario) => {
@@ -21,19 +30,19 @@ export default function UsuariosIndex({ usuarios }) {
     const ejecutarEliminar = () => {
         router.delete(`/usuarios/${eliminando.id}`, {
             data: { password },
-            onError: (errors) => setError(errors.password || 'Error al eliminar.'),
+            onError:   (errors) => setError(errors.password || 'Error al eliminar.'),
             onSuccess: () => setEliminando(null),
         });
     };
 
     const rolBadge = (rol) => {
-        if (rol === 'admin') return 'bg-red-100 text-red-700';
+        if (rol === 'admin')    return 'bg-red-100 text-red-700';
         if (rol === 'empleado') return 'bg-blue-100 text-blue-700';
         return 'bg-gray-100 text-gray-600';
     };
 
     const rolLabel = (rol) => {
-        if (rol === 'admin') return 'Administrador';
+        if (rol === 'admin')    return 'Administrador';
         if (rol === 'empleado') return 'Empleado';
         return 'Sin rol';
     };
@@ -83,23 +92,56 @@ export default function UsuariosIndex({ usuarios }) {
                             </thead>
                             <tbody className="divide-y divide-gray-50">
                             {usuarios.map((u) => (
-                                <tr key={u.id} className="hover:bg-gray-50 transition">
+                                <tr
+                                    key={u.id}
+                                    className={
+                                        'hover:bg-gray-50 transition ' +
+                                        // NUEVO — fila con fondo rojo suave si está bloqueada
+                                        (u.bloqueado ? 'bg-red-50 hover:bg-red-50' : '')
+                                    }
+                                >
+                                    {/* Usuario */}
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                                                {u.name.charAt(0).toUpperCase()}
+                                            <div className={
+                                                'w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ' +
+                                                // NUEVO — avatar gris si está bloqueado
+                                                (u.bloqueado
+                                                    ? 'bg-gradient-to-br from-red-400 to-red-500'
+                                                    : 'bg-gradient-to-br from-red-500 to-red-600')
+                                            }>
+                                                {u.bloqueado
+                                                    ? '🔒'
+                                                    : u.name.charAt(0).toUpperCase()
+                                                }
                                             </div>
                                             <div>
                                                 <p className="text-sm font-medium text-gray-900">{u.name}</p>
                                                 <p className="text-xs text-gray-500">{u.email}</p>
+                                                {/* NUEVO — badge "Cuenta bloqueada" bajo el email */}
+                                                {u.bloqueado && (
+                                                    <span className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                                            </svg>
+                                                            Cuenta bloqueada
+                                                        {u.bloqueado_hasta && (
+                                                            <span className="font-normal">· hasta {u.bloqueado_hasta}</span>
+                                                        )}
+                                                        </span>
+                                                )}
                                             </div>
                                         </div>
                                     </td>
+
+                                    {/* Rol */}
                                     <td className="px-6 py-4">
                                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${rolBadge(u.rol)}`}>
                                                 {rolLabel(u.rol)}
                                             </span>
                                     </td>
+
+                                    {/* Permisos */}
                                     <td className="px-6 py-4">
                                         {u.permisos.length > 0 ? (
                                             <div className="flex flex-wrap gap-1">
@@ -120,17 +162,46 @@ export default function UsuariosIndex({ usuarios }) {
                                                 </span>
                                         )}
                                     </td>
+
+                                    {/* Estado */}
                                     <td className="px-6 py-4">
-                                        <button
-                                            onClick={() => toggleActivo(u.id)}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${u.activo !== false ? 'bg-green-500' : 'bg-gray-300'}`}
-                                        >
-                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${u.activo !== false ? 'translate-x-6' : 'translate-x-1'}`} />
-                                        </button>
+                                        <div className="flex flex-col gap-1">
+                                            {/* Toggle activo/inactivo — se mantiene igual */}
+                                            <button
+                                                onClick={() => toggleActivo(u.id)}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${u.activo !== false ? 'bg-green-500' : 'bg-gray-300'}`}
+                                                title={u.activo !== false ? 'Activo — clic para desactivar' : 'Inactivo — clic para activar'}
+                                            >
+                                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${u.activo !== false ? 'translate-x-6' : 'translate-x-1'}`} />
+                                            </button>
+                                            {/* NUEVO — intentos fallidos visibles si hay alguno */}
+                                            {!u.bloqueado && u.intentos_fallidos > 0 && (
+                                                <span className="text-xs text-amber-600 font-medium">
+                                                        ⚠ {u.intentos_fallidos} intento(s) fallido(s)
+                                                    </span>
+                                            )}
+                                        </div>
                                     </td>
+
+                                    {/* Creado */}
                                     <td className="px-6 py-4 text-sm text-gray-500">{u.created_at}</td>
+
+                                    {/* Acciones */}
                                     <td className="px-6 py-4">
                                         <div className="flex items-center justify-end gap-2">
+                                            {/* NUEVO — botón desbloquear, solo visible si bloqueado=true */}
+                                            {u.bloqueado && (
+                                                <button
+                                                    onClick={() => setDesbloqueando(u)}
+                                                    className="p-2 text-red-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition"
+                                                    title="Desbloquear cuenta"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 018 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                                    </svg>
+                                                </button>
+                                            )}
+
                                             <Link
                                                 href={`/usuarios/${u.id}/edit`}
                                                 className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
@@ -140,6 +211,7 @@ export default function UsuariosIndex({ usuarios }) {
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                 </svg>
                                             </Link>
+
                                             <button
                                                 onClick={() => confirmarEliminar(u)}
                                                 className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
@@ -165,7 +237,49 @@ export default function UsuariosIndex({ usuarios }) {
                 </div>
             </div>
 
-            {/* Modal Eliminar */}
+            {/* ── NUEVO Modal Desbloquear ── */}
+            {desbloqueando && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+                        <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 018 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+                            Desbloquear cuenta
+                        </h3>
+                        <p className="text-sm text-gray-500 text-center mb-2">
+                            La cuenta de <strong>{desbloqueando.name}</strong> está bloqueada por{' '}
+                            <strong>{desbloqueando.intentos_fallidos} intentos fallidos</strong>.
+                        </p>
+                        {desbloqueando.bloqueado_hasta && (
+                            <p className="text-xs text-gray-400 text-center mb-6">
+                                Se desbloquearía automáticamente el {desbloqueando.bloqueado_hasta}
+                            </p>
+                        )}
+                        <p className="text-sm text-gray-600 text-center mb-6">
+                            ¿Deseas desbloquearla ahora manualmente?
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setDesbloqueando(null)}
+                                className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition font-medium"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={ejecutarDesbloquear}
+                                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition font-medium"
+                            >
+                                Sí, desbloquear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Eliminar — idéntico al original */}
             {eliminando && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
@@ -187,10 +301,16 @@ export default function UsuariosIndex({ usuarios }) {
                         />
                         {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
                         <div className="flex gap-3 mt-4">
-                            <button onClick={() => setEliminando(null)} className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition font-medium">
+                            <button
+                                onClick={() => setEliminando(null)}
+                                className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition font-medium"
+                            >
                                 Cancelar
                             </button>
-                            <button onClick={ejecutarEliminar} className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-medium">
+                            <button
+                                onClick={ejecutarEliminar}
+                                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-medium"
+                            >
                                 Eliminar
                             </button>
                         </div>

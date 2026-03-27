@@ -15,11 +15,14 @@ class Abono extends Model
         'forma_pago',
         'empleado_id',
         'observaciones',
+        'tipo_movimiento',   // 'abono_normal' | 'ajuste'
     ];
 
     protected $casts = [
         'monto' => 'decimal:2',
     ];
+
+    // ── Relaciones ────────────────────────────────────────────────
 
     public function venta()
     {
@@ -29,5 +32,22 @@ class Abono extends Model
     public function empleado()
     {
         return $this->belongsTo(User::class, 'empleado_id');
+    }
+
+    // ── Accessors ─────────────────────────────────────────────────
+
+    /** Etiqueta legible para mostrar en UI */
+    public function getTipoMovimientoLabelAttribute(): string
+    {
+        return match ($this->tipo_movimiento) {
+            'ajuste'       => 'Ajuste',
+            default        => 'Abono',
+        };
+    }
+
+    /** True si fue registrado como ajuste auditado */
+    public function getEsAjusteAttribute(): bool
+    {
+        return $this->tipo_movimiento === 'ajuste';
     }
 }

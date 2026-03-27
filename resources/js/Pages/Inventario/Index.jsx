@@ -6,9 +6,9 @@ import Pagination from '@/Components/Pagination';
 const PER_PAGE = 15;
 
 export default function InventarioIndex({ productos = [] }) {
-    const [searchTerm, setSearchTerm]       = useState('');
+    const [searchTerm, setSearchTerm]             = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
-    const [currentPage, setCurrentPage]     = useState(1);
+    const [currentPage, setCurrentPage]           = useState(1);
 
     const stats = useMemo(() => {
         const activos = productos.filter(p => p.activo);
@@ -115,6 +115,8 @@ export default function InventarioIndex({ productos = [] }) {
                                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock Actual</th>
                                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock Mínimo</th>
                                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                        {/* NUEVO — columna de acciones */}
+                                        <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                                     </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
@@ -150,6 +152,19 @@ export default function InventarioIndex({ productos = [] }) {
                                                 ) : (
                                                     <span className="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-red-100 text-red-800">Agotado</span>
                                                 )}
+                                            </td>
+                                            {/* NUEVO — botón ver kardex */}
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <Link
+                                                    href={`/inventario/${producto.id}/kardex`}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition"
+                                                    title="Ver historial de movimientos"
+                                                >
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                                    </svg>
+                                                    Kardex
+                                                </Link>
                                             </td>
                                         </tr>
                                     ))}

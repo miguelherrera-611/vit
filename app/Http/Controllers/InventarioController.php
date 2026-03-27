@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Producto;
 use App\Models\Registro;
+use App\Models\MovimientoInventario;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -38,8 +39,8 @@ class InventarioController extends Controller
             'observaciones.min'      => 'Las observaciones deben tener al menos 5 caracteres.',
         ]);
 
-        $producto    = Producto::findOrFail($validated['producto_id']);
-        $stockAntes  = $producto->stock;
+        $producto   = Producto::findOrFail($validated['producto_id']);
+        $stockAntes = $producto->stock;
 
         if ($validated['tipo_ajuste'] === 'incremento') {
             $producto->increment('stock', $validated['cantidad']);
@@ -52,7 +53,20 @@ class InventarioController extends Controller
             $producto->decrement('stock', $validated['cantidad']);
         }
 
-        $stockDespues = $producto->fresh()->stock;
+        $stockDespues   = $producto->fresh()->stock;
+        $tipoMovimiento = $validated['tipo_ajuste'] === 'incremento'
+            ? 'ajuste_entrada'
+            : 'ajuste_salida';
+
+        // NUEVO — registrar movimiento en kardex
+        MovimientoInventario::registrar(
+            producto:      $producto,
+            stockAnterior: $stockAntes,
+            stockNuevo:    $stockDespues,
+            tipo:          $tipoMovimiento,
+            motivo:        $validated['motivo'],
+            observaciones: $validated['observaciones'],
+        );
 
         Registro::registrar(
             'ajuste_inventario',
@@ -63,5 +77,43 @@ class InventarioController extends Controller
 
         return redirect()->route('inventario.index')
             ->with('success', 'Stock ajustado. Nuevo stock: ' . $stockDespues . ' unidades.');
+    }
+
+    // NUEVO — ver kardex de un producto específico
+    public function kardex(string $productoId): Response
+    {
+        $producto = Producto::findOrFail($productoId);
+
+        $movimientos = MovimientoInventario::where('producto_id', $productoId)
+            ->with('user')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($m) => [
+                'id'              => $m->id,
+                'tipo'            => $m->tipo,
+                'tipo_label'      => $m->tipo_label,
+                'tipo_color'      => $m->tipo_color,
+                'es_entrada'      => $m->es_entrada,
+                'cantidad'        => $m->cantidad,
+                'stock_anterior'  => $m->stock_anterior,
+                'stock_nuevo'     => $m->stock_nuevo,
+                'motivo'          => $m->motivo,
+                'observaciones'   => $m->observaciones,
+                'referencia_tipo' => $m->referencia_tipo,
+                'referencia_id'   => $m->referencia_id,
+                'usuario'         => $m->user?->name ?? 'Sistema',
+                'created_at'      => $m->created_at->format('d/m/Y H:i'),
+            ]);
+
+        return Inertia::render('Inventario/Kardex', [
+            'producto' => [
+                'id'        => $producto->id,
+                'nombre'    => $producto->nombre,
+                'categoria' => $producto->categoria,
+                'stock'     => $producto->stock,
+                'imagen'    => $producto->imagen,
+            ],
+            'movimientos' => $movimientos,
+        ]);
     }
 }

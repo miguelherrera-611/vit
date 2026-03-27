@@ -44,11 +44,13 @@ class AbonoController extends Controller
                         'estado'          => $v->estado,
                         'created_at'      => $v->created_at->format('d/m/Y'),
                         'abonos'          => $v->abonos->map(fn($a) => [
-                            'id'            => $a->id,
-                            'monto'         => $a->monto,
-                            'forma_pago'    => $a->forma_pago,
-                            'observaciones' => $a->observaciones,
-                            'created_at'    => $a->created_at->format('d/m/Y H:i'),
+                            'id'              => $a->id,
+                            'monto'           => $a->monto,
+                            'forma_pago'      => $a->forma_pago,
+                            'observaciones'   => $a->observaciones,
+                            'tipo_movimiento' => $a->tipo_movimiento,
+                            'tipo_label'      => $a->tipo_movimiento_label,
+                            'created_at'      => $a->created_at->format('d/m/Y H:i'),
                         ]),
                     ]),
                 ]);
@@ -65,11 +67,18 @@ class AbonoController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'venta_id'      => 'required|exists:ventas,id',
-            'monto'         => 'required|numeric|min:0.01',
-            'forma_pago'    => 'required|in:Efectivo,Tarjeta,Transferencia,Mixto',
-            'observaciones' => 'nullable|string|max:255',
+            'venta_id'        => 'required|exists:ventas,id',
+            'monto'           => 'required|numeric|min:0.01',
+            'forma_pago'      => 'required|in:Efectivo,Tarjeta,Transferencia,Mixto',
+            'observaciones'   => 'nullable|string|max:255',
+            'tipo_movimiento' => 'nullable|in:abono_normal,ajuste',
         ]);
+
+        // Solo admin puede registrar ajustes; cualquier otro intento se trata como abono normal
+        $tipoMovimiento = 'abono_normal';
+        if (($validated['tipo_movimiento'] ?? 'abono_normal') === 'ajuste' && auth()->user()->hasRole('admin')) {
+            $tipoMovimiento = 'ajuste';
+        }
 
         $venta = Venta::with('cliente')->findOrFail($validated['venta_id']);
 
@@ -84,17 +93,18 @@ class AbonoController extends Controller
         DB::beginTransaction();
         try {
             $abono = $venta->abonos()->create([
-                'monto'         => $validated['monto'],
-                'forma_pago'    => $validated['forma_pago'],
-                'empleado_id'   => auth()->id(),
-                'observaciones' => $validated['observaciones'],
+                'monto'           => $validated['monto'],
+                'forma_pago'      => $validated['forma_pago'],
+                'empleado_id'     => auth()->id(),
+                'observaciones'   => $validated['observaciones'],
+                'tipo_movimiento' => $tipoMovimiento,
             ]);
 
-            $saldoAnterior = $venta->saldo_pendiente;
+            $saldoAnterior  = $venta->saldo_pendiente;
             $pagadoAnterior = $venta->pagado;
-            $nuevoPagado   = $venta->pagado + $validated['monto'];
-            $nuevoSaldo    = max(0, $venta->total - $nuevoPagado);
-            $nuevoEstado   = $nuevoSaldo <= 0 ? 'Completada' : 'Pendiente';
+            $nuevoPagado    = $venta->pagado + $validated['monto'];
+            $nuevoSaldo     = max(0, $venta->total - $nuevoPagado);
+            $nuevoEstado    = $nuevoSaldo <= 0 ? 'Completada' : 'Pendiente';
 
             $venta->update([
                 'pagado'          => $nuevoPagado,
@@ -104,13 +114,15 @@ class AbonoController extends Controller
 
             DB::commit();
 
-            // ── Registro detallado ───────────────────────────────
-            $cliente = $venta->cliente?->nombre ?? 'Cliente general';
+            // ── Registro de auditoría ────────────────────────────
+            $cliente   = $venta->cliente?->nombre ?? 'Cliente general';
+            $tipoLabel = $tipoMovimiento === 'ajuste' ? 'Ajuste' : 'Abono';
 
-            $descripcion = "Abono de $" . number_format($validated['monto'], 0, ',', '.')
+            $descripcion = "{$tipoLabel} de $" . number_format($validated['monto'], 0, ',', '.')
                 . " en venta {$venta->numero_venta}"
                 . " | Cliente: {$cliente}"
                 . " | Forma de pago: {$validated['forma_pago']}"
+                . " | Tipo: {$tipoLabel}"
                 . " | Saldo anterior: $" . number_format($saldoAnterior, 0, ',', '.')
                 . " | Nuevo saldo: $" . number_format($nuevoSaldo, 0, ',', '.')
                 . " | Estado: {$nuevoEstado}"
@@ -130,6 +142,7 @@ class AbonoController extends Controller
                 [
                     'monto_abonado'   => $validated['monto'],
                     'forma_pago'      => $validated['forma_pago'],
+                    'tipo_movimiento' => $tipoMovimiento,
                     'observaciones'   => $validated['observaciones'] ?? null,
                     'pagado_total'    => $nuevoPagado,
                     'saldo_pendiente' => $nuevoSaldo,
@@ -141,7 +154,7 @@ class AbonoController extends Controller
 
             $msg = $nuevoEstado === 'Completada'
                 ? "¡Venta {$venta->numero_venta} pagada en su totalidad!"
-                : "Abono registrado. Saldo pendiente: $" . number_format($nuevoSaldo, 0, ',', '.');
+                : "{$tipoLabel} registrado. Saldo pendiente: $" . number_format($nuevoSaldo, 0, ',', '.');
 
             return back()->with('success', $msg);
 
@@ -211,12 +224,15 @@ class AbonoController extends Controller
                     'subtotal'        => $d->subtotal,
                 ]),
                 'abonos'          => $venta->abonos->map(fn($a) => [
-                    'id'            => $a->id,
-                    'monto'         => $a->monto,
-                    'forma_pago'    => $a->forma_pago,
-                    'empleado'      => $a->empleado?->name ?? 'Sistema',
-                    'observaciones' => $a->observaciones,
-                    'created_at'    => $a->created_at->format('d/m/Y H:i'),
+                    'id'              => $a->id,
+                    'monto'           => $a->monto,
+                    'forma_pago'      => $a->forma_pago,
+                    'empleado'        => $a->empleado?->name ?? 'Sistema',
+                    'observaciones'   => $a->observaciones,
+                    'tipo_movimiento' => $a->tipo_movimiento,
+                    'tipo_label'      => $a->tipo_movimiento_label,
+                    'es_ajuste'       => $a->es_ajuste,
+                    'created_at'      => $a->created_at->format('d/m/Y H:i'),
                 ]),
             ],
         ]);

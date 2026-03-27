@@ -13,13 +13,15 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
+            // NUEVO — detecta inactividad y cierra sesión a los 30 min
+            \App\Http\Middleware\CheckSessionTimeout::class,
         ]);
 
         $middleware->alias([
-            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
-            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
-            'authenticated' => \App\Http\Middleware\EnsureUserIsAuthenticated::class,
+            'role'              => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission'        => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission'=> \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'authenticated'     => \App\Http\Middleware\EnsureUserIsAuthenticated::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

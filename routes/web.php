@@ -67,18 +67,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('role:admin')
         ->prefix('usuarios')->name('usuarios.')
         ->group(function () {
-            Route::get('/',                   [UserController::class, 'index'])->name('index');
-            Route::get('/create',             [UserController::class, 'create'])->name('create');
-            Route::post('/',                  [UserController::class, 'store'])->name('store');
-            Route::get('/{usuario}/edit',     [UserController::class, 'edit'])->name('edit');
-            Route::put('/{usuario}',          [UserController::class, 'update'])->name('update');
-            Route::delete('/{usuario}',       [UserController::class, 'destroy'])->name('destroy');
-            Route::patch('/{usuario}/toggle', [UserController::class, 'toggleActivo'])->name('toggle');
+            Route::get('/',                       [UserController::class, 'index'])->name('index');
+            Route::get('/create',                 [UserController::class, 'create'])->name('create');
+            Route::post('/',                      [UserController::class, 'store'])->name('store');
+            Route::get('/{usuario}/edit',         [UserController::class, 'edit'])->name('edit');
+            Route::put('/{usuario}',              [UserController::class, 'update'])->name('update');
+            Route::delete('/{usuario}',           [UserController::class, 'destroy'])->name('destroy');
+            Route::patch('/{usuario}/toggle',     [UserController::class, 'toggleActivo'])->name('toggle');
+            // Nueva ruta: desbloquear cuenta bloqueada por intentos fallidos
+            Route::patch('/{usuario}/desbloquear',[UserController::class, 'desbloquear'])->name('desbloquear');
         });
 
     // ─────────────────────────────────────────────────────────────────────────
     // Productos
-    // Acceso controlado por permiso individual
     // ─────────────────────────────────────────────────────────────────────────
     Route::prefix('productos')->name('productos.')->group(function () {
         Route::get('/', [ProductoController::class, 'index'])
@@ -160,7 +161,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('role_or_permission:admin|gestionar_clientes')
             ->name('show');
 
-        // Editar/eliminar solo admin
         Route::get('/{cliente}/edit', [ClienteController::class, 'edit'])
             ->middleware('role:admin')->name('edit');
         Route::put('/{cliente}', [ClienteController::class, 'update'])
@@ -185,7 +185,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('role_or_permission:admin|crear_ventas')
             ->name('store');
 
-        // ── Nuevas rutas ──────────────────────────────────────────
         Route::get('/cartera', [VentaController::class, 'cartera'])
             ->middleware('role:admin')
             ->name('cartera');
@@ -225,6 +224,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/ajustar', [InventarioController::class, 'procesarAjuste'])
             ->middleware('role_or_permission:admin|ajustar_inventario')
             ->name('procesarAjuste');
+        // NUEVO — kardex de un producto
+        Route::get('/{producto}/kardex', [InventarioController::class, 'kardex'])
+            ->middleware('role_or_permission:admin|ver_inventario')
+            ->name('kardex');
     });
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -319,9 +322,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('forceDelete');
     });
 
-    // ─────────────────────────────────────────────────────────────────────────────
-// Registros de actividad
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // Registros de actividad
+    // ─────────────────────────────────────────────────────────────────────────
     Route::prefix('registros')->name('registros.')->group(function () {
         Route::get('/', [RegistroController::class, 'index'])
             ->middleware('role_or_permission:admin|ver_registros')

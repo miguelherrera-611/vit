@@ -66,13 +66,17 @@ class UserController extends Controller
             ->orderBy('name')
             ->get()
             ->map(fn($u) => [
-                'id'         => $u->id,
-                'name'       => $u->name,
-                'email'      => $u->email,
-                'rol'        => $u->roles->first()?->name ?? 'sin_rol',
-                'permisos'   => $u->getAllPermissions()->pluck('name')->toArray(),
-                'activo'     => $u->activo,
-                'created_at' => $u->created_at->format('d/m/Y'),
+                'id'               => $u->id,
+                'name'             => $u->name,
+                'email'            => $u->email,
+                'rol'              => $u->roles->first()?->name ?? 'sin_rol',
+                'permisos'         => $u->getAllPermissions()->pluck('name')->toArray(),
+                'activo'           => $u->activo,
+                // Exponer estado de bloqueo para que el admin pueda ver y desbloquear
+                'bloqueado'        => $u->estaBloqueado(),
+                'intentos_fallidos'=> $u->intentos_fallidos,
+                'bloqueado_hasta'  => $u->bloqueado_hasta?->format('d/m/Y H:i'),
+                'created_at'       => $u->created_at->format('d/m/Y'),
             ]);
 
         return Inertia::render('Usuarios/Index', [
@@ -112,7 +116,6 @@ class UserController extends Controller
 
         // Asignar permisos solo si es empleado y vienen permisos seleccionados
         if ($validated['rol'] === 'empleado' && !empty($validated['permisos'])) {
-            // Solo asignar permisos que realmente existen en la BD
             $permisosValidos = Permission::whereIn('name', $validated['permisos'])
                 ->where('guard_name', 'web')
                 ->pluck('name')
@@ -121,10 +124,8 @@ class UserController extends Controller
             $user->syncPermissions($permisosValidos);
         }
 
-        // Limpiar caché de permisos de Spatie
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // ── Auditoría ────────────────────────────────────────────
         Registro::registrar(
             'crear',
             'usuarios',
@@ -184,7 +185,6 @@ class UserController extends Controller
         $user->save();
         $user->syncRoles([$validated['rol']]);
 
-        // Actualizar permisos
         if ($validated['rol'] === 'empleado') {
             $permisos = $validated['permisos'] ?? [];
 
@@ -198,14 +198,11 @@ class UserController extends Controller
                 $user->syncPermissions([]);
             }
         } else {
-            // Si es admin, quitarle permisos directos (ya tiene todo por rol)
             $user->syncPermissions([]);
         }
 
-        // Limpiar caché de permisos de Spatie
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // ── Auditoría ────────────────────────────────────────────
         Registro::registrar(
             'editar',
             'usuarios',
@@ -233,7 +230,6 @@ class UserController extends Controller
         $user   = User::findOrFail($id);
         $nombre = $user->name;
 
-        // ── Auditoría ────────────────────────────────────────────
         Registro::registrar(
             'eliminar',
             'usuarios',
@@ -258,7 +254,6 @@ class UserController extends Controller
 
         $estado = $user->activo ? 'activado' : 'desactivado';
 
-        // ── Auditoría ────────────────────────────────────────────
         Registro::registrar(
             $estado,
             'usuarios',
@@ -267,5 +262,32 @@ class UserController extends Controller
         );
 
         return back()->with('success', "Usuario \"{$user->name}\" {$estado}.");
+    }
+
+    // ── DESBLOQUEAR cuenta bloqueada por intentos fallidos ────────
+
+    public function desbloquear(string $id)
+    {
+        if (auth()->id() == $id) {
+            return back()->withErrors(['error' => 'No puedes desbloquearte a ti mismo desde aquí.']);
+        }
+
+        $user = User::findOrFail($id);
+
+        if (!$user->estaBloqueado()) {
+            return back()->with('success', "El usuario \"{$user->name}\" no está bloqueado.");
+        }
+
+        $user->desbloquear();
+
+        Registro::registrar(
+            'desbloquear',
+            'usuarios',
+            "Usuario \"{$user->name}\" desbloqueado manualmente por " . auth()->user()->name
+            . " (tenía {$user->intentos_fallidos} intentos fallidos).",
+            $user
+        );
+
+        return back()->with('success', "Usuario \"{$user->name}\" desbloqueado correctamente.");
     }
 }
