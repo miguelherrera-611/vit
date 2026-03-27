@@ -1,209 +1,651 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Link } from '@inertiajs/react';
-import { useState, useMemo, useEffect } from 'react';
-import Pagination from '@/Components/Pagination';
+import { Link, useForm } from '@inertiajs/react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 
-const PER_PAGE = 15;
+const MOTIVOS = {
+    incremento: [
+        { value: 'Ingreso mercancía', label: 'Ingreso de mercancía',   icon: '📦' },
+        { value: 'Devolución',        label: 'Devolución de cliente',  icon: '↩️' },
+        { value: 'Error conteo',      label: 'Error de conteo',        icon: '🔢' },
+        { value: 'Otro',              label: 'Otro',                   icon: '📝' },
+    ],
+    decremento: [
+        { value: 'Daño',         label: 'Daño',                   icon: '💔' },
+        { value: 'Robo',         label: 'Robo',                   icon: '🚨' },
+        { value: 'Devolución',   label: 'Devolución a proveedor', icon: '↩️' },
+        { value: 'Error conteo', label: 'Error de conteo',        icon: '🔢' },
+        { value: 'Otro',         label: 'Otro',                   icon: '📝' },
+    ],
+};
 
-export default function InventarioIndex({ productos = [] }) {
-    const [searchTerm, setSearchTerm]             = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [currentPage, setCurrentPage]           = useState(1);
+const PRODUCTOS_POR_PAGINA = 6;
+const normalize = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-    const stats = useMemo(() => {
-        const activos = productos.filter(p => p.activo);
-        return {
-            total:     activos.length,
-            enStock:   activos.filter(p => p.stock > p.stock_minimo).length,
-            bajoStock: productos.filter(p => p.stock <= p.stock_minimo && p.stock > 0).length,
-            agotados:  productos.filter(p => p.stock === 0).length,
+const GLASS_BG = `
+    radial-gradient(ellipse 75% 60% at 0% 0%,   rgba(255,210,170,0.22) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 55% at 100% 100%,rgba(255,195,145,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 50% at 75% 10%,  rgba(255,215,175,0.16) 0%, transparent 55%),
+    linear-gradient(145deg, #fdf6f0 0%, #fdf3ec 35%, #fef5ef 70%, #fef8f4 100%)
+`;
+
+const STYLES = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+    .aj-bg { min-height:100vh; font-family:'Inter',-apple-system,sans-serif; background:${GLASS_BG}; }
+    .aj-hdr {
+        background:rgba(255,255,255,0.08); backdrop-filter:blur(40px) saturate(180%);
+        -webkit-backdrop-filter:blur(40px) saturate(180%);
+        border-bottom:1px solid rgba(255,255,255,0.68);
+        box-shadow:0 4px 24px rgba(200,100,30,0.07),inset 0 1px 0 rgba(255,255,255,0.85);
+        position:relative; z-index:2;
+    }
+    .aj-glass {
+        background:rgba(255,255,255,0.04); backdrop-filter:blur(22px) saturate(150%);
+        -webkit-backdrop-filter:blur(22px) saturate(150%);
+        border:1px solid rgba(255,255,255,0.65); border-radius:24px;
+        box-shadow:0 16px 48px rgba(180,90,20,0.1),0 4px 14px rgba(180,90,20,0.06),
+            inset 0 1.5px 0 rgba(255,255,255,0.88);
+        position:relative; overflow:hidden; padding:1.75rem;
+    }
+    .aj-glass::before {
+        content:''; position:absolute; top:0; left:0; right:0; height:1px;
+        background:linear-gradient(90deg,transparent,rgba(255,255,255,0.95) 30%,rgba(255,255,255,0.95) 70%,transparent);
+        pointer-events:none; z-index:1;
+    }
+    .aj-step-num {
+        width:28px; height:28px; border-radius:9px; flex-shrink:0;
+        background:rgba(220,38,38,0.08); border:1px solid rgba(220,38,38,0.2);
+        display:flex; align-items:center; justify-content:center;
+        font-size:0.72rem; font-weight:700; color:rgba(185,28,28,0.8);
+    }
+    .aj-step-title { font-size:0.97rem; font-weight:600; color:#2d1a08; }
+    /* Trigger de dropdowns */
+    .aj-trigger {
+        width:100%; display:flex; align-items:center; justify-content:space-between;
+        padding:0.75rem 1rem;
+        background:rgba(255,255,255,0.06); border:1px solid rgba(200,140,80,0.4); border-radius:14px;
+        font-size:0.88rem; color:#2d1a08; font-family:'Inter',sans-serif; outline:none;
+        cursor:pointer; transition:all 0.2s; backdrop-filter:blur(10px);
+        box-shadow:0 3px 12px rgba(160,80,10,0.07),inset 0 1px 0 rgba(255,255,255,0.75);
+        text-align:left;
+    }
+    .aj-trigger.open   { border-color:rgba(200,140,80,0.65); background:rgba(255,255,255,0.12); }
+    .aj-trigger.error  { border-color:rgba(220,38,38,0.45); }
+    /* Panel del dropdown renderizado via portal */
+    @keyframes ajDrop {
+        from { opacity:0; transform:translateY(-6px) scale(0.98); }
+        to   { opacity:1; transform:translateY(0) scale(1); }
+    }
+    .aj-portal {
+        position:fixed; z-index:99999;
+        background:rgba(255,248,240,0.98);
+        backdrop-filter:blur(32px) saturate(180%); -webkit-backdrop-filter:blur(32px) saturate(180%);
+        border:1px solid rgba(255,255,255,0.72); border-radius:18px;
+        box-shadow:0 24px 64px rgba(180,90,20,0.18),inset 0 1px 0 rgba(255,255,255,0.9);
+        overflow:hidden; animation:ajDrop 0.17s cubic-bezier(0.16,1,0.3,1);
+        font-family:'Inter',-apple-system,sans-serif;
+    }
+    .aj-search-wrap { padding:0.6rem 0.75rem 0.45rem; border-bottom:1px solid rgba(200,140,80,0.14); }
+    .aj-search {
+        width:100%; padding:0.5rem 2rem 0.5rem 2.1rem;
+        background:rgba(255,255,255,0.1); border:1px solid rgba(200,140,80,0.35); border-radius:11px;
+        font-size:0.82rem; color:#2d1a08; font-family:'Inter',sans-serif; outline:none;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,0.7); transition:all 0.17s; box-sizing:border-box;
+    }
+    .aj-search:focus { border-color:rgba(200,140,80,0.6); background:rgba(255,255,255,0.16); }
+    .aj-search::placeholder { color:rgba(180,100,30,0.38); }
+    .aj-opt {
+        display:flex; align-items:center; justify-content:space-between;
+        padding:0.65rem 1rem; cursor:pointer; border:none; background:none;
+        width:100%; text-align:left; font-family:'Inter',sans-serif; transition:background 0.12s;
+    }
+    .aj-opt:hover  { background:rgba(255,255,255,0.55); }
+    .aj-opt.active { background:rgba(220,38,38,0.06); }
+    .aj-pager {
+        display:flex; align-items:center; justify-content:space-between;
+        padding:0.45rem 0.75rem; border-top:1px solid rgba(200,140,80,0.12);
+    }
+    .aj-pager-btn {
+        display:flex; align-items:center; gap:0.3rem; padding:0.28rem 0.6rem;
+        border-radius:8px; cursor:pointer; font-size:0.73rem; font-weight:500;
+        color:rgba(120,60,10,0.7); background:none; border:none;
+        font-family:'Inter',sans-serif; transition:background 0.12s;
+    }
+    .aj-pager-btn:hover:not(:disabled) { background:rgba(255,255,255,0.65); }
+    .aj-pager-btn:disabled { opacity:0.28; cursor:not-allowed; }
+    .aj-pager-dot {
+        width:24px; height:24px; border-radius:7px; cursor:pointer;
+        font-size:0.72rem; font-weight:600; border:none; font-family:'Inter',sans-serif; transition:all 0.12s;
+    }
+    /* Textarea / input glass */
+    .aj-textarea {
+        width:100%; padding:0.8rem 1rem;
+        background:rgba(255,255,255,0.06); border:1px solid rgba(200,140,80,0.4); border-radius:14px;
+        font-size:0.88rem; color:#2d1a08; font-family:'Inter',sans-serif; outline:none;
+        resize:none; transition:all 0.2s; backdrop-filter:blur(10px);
+        box-shadow:inset 0 1px 0 rgba(255,255,255,0.75); box-sizing:border-box;
+    }
+    .aj-textarea::placeholder { color:rgba(180,100,30,0.38); }
+    .aj-textarea:focus { border-color:rgba(200,140,80,0.65); box-shadow:0 0 0 3px rgba(220,38,38,0.05),inset 0 1px 0 rgba(255,255,255,0.85); }
+    .aj-label {
+        display:block; font-size:0.7rem; font-weight:600;
+        color:rgba(150,80,20,0.7); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.45rem;
+    }
+    .aj-error { margin-top:0.3rem; font-size:0.78rem; color:rgba(185,28,28,0.85); }
+    .aj-hint  { margin-top:0.3rem; font-size:0.74rem; color:rgba(150,80,20,0.5); }
+    /* Botones principales */
+    .aj-btn-submit {
+        flex:1; display:flex; align-items:center; justify-content:center; gap:0.45rem;
+        padding:0.85rem 1.5rem;
+        background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.45); border-radius:16px;
+        font-size:0.9rem; font-weight:600; color:rgba(185,28,28,0.95);
+        cursor:pointer; transition:all 0.2s; font-family:'Inter',sans-serif;
+        box-shadow:0 4px 16px rgba(220,38,38,0.1),inset 0 1px 0 rgba(255,120,120,0.25);
+    }
+    .aj-btn-submit:hover:not(:disabled) { background:rgba(220,38,38,0.16); transform:translateY(-1px); }
+    .aj-btn-submit:disabled { opacity:0.4; cursor:not-allowed; }
+    .aj-btn-cancel {
+        flex:1; display:flex; align-items:center; justify-content:center;
+        padding:0.85rem 1.5rem;
+        background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.65); border-radius:16px;
+        font-size:0.9rem; font-weight:500; color:rgba(120,60,10,0.8);
+        text-decoration:none; transition:all 0.18s; font-family:'Inter',sans-serif;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,0.78);
+    }
+    .aj-btn-cancel:hover { background:rgba(255,255,255,0.14); }
+    @keyframes ajUp {
+        from { opacity:0; transform:translateY(14px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+    .aj-a1 { animation:ajUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
+    .aj-a2 { animation:ajUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.12s both; }
+    .aj-a3 { animation:ajUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.19s both; }
+    .aj-a4 { animation:ajUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.26s both; }
+`;
+
+// ── Dropdown de motivo ────────────────────────────────────────────────────────
+function MotivoSelect({ value, onChange, options, placeholder, error }) {
+    const [open, setOpen]   = useState(false);
+    const [pos,  setPos]    = useState({ top: 0, left: 0, width: 0 });
+    const trigRef           = useRef(null);
+    const panelRef          = useRef(null);
+
+    const calcPos = () => {
+        if (!trigRef.current) return;
+        const r = trigRef.current.getBoundingClientRect();
+        setPos({ top: r.bottom + 6, left: r.left, width: r.width });
+    };
+
+    useEffect(() => {
+        if (!open) return;
+        const h = (e) => {
+            if (!trigRef.current?.contains(e.target) && !panelRef.current?.contains(e.target))
+                setOpen(false);
         };
-    }, [productos]);
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, [open]);
 
-    const categorias = useMemo(() => [...new Set(productos.map(p => p.categoria))].sort(), [productos]);
-
-    const productosFiltrados = useMemo(() => {
-        return productos.filter(p => {
-            const q = searchTerm.toLowerCase();
-            return (
-                (!q || p.nombre.toLowerCase().includes(q) || (p.codigo_barras || '').toLowerCase().includes(q)) &&
-                (!selectedCategory || p.categoria === selectedCategory)
-            );
-        });
-    }, [productos, searchTerm, selectedCategory]);
-
-    useEffect(() => { setCurrentPage(1); }, [searchTerm, selectedCategory]);
-
-    const productosPaginados = useMemo(
-        () => productosFiltrados.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE),
-        [productosFiltrados, currentPage]
-    );
+    const selected = options.find(o => o.value === value);
 
     return (
-        <AppLayout>
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-                {/* Header */}
-                <div className="bg-white border-b border-gray-200">
-                    <div className="max-w-7xl mx-auto px-6 py-8">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h1 className="text-3xl font-light text-gray-900">Control de Inventario</h1>
-                                <p className="mt-1 text-sm text-gray-500">Monitorea y ajusta el stock de tus productos</p>
-                            </div>
-                            <Link href="/inventario/ajustar"
-                                  className="px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200">
-                                Ajustar Stock
-                            </Link>
-                        </div>
-                    </div>
-                </div>
+        <>
+            <button type="button" ref={trigRef}
+                    onClick={() => { calcPos(); setOpen(o => !o); }}
+                    className={`aj-trigger${open ? ' open' : ''}${error ? ' error' : ''}`}>
+                <span style={{ color: selected ? '#2d1a08' : 'rgba(180,100,30,0.38)', fontWeight: selected ? '500' : '400', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {selected ? <><span>{selected.icon}</span><span>{selected.label}</span></> : placeholder}
+                </span>
+                <svg style={{ width: '14px', height: '14px', color: 'rgba(150,80,20,0.45)', flexShrink: 0, transition: 'transform 0.18s', transform: open ? 'rotate(180deg)' : 'none' }}
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
 
-                <div className="max-w-7xl mx-auto px-6 py-12">
-                    {/* Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                        {[
-                            { label: 'Productos totales', value: stats.total,     color: 'blue',   icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
-                            { label: 'En stock',          value: stats.enStock,   color: 'green',  icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
-                            { label: 'Stock bajo',        value: stats.bajoStock, color: 'yellow', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' },
-                            { label: 'Agotados',          value: stats.agotados,  color: 'red',    icon: 'M6 18L18 6M6 6l12 12' },
-                        ].map(({ label, value, color, icon }) => (
-                            <div key={label} className="bg-white rounded-2xl p-6 shadow-sm">
-                                <div className={`w-12 h-12 bg-${color}-50 rounded-xl flex items-center justify-center mb-4`}>
-                                    <svg className={`w-6 h-6 text-${color}-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon} />
+            {open && createPortal(
+                <div ref={panelRef} className="aj-portal" style={{ top: pos.top, left: pos.left, width: pos.width }}>
+                    {options.map((opt, i) => {
+                        const sel = opt.value === value;
+                        return (
+                            <button key={opt.value} type="button"
+                                    onClick={() => { onChange(opt.value); setOpen(false); }}
+                                    className={`aj-opt${sel ? ' active' : ''}`}
+                                    style={{ borderBottom: i < options.length - 1 ? '1px solid rgba(200,140,80,0.1)' : 'none' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                    <span style={{ fontSize: '1.1rem' }}>{opt.icon}</span>
+                                    <span style={{ fontSize: '0.87rem', fontWeight: '500', color: sel ? 'rgba(185,28,28,0.9)' : 'rgba(80,40,8,0.82)' }}>{opt.label}</span>
+                                </span>
+                                {sel && (
+                                    <svg style={{ width: '13px', height: '13px', color: 'rgba(185,28,28,0.8)', flexShrink: 0 }}
+                                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                                     </svg>
-                                </div>
-                                <p className="text-2xl font-semibold text-gray-900">{value}</p>
-                                <p className="text-sm text-gray-500 mt-1">{label}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Search & Filters */}
-                    <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-                        <div className="flex flex-col md:flex-row gap-4">
-                            <div className="flex-1 relative">
-                                <input type="text" placeholder="Buscar productos en inventario..."
-                                       value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                                       className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-3 focus:ring-orange-100 transition" />
-                                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                            <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}
-                                    className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition">
-                                <option value="">Todas las categorías</option>
-                                {categorias.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                            </select>
-                        </div>
-                        {(searchTerm || selectedCategory) && (
-                            <p className="mt-2 text-sm text-gray-500">
-                                <span className="font-medium text-gray-700">{productosFiltrados.length}</span> producto{productosFiltrados.length !== 1 ? 's' : ''} encontrado{productosFiltrados.length !== 1 ? 's' : ''}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Table */}
-                    {productosFiltrados.length > 0 ? (
-                        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-gray-50 border-b border-gray-200">
-                                    <tr>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock Actual</th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock Mínimo</th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                                        {/* NUEVO — columna de acciones */}
-                                        <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                    {productosPaginados.map((producto) => (
-                                        <tr key={producto.id} className="hover:bg-gray-50 transition">
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mr-4">
-                                                        <span className="text-white font-semibold text-lg">{producto.nombre.charAt(0)}</span>
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-sm font-medium text-gray-900">{producto.nombre}</div>
-                                                        <div className="text-sm text-gray-500">{producto.codigo_barras || 'Sin código'}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
-                                                        {producto.categoria}
-                                                    </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                                                {producto.stock} unidades
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {producto.stock_minimo} unidades
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                {producto.stock > producto.stock_minimo ? (
-                                                    <span className="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-green-100 text-green-800">En stock</span>
-                                                ) : producto.stock > 0 ? (
-                                                    <span className="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Bajo stock</span>
-                                                ) : (
-                                                    <span className="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-red-100 text-red-800">Agotado</span>
-                                                )}
-                                            </td>
-                                            {/* NUEVO — botón ver kardex */}
-                                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <Link
-                                                    href={`/inventario/${producto.id}/kardex`}
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition"
-                                                    title="Ver historial de movimientos"
-                                                >
-                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                                    </svg>
-                                                    Kardex
-                                                </Link>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="px-6 pb-6">
-                                <Pagination
-                                    currentPage={currentPage}
-                                    totalItems={productosFiltrados.length}
-                                    perPage={PER_PAGE}
-                                    onPageChange={setCurrentPage}
-                                    accentColor="orange"
-                                />
-                            </div>
-                        </div>
-                    ) : (
-                        <EmptyState />
-                    )}
-                </div>
-            </div>
-        </AppLayout>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>,
+                document.body
+            )}
+        </>
     );
 }
 
-function EmptyState() {
+// ── Dropdown de producto con buscador + paginación + portal ──────────────────
+function ProductoSelect({ productos, value, onChange, error }) {
+    const [open,     setOpen]     = useState(false);
+    const [busqueda, setBusqueda] = useState('');
+    const [pagina,   setPagina]   = useState(1);
+    const [pos,      setPos]      = useState({ top: 0, left: 0, width: 0 });
+    const trigRef                 = useRef(null);
+    const panelRef                = useRef(null);
+    const inputRef                = useRef(null);
+
+    const calcPos = () => {
+        if (!trigRef.current) return;
+        const r = trigRef.current.getBoundingClientRect();
+        setPos({ top: r.bottom + 6, left: r.left, width: r.width });
+    };
+
+    useEffect(() => {
+        if (!open) return;
+        const h = (e) => {
+            if (!trigRef.current?.contains(e.target) && !panelRef.current?.contains(e.target))
+                setOpen(false);
+        };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, [open]);
+
+    useEffect(() => {
+        if (open) {
+            setPagina(1);
+            setTimeout(() => inputRef.current?.focus(), 60);
+        } else {
+            setBusqueda('');
+        }
+    }, [open]);
+
+    useEffect(() => { setPagina(1); }, [busqueda]);
+
+    const filtrados = useMemo(() => {
+        const q = normalize(busqueda);
+        return q ? productos.filter(p => normalize(p.nombre).includes(q) || normalize(p.categoria).includes(q)) : productos;
+    }, [productos, busqueda]);
+
+    const totalPags = Math.ceil(filtrados.length / PRODUCTOS_POR_PAGINA);
+    const pagActual = filtrados.slice((pagina - 1) * PRODUCTOS_POR_PAGINA, pagina * PRODUCTOS_POR_PAGINA);
+    const selected  = productos.find(p => String(p.id) === String(value));
+
+    const stockColor = (stock) => {
+        if (stock === 0) return { bg: 'rgba(220,38,38,0.08)', color: 'rgba(185,28,28,0.9)', border: 'rgba(220,38,38,0.2)' };
+        if (stock <= 5)  return { bg: 'rgba(245,158,11,0.08)', color: 'rgba(146,64,14,0.9)', border: 'rgba(245,158,11,0.25)' };
+        return { bg: 'rgba(16,185,129,0.08)', color: 'rgba(4,120,87,0.9)', border: 'rgba(16,185,129,0.2)' };
+    };
+
     return (
-        <div className="bg-white rounded-2xl shadow-sm p-16 text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-orange-50 rounded-full mb-6">
-                <svg className="w-10 h-10 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+        <>
+            <button type="button" ref={trigRef}
+                    onClick={() => { calcPos(); setOpen(o => !o); }}
+                    className={`aj-trigger${open ? ' open' : ''}${error ? ' error' : ''}`}>
+                {selected ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', overflow: 'hidden' }}>
+                        <span style={{ fontSize: '0.88rem', fontWeight: '600', color: '#2d1a08', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.nombre}</span>
+                        <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.15rem 0.55rem', borderRadius: '20px', flexShrink: 0, ...stockColor(selected.stock), border: `1px solid ${stockColor(selected.stock).border}` }}>
+                            {selected.stock} uds
+                        </span>
+                    </span>
+                ) : (
+                    <span style={{ color: 'rgba(180,100,30,0.38)', fontSize: '0.88rem' }}>Selecciona un producto...</span>
+                )}
+                <svg style={{ width: '14px', height: '14px', color: 'rgba(150,80,20,0.45)', flexShrink: 0, transition: 'transform 0.18s', transform: open ? 'rotate(180deg)' : 'none' }}
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                 </svg>
+            </button>
+
+            {open && createPortal(
+                <div ref={panelRef} className="aj-portal" style={{ top: pos.top, left: pos.left, width: pos.width }}>
+                    {/* Buscador */}
+                    <div className="aj-search-wrap">
+                        <div style={{ position: 'relative' }}>
+                            <svg style={{ position: 'absolute', left: '0.62rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(180,100,30,0.4)', pointerEvents: 'none' }}
+                                 width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input ref={inputRef} type="text" value={busqueda}
+                                   onChange={e => setBusqueda(e.target.value)}
+                                   placeholder="Buscar por nombre o categoría..."
+                                   className="aj-search" />
+                            {busqueda && (
+                                <button type="button" onClick={() => setBusqueda('')}
+                                        style={{ position: 'absolute', right: '0.62rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(150,80,20,0.5)', padding: 0 }}>
+                                    <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
+                        <p style={{ fontSize: '0.71rem', color: 'rgba(150,80,20,0.45)', marginTop: '0.28rem', paddingLeft: '0.2rem' }}>
+                            {filtrados.length} producto{filtrados.length !== 1 ? 's' : ''}{busqueda && ` · "${busqueda}"`}
+                        </p>
+                    </div>
+
+                    {/* Lista */}
+                    <div style={{ maxHeight: '260px', overflowY: 'auto' }}>
+                        {pagActual.length === 0 ? (
+                            <div style={{ padding: '1.5rem', textAlign: 'center' }}>
+                                <p style={{ fontSize: '0.84rem', color: 'rgba(150,80,20,0.5)' }}>Sin resultados para <strong>"{busqueda}"</strong></p>
+                                <button type="button" onClick={() => setBusqueda('')}
+                                        style={{ marginTop: '0.4rem', fontSize: '0.76rem', color: 'rgba(185,28,28,0.8)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                    Limpiar búsqueda
+                                </button>
+                            </div>
+                        ) : pagActual.map((p, i) => {
+                            const sel = String(p.id) === String(value);
+                            const sc  = stockColor(p.stock);
+                            return (
+                                <button key={p.id} type="button"
+                                        onClick={() => { onChange(String(p.id)); setOpen(false); }}
+                                        className={`aj-opt${sel ? ' active' : ''}`}
+                                        style={{ borderBottom: i < pagActual.length - 1 ? '1px solid rgba(200,140,80,0.09)' : 'none' }}>
+                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                        <p style={{ fontSize: '0.87rem', fontWeight: '600', color: sel ? 'rgba(185,28,28,0.9)' : '#2d1a08', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nombre}</p>
+                                        {p.categoria && <p style={{ fontSize: '0.74rem', color: 'rgba(150,80,20,0.5)', marginTop: '0.1rem' }}>{p.categoria}</p>}
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.75rem', flexShrink: 0 }}>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.15rem 0.55rem', borderRadius: '20px', background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
+                                            {p.stock} uds
+                                        </span>
+                                        {sel && (
+                                            <svg style={{ width: '13px', height: '13px', color: 'rgba(185,28,28,0.8)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        )}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Paginador */}
+                    {totalPags > 1 && (
+                        <div className="aj-pager">
+                            <button type="button" className="aj-pager-btn" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}>
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                                Ant.
+                            </button>
+                            <div style={{ display: 'flex', gap: '3px' }}>
+                                {Array.from({ length: totalPags }, (_, i) => i + 1).map(n => (
+                                    <button key={n} type="button" className="aj-pager-dot" onClick={() => setPagina(n)}
+                                            style={{
+                                                background: n === pagina ? 'rgba(220,38,38,0.12)' : 'rgba(255,255,255,0.08)',
+                                                color:      n === pagina ? 'rgba(185,28,28,0.9)'  : 'rgba(120,60,10,0.6)',
+                                                border:     n === pagina ? '1px solid rgba(220,38,38,0.3)' : '1px solid rgba(200,140,80,0.2)',
+                                            }}>
+                                        {n}
+                                    </button>
+                                ))}
+                            </div>
+                            <button type="button" className="aj-pager-btn" disabled={pagina === totalPags} onClick={() => setPagina(p => p + 1)}>
+                                Sig.
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    )}
+                </div>,
+                document.body
+            )}
+        </>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function InventarioAjustar({ productos = [] }) {
+    const [productoSeleccionado, setProductoSeleccionado] = useState(null);
+
+    const { data, setData, post, processing, errors } = useForm({
+        producto_id: '', tipo_ajuste: 'incremento', cantidad: '1', motivo: '', observaciones: '',
+    });
+
+    const handleProductoChange = (id) => {
+        setData('producto_id', id);
+        setProductoSeleccionado(productos.find(p => String(p.id) === id) || null);
+    };
+
+    const handleTipoChange = (tipo) => {
+        setData(prev => ({ ...prev, tipo_ajuste: tipo, motivo: '' }));
+    };
+
+    const submit = (e) => { e.preventDefault(); post('/inventario/ajustar'); };
+
+    const resultado = useMemo(() => {
+        if (!productoSeleccionado || !data.cantidad) return null;
+        const cant = parseInt(data.cantidad) || 0;
+        return data.tipo_ajuste === 'incremento'
+            ? productoSeleccionado.stock + cant
+            : Math.max(0, productoSeleccionado.stock - cant);
+    }, [productoSeleccionado, data.cantidad, data.tipo_ajuste]);
+
+    const esPlusSub = data.tipo_ajuste === 'incremento';
+
+    return (
+        <AppLayout>
+            <style>{STYLES}</style>
+            <div className="aj-bg">
+
+                {/* ── Header ── */}
+                <div className="aj-hdr">
+                    <div style={{ maxWidth: '780px', margin: '0 auto', padding: '1.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                            <Link href="/inventario" style={{
+                                width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.65)',
+                                borderRadius: '10px', color: 'rgba(150,80,20,0.6)', textDecoration: 'none',
+                                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.72)', flexShrink: 0,
+                            }}>
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </Link>
+                            <div>
+                                <h1 style={{ fontSize: '1.45rem', fontWeight: '300', color: '#2d1a08', letterSpacing: '-0.03em' }}>Ajuste de Stock</h1>
+                                <p style={{ fontSize: '0.8rem', color: 'rgba(150,80,20,0.6)', marginTop: '0.2rem' }}>Modifica el inventario con justificación obligatoria</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ maxWidth: '780px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+                    <form onSubmit={submit}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+                            {/* ── Paso 1: Producto ── */}
+                            <div className="aj-glass aj-a1">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
+                                    <div className="aj-step-num">1</div>
+                                    <h2 className="aj-step-title">Producto a Ajustar</h2>
+                                </div>
+                                <label className="aj-label">Producto <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span></label>
+                                <ProductoSelect productos={productos} value={data.producto_id} onChange={handleProductoChange} error={errors.producto_id} />
+                                {errors.producto_id && <p className="aj-error">{errors.producto_id}</p>}
+
+                                {productoSeleccionado && (
+                                    <div style={{
+                                        marginTop: '1rem', padding: '1rem 1.25rem',
+                                        background: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.15)',
+                                        borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem',
+                                    }}>
+                                        <div style={{ minWidth: 0 }}>
+                                            <p style={{ fontSize: '0.9rem', fontWeight: '600', color: '#2d1a08', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {productoSeleccionado.nombre}
+                                            </p>
+                                            <p style={{ fontSize: '0.76rem', color: 'rgba(150,80,20,0.55)', marginTop: '0.15rem' }}>
+                                                {productoSeleccionado.categoria || 'Sin categoría'}
+                                            </p>
+                                        </div>
+                                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                            <p style={{ fontSize: '2rem', fontWeight: '700', color: 'rgba(185,28,28,0.85)', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                                                {productoSeleccionado.stock}
+                                            </p>
+                                            <p style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.55)', marginTop: '0.1rem' }}>Stock actual</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* ── Paso 2: Tipo + Cantidad + Motivo ── */}
+                            <div className="aj-glass aj-a2">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
+                                    <div className="aj-step-num">2</div>
+                                    <h2 className="aj-step-title">Tipo de Ajuste</h2>
+                                </div>
+
+                                {/* Tipo */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '1.25rem' }}>
+                                    {[
+                                        { tipo: 'incremento', label: 'Incremento', sub: 'Aumentar stock', icon: 'M12 4v16m8-8H4', color: { on: 'rgba(16,185,129,0.9)', border: 'rgba(16,185,129,0.4)', bg: 'rgba(16,185,129,0.07)', iconBg: 'rgba(16,185,129,0.15)' } },
+                                        { tipo: 'decremento', label: 'Decremento', sub: 'Reducir stock',   icon: 'M20 12H4',         color: { on: 'rgba(220,38,38,0.9)',  border: 'rgba(220,38,38,0.4)',  bg: 'rgba(220,38,38,0.07)',  iconBg: 'rgba(220,38,38,0.12)' } },
+                                    ].map(({ tipo, label, sub, icon, color }) => {
+                                        const activo = data.tipo_ajuste === tipo;
+                                        return (
+                                            <button key={tipo} type="button" onClick={() => handleTipoChange(tipo)}
+                                                    style={{
+                                                        padding: '1.1rem', borderRadius: '16px', textAlign: 'center',
+                                                        border: `1.5px solid ${activo ? color.border : 'rgba(255,255,255,0.55)'}`,
+                                                        background: activo ? color.bg : 'rgba(255,255,255,0.04)',
+                                                        cursor: 'pointer', transition: 'all 0.18s',
+                                                        boxShadow: activo ? `0 4px 16px ${color.border.replace(/[\d.]+\)$/, '0.15)')}` : 'inset 0 1px 0 rgba(255,255,255,0.7)',
+                                                    }}>
+                                                <div style={{
+                                                    width: '42px', height: '42px', borderRadius: '14px', margin: '0 auto 0.65rem',
+                                                    background: activo ? color.iconBg : 'rgba(180,90,20,0.08)',
+                                                    border: `1px solid ${activo ? color.border : 'rgba(200,140,80,0.2)'}`,
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                }}>
+                                                    <svg width="18" height="18" fill="none" stroke={activo ? color.on : 'rgba(150,80,20,0.5)'} viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon} />
+                                                    </svg>
+                                                </div>
+                                                <p style={{ fontSize: '0.9rem', fontWeight: '600', color: activo ? color.on : 'rgba(80,40,8,0.7)' }}>{label}</p>
+                                                <p style={{ fontSize: '0.74rem', color: 'rgba(150,80,20,0.5)', marginTop: '0.15rem' }}>{sub}</p>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Cantidad + Motivo */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div>
+                                        <label className="aj-label">Cantidad <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span></label>
+                                        <div style={{
+                                            display: 'flex', alignItems: 'center',
+                                            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(200,140,80,0.4)',
+                                            borderRadius: '14px', overflow: 'hidden', backdropFilter: 'blur(10px)',
+                                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.75)',
+                                        }}>
+                                            <button type="button"
+                                                    onClick={() => setData('cantidad', String(Math.max(1, parseInt(data.cantidad || 1) - 1)))}
+                                                    style={{ padding: '0.75rem 1rem', fontSize: '1.2rem', fontWeight: '600', color: 'rgba(150,80,20,0.7)', background: 'none', border: 'none', cursor: 'pointer', transition: 'background 0.13s', flexShrink: 0 }}>
+                                                −
+                                            </button>
+                                            <input type="number" value={data.cantidad}
+                                                   onChange={e => setData('cantidad', e.target.value)}
+                                                   style={{ flex: 1, textAlign: 'center', padding: '0.75rem 0', background: 'none', border: 'none', outline: 'none', fontSize: '1.1rem', fontWeight: '700', color: '#2d1a08', fontFamily: 'Inter,sans-serif', width: 0 }}
+                                                   min="1" />
+                                            <button type="button"
+                                                    onClick={() => setData('cantidad', String(parseInt(data.cantidad || 0) + 1))}
+                                                    style={{ padding: '0.75rem 1rem', fontSize: '1.2rem', fontWeight: '600', color: 'rgba(150,80,20,0.7)', background: 'none', border: 'none', cursor: 'pointer', transition: 'background 0.13s', flexShrink: 0 }}>
+                                                +
+                                            </button>
+                                        </div>
+                                        {errors.cantidad && <p className="aj-error">{errors.cantidad}</p>}
+                                    </div>
+
+                                    <div>
+                                        <label className="aj-label">Motivo <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span></label>
+                                        <MotivoSelect
+                                            value={data.motivo}
+                                            onChange={v => setData('motivo', v)}
+                                            placeholder="Selecciona un motivo..."
+                                            error={errors.motivo}
+                                            options={MOTIVOS[data.tipo_ajuste]}
+                                        />
+                                        {errors.motivo && <p className="aj-error">{errors.motivo}</p>}
+                                    </div>
+                                </div>
+
+                                {/* Preview resultado */}
+                                {productoSeleccionado && resultado !== null && (
+                                    <div style={{
+                                        marginTop: '1.25rem', padding: '1rem 1.25rem', borderRadius: '16px',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        background: esPlusSub ? 'rgba(16,185,129,0.06)' : 'rgba(220,38,38,0.05)',
+                                        border: `1px solid ${esPlusSub ? 'rgba(16,185,129,0.2)' : 'rgba(220,38,38,0.18)'}`,
+                                    }}>
+                                        <div>
+                                            <p style={{ fontSize: '0.7rem', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', color: esPlusSub ? 'rgba(4,120,87,0.8)' : 'rgba(185,28,28,0.8)' }}>
+                                                Stock resultante
+                                            </p>
+                                            <p style={{ fontSize: '0.76rem', color: 'rgba(150,80,20,0.55)', marginTop: '0.15rem' }}>Después de aplicar el ajuste</p>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <p style={{ fontSize: '0.7rem', color: 'rgba(150,80,20,0.5)' }}>Actual</p>
+                                                <p style={{ fontSize: '1.5rem', fontWeight: '700', color: 'rgba(120,60,10,0.65)', letterSpacing: '-0.02em' }}>{productoSeleccionado.stock}</p>
+                                            </div>
+                                            <svg width="18" height="18" fill="none" stroke="rgba(150,80,20,0.35)" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                            </svg>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <p style={{ fontSize: '0.7rem', color: 'rgba(150,80,20,0.5)' }}>Nuevo</p>
+                                                <p style={{ fontSize: '1.9rem', fontWeight: '700', letterSpacing: '-0.03em', color: esPlusSub ? 'rgba(4,120,87,0.9)' : 'rgba(185,28,28,0.85)' }}>{resultado}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* ── Paso 3: Observaciones ── */}
+                            <div className="aj-glass aj-a3">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.4rem' }}>
+                                    <div className="aj-step-num">3</div>
+                                    <h2 className="aj-step-title">Observaciones</h2>
+                                </div>
+                                <p style={{ fontSize: '0.82rem', color: 'rgba(150,80,20,0.55)', marginLeft: '2.35rem', marginBottom: '1rem' }}>
+                                    Obligatorio — describe el motivo detallado del ajuste
+                                </p>
+                                <textarea
+                                    value={data.observaciones}
+                                    onChange={e => setData('observaciones', e.target.value)}
+                                    rows={4} className="aj-textarea"
+                                    placeholder="Describe el motivo del ajuste con detalle suficiente..." />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.4rem' }}>
+                                    {errors.observaciones
+                                        ? <p className="aj-error">{errors.observaciones}</p>
+                                        : <p className="aj-hint">Mínimo 5 caracteres</p>}
+                                    <span style={{ fontSize: '0.73rem', fontWeight: '600', color: data.observaciones.length >= 5 ? 'rgba(4,120,87,0.8)' : 'rgba(150,80,20,0.4)' }}>
+                                        {data.observaciones.length} chars
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* ── Botones ── */}
+                            <div className="aj-a4" style={{ display: 'flex', gap: '0.85rem' }}>
+                                <button type="submit" disabled={processing} className="aj-btn-submit">
+                                    {processing ? 'Aplicando...' : 'Aplicar Ajuste'}
+                                </button>
+                                <Link href="/inventario" className="aj-btn-cancel">Cancelar</Link>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No hay productos en inventario</h3>
-            <p className="text-gray-500 mb-6">Primero agrega productos desde el módulo de Productos</p>
-            <Link href="/productos/crear"
-                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200">
-                Ir a Productos
-            </Link>
-        </div>
+        </AppLayout>
     );
 }
