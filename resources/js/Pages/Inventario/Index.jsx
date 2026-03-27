@@ -406,7 +406,7 @@ function ProductoSelect({ productos, value, onChange, error }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function InventarioAjustar({ productos = [] }) {
+export default function InventarioIndex({ productos = [] }) {
     const [productoSeleccionado, setProductoSeleccionado] = useState(null);
 
     const { data, setData, post, processing, errors } = useForm({
