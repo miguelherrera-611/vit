@@ -76,6 +76,37 @@ const CAMPOS_MONEDA = new Set([
 const fmt = (v) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v ?? 0);
 
+/**
+ * Formatea cualquier string de fecha — ISO, MySQL o ya formateado por el backend.
+ * Ejemplos de entrada:
+ *   "2026-03-27T20:10:06.000000Z"  → "27/03/2026 15:10"
+ *   "27/03/2026 20:10:06"          → "27/03/2026 20:10"
+ *   "27/03/2026"                   → "27/03/2026"
+ */
+const formatFecha = (str) => {
+    if (!str) return '—';
+
+    // Si ya viene en formato dd/mm/yyyy HH:mm[:ss] del backend, solo limpiamos los segundos
+    const yaFormateado = /^\d{2}\/\d{2}\/\d{4}/.test(str);
+    if (yaFormateado) {
+        // quitar los segundos si vienen: "27/03/2026 20:10:06" → "27/03/2026 20:10"
+        return str.replace(/(\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}):\d{2}$/, '$1');
+    }
+
+    // ISO u otro formato reconocible por Date
+    const date = new Date(str);
+    if (isNaN(date.getTime())) return str; // si falla, mostrar tal cual
+
+    return date.toLocaleString('es-CO', {
+        day:    '2-digit',
+        month:  '2-digit',
+        year:   'numeric',
+        hour:   '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    }).replace(',', '');
+};
+
 function renderValor(clave, valor) {
     if (valor === null || valor === undefined || valor === '') {
         return <span className="text-gray-400 italic text-sm">—</span>;
@@ -164,7 +195,6 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
 
     const form2FA = useForm({ code: '' });
 
-    // ── Si el servidor dice que hay un proceso 2FA pendiente, abrir modal automáticamente ──
     useEffect(() => {
         if (esperando2FA) {
             setDeleteCount(delete_count ?? 0);
@@ -173,7 +203,6 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
         }
     }, [esperando2FA, delete_count]);
 
-    // ── Flash fallback (por si acaso) ──
     useEffect(() => {
         if (flash.delete_code_sent) {
             setDeleteCount(flash.delete_count ?? seleccionados.length);
@@ -214,14 +243,13 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
         setErrorPassword('');
 
         router.post('/registros/solicitar-eliminacion', {
-            password:  password,
-            ids:       seleccionados,
+            password: password,
+            ids:      seleccionados,
         }, {
             preserveScroll: true,
             onSuccess: (page) => {
-                const f = page.props.flash ?? {};
+                const f      = page.props.flash ?? {};
                 const espera = page.props.esperando2FA ?? false;
-
                 if (f.delete_code_sent || espera) {
                     setDeleteCount(f.delete_count ?? page.props.delete_count ?? seleccionados.length);
                     setModalEliminar(false);
@@ -246,9 +274,6 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                 setSeleccionados([]);
                 form2FA.reset();
             },
-            onError: () => {
-                // errores se muestran automáticamente via form2FA.errors
-            },
         });
     };
 
@@ -272,7 +297,7 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
         <AppLayout>
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
 
-                {/* ── HEADER ─────────────────────────────────────────── */}
+                {/* ── HEADER ── */}
                 <div className="bg-white border-b border-gray-200">
                     <div className="max-w-7xl mx-auto px-6 py-8">
                         <div className="flex items-center justify-between">
@@ -304,7 +329,7 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
 
                 <div className="max-w-7xl mx-auto px-6 py-8">
 
-                    {/* ── FLASH SUCCESS ───────────────────────────────── */}
+                    {/* ── FLASH ── */}
                     {flash.success && (
                         <div className="mb-6 bg-green-50 border border-green-200 rounded-xl px-5 py-4 flex items-center gap-3">
                             <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -314,7 +339,7 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                         </div>
                     )}
 
-                    {/* ── FILTROS ─────────────────────────────────────── */}
+                    {/* ── FILTROS ── */}
                     <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                             <div>
@@ -346,7 +371,7 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                         </div>
                     </div>
 
-                    {/* ── TABLA ───────────────────────────────────────── */}
+                    {/* ── TABLA ── */}
                     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                         {registros.data.length === 0 ? (
                             <div className="text-center py-16">
@@ -366,12 +391,7 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                                         <thead className="bg-gray-50 border-b border-gray-200">
                                         <tr>
                                             <th className="px-4 py-3 w-10">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={todosSeleccionados}
-                                                    onChange={toggleTodos}
-                                                    className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
-                                                />
+                                                <input type="checkbox" checked={todosSeleccionados} onChange={toggleTodos} className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer" />
                                             </th>
                                             <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha/Hora</th>
                                             <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
@@ -386,14 +406,12 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                                         {registros.data.map((r) => (
                                             <tr key={r.id} className={'transition ' + (seleccionados.includes(r.id) ? 'bg-red-50' : 'hover:bg-blue-50')}>
                                                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={seleccionados.includes(r.id)}
-                                                        onChange={() => toggleSeleccion(r.id)}
-                                                        className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
-                                                    />
+                                                    <input type="checkbox" checked={seleccionados.includes(r.id)} onChange={() => toggleSeleccion(r.id)} className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer" />
                                                 </td>
-                                                <td className="px-5 py-3 text-xs text-gray-500 whitespace-nowrap cursor-pointer" onClick={() => setDetalle(r)}>{r.created_at}</td>
+                                                {/* ── FECHA FORMATEADA en tabla ── */}
+                                                <td className="px-5 py-3 text-xs text-gray-500 whitespace-nowrap cursor-pointer" onClick={() => setDetalle(r)}>
+                                                    {formatFecha(r.created_at)}
+                                                </td>
                                                 <td className="px-5 py-3 cursor-pointer" onClick={() => setDetalle(r)}>
                                                     <p className="text-sm font-medium text-gray-800">{r.user_name}</p>
                                                 </td>
@@ -416,7 +434,7 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                             </>
                         )}
 
-                        {/* ── PAGINACIÓN ───────────────────────────────── */}
+                        {/* ── PAGINACIÓN ── */}
                         {registros.last_page > 1 && (
                             <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
                                 <p className="text-sm text-gray-500">Mostrando {registros.from}–{registros.to} de {registros.total} registros</p>
@@ -448,7 +466,8 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                                 <div className="text-2xl">{MODULO_ICONOS[detalle.modulo] ?? '📌'}</div>
                                 <div>
                                     <h2 className="text-lg font-semibold text-gray-900">Detalle del registro</h2>
-                                    <p className="text-sm text-gray-500">#{detalle.id} — {detalle.created_at}</p>
+                                    {/* ── FECHA FORMATEADA en cabecera del modal ── */}
+                                    <p className="text-sm text-gray-500">#{detalle.id} — {formatFecha(detalle.created_at)}</p>
                                 </div>
                             </div>
                             <button onClick={() => setDetalle(null)} className="p-2 hover:bg-gray-100 rounded-xl transition text-gray-400 hover:text-gray-600">
@@ -459,21 +478,48 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                         </div>
                         <div className="p-6 space-y-5">
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="bg-gray-50 rounded-xl p-4"><p className="text-xs text-gray-400 mb-1">Usuario</p><p className="text-sm font-semibold text-gray-800">{detalle.user_name}</p></div>
-                                <div className="bg-gray-50 rounded-xl p-4"><p className="text-xs text-gray-400 mb-1">Rol</p><span className={'px-2 py-0.5 rounded-full text-xs font-medium ' + (detalle.user_rol === 'admin' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700')}>{detalle.user_rol}</span></div>
-                                <div className="bg-gray-50 rounded-xl p-4"><p className="text-xs text-gray-400 mb-1">Módulo</p><p className="text-sm font-semibold text-gray-800">{MODULO_ICONOS[detalle.modulo] ?? '📌'} {detalle.modulo}</p></div>
-                                <div className="bg-gray-50 rounded-xl p-4"><p className="text-xs text-gray-400 mb-1">Acción</p><span className={'px-2 py-0.5 rounded-full text-xs font-medium ' + (ACCION_COLORES[detalle.accion] ?? 'bg-gray-100 text-gray-700')}>{detalle.accion}</span></div>
-                                <div className="bg-gray-50 rounded-xl p-4"><p className="text-xs text-gray-400 mb-1">Fecha y hora</p><p className="text-sm font-semibold text-gray-800">{detalle.created_at}</p></div>
-                                <div className="bg-gray-50 rounded-xl p-4"><p className="text-xs text-gray-400 mb-1">Dirección IP</p><p className="text-sm font-semibold text-gray-800">{detalle.ip ?? '—'}</p></div>
+                                <div className="bg-gray-50 rounded-xl p-4">
+                                    <p className="text-xs text-gray-400 mb-1">Usuario</p>
+                                    <p className="text-sm font-semibold text-gray-800">{detalle.user_name}</p>
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-4">
+                                    <p className="text-xs text-gray-400 mb-1">Rol</p>
+                                    <span className={'px-2 py-0.5 rounded-full text-xs font-medium ' + (detalle.user_rol === 'admin' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700')}>{detalle.user_rol}</span>
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-4">
+                                    <p className="text-xs text-gray-400 mb-1">Módulo</p>
+                                    <p className="text-sm font-semibold text-gray-800">{MODULO_ICONOS[detalle.modulo] ?? '📌'} {detalle.modulo}</p>
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-4">
+                                    <p className="text-xs text-gray-400 mb-1">Acción</p>
+                                    <span className={'px-2 py-0.5 rounded-full text-xs font-medium ' + (ACCION_COLORES[detalle.accion] ?? 'bg-gray-100 text-gray-700')}>{detalle.accion}</span>
+                                </div>
+                                {/* ── FECHA FORMATEADA en grid del modal ── */}
+                                <div className="bg-gray-50 rounded-xl p-4">
+                                    <p className="text-xs text-gray-400 mb-1">Fecha y hora</p>
+                                    <p className="text-sm font-semibold text-gray-800">{formatFecha(detalle.created_at)}</p>
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-4">
+                                    <p className="text-xs text-gray-400 mb-1">Dirección IP</p>
+                                    <p className="text-sm font-semibold text-gray-800">{detalle.ip ?? '—'}</p>
+                                </div>
                             </div>
                             {detalle.modelo_tipo && (
-                                <div className="bg-gray-50 rounded-xl p-4"><p className="text-xs text-gray-400 mb-1">Registro afectado</p><p className="text-sm font-semibold text-gray-800">{detalle.modelo_tipo} #{detalle.modelo_id}</p></div>
+                                <div className="bg-gray-50 rounded-xl p-4">
+                                    <p className="text-xs text-gray-400 mb-1">Registro afectado</p>
+                                    <p className="text-sm font-semibold text-gray-800">{detalle.modelo_tipo} #{detalle.modelo_id}</p>
+                                </div>
                             )}
-                            <div className="bg-gray-50 rounded-xl p-4"><p className="text-xs text-gray-400 mb-2">Descripción completa</p><p className="text-sm text-gray-700 leading-relaxed">{detalle.descripcion}</p></div>
-                            <DatosPanel datos={detalle.datos_anteriores} titulo="Estado anterior" dotColor="bg-red-400" colorClase="bg-red-50" borderClase="border-red-100" />
-                            <DatosPanel datos={detalle.datos_nuevos} titulo="Datos registrados" dotColor="bg-green-400" colorClase="bg-green-50" borderClase="border-green-100" />
+                            <div className="bg-gray-50 rounded-xl p-4">
+                                <p className="text-xs text-gray-400 mb-2">Descripción completa</p>
+                                <p className="text-sm text-gray-700 leading-relaxed">{detalle.descripcion}</p>
+                            </div>
+                            <DatosPanel datos={detalle.datos_anteriores} titulo="Estado anterior"    dotColor="bg-red-400"   colorClase="bg-red-50"   borderClase="border-red-100"   />
+                            <DatosPanel datos={detalle.datos_nuevos}     titulo="Datos registrados"  dotColor="bg-green-400" colorClase="bg-green-50" borderClase="border-green-100" />
                             {!detalle.datos_anteriores && !detalle.datos_nuevos && (
-                                <div className="bg-gray-50 rounded-xl p-4 text-center"><p className="text-sm text-gray-400">No hay datos adicionales para este registro</p></div>
+                                <div className="bg-gray-50 rounded-xl p-4 text-center">
+                                    <p className="text-sm text-gray-400">No hay datos adicionales para este registro</p>
+                                </div>
                             )}
                         </div>
                         <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
@@ -502,26 +548,17 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                                 </div>
                             </div>
                         </div>
-
                         <form onSubmit={enviarSolicitud} className="p-6 space-y-4">
                             <div className="bg-red-50 border border-red-100 rounded-xl p-4">
                                 <p className="text-sm text-red-700">
                                     Vas a eliminar permanentemente <strong>{seleccionados.length}</strong> registro{seleccionados.length !== 1 ? 's' : ''}. Esta acción <strong>no se puede deshacer</strong>.
                                 </p>
                             </div>
-
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Ingresa tu contraseña para continuar
-                                </label>
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 transition bg-gray-50"
-                                    placeholder="Tu contraseña actual"
-                                    autoFocus
-                                />
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Ingresa tu contraseña para continuar</label>
+                                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                                       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 transition bg-gray-50"
+                                       placeholder="Tu contraseña actual" autoFocus />
                                 {errorPassword && (
                                     <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
                                         <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -531,24 +568,14 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                                     </p>
                                 )}
                             </div>
-
-                            <p className="text-xs text-gray-400">
-                                Tras confirmar tu contraseña, recibirás un código de verificación en tu correo electrónico.
-                            </p>
-
+                            <p className="text-xs text-gray-400">Tras confirmar tu contraseña, recibirás un código de verificación en tu correo electrónico.</p>
                             <div className="flex gap-3 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => { setModalEliminar(false); setPassword(''); setErrorPassword(''); }}
-                                    className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 transition text-sm"
-                                >
+                                <button type="button" onClick={() => { setModalEliminar(false); setPassword(''); setErrorPassword(''); }}
+                                        className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 transition text-sm">
                                     Cancelar
                                 </button>
-                                <button
-                                    type="submit"
-                                    disabled={processing || !password}
-                                    className="flex-1 py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                >
+                                <button type="submit" disabled={processing || !password}
+                                        className="flex-1 py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                                     {processing ? (
                                         <>
                                             <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -584,27 +611,20 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                                 </div>
                             </div>
                         </div>
-
                         <form onSubmit={enviarCodigo2FA} className="p-6 space-y-4">
                             <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
                                 <p className="text-sm text-amber-800">
                                     📧 Hemos enviado un código de <strong>6 dígitos</strong> a tu correo. Ingresa el código para confirmar la eliminación de <strong>{deleteCount}</strong> registro{deleteCount !== 1 ? 's' : ''}.
                                 </p>
                             </div>
-
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Código de verificación
-                                </label>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Código de verificación</label>
                                 <input
-                                    type="text"
-                                    inputMode="numeric"
+                                    type="text" inputMode="numeric"
                                     value={form2FA.data.code}
                                     onChange={(e) => form2FA.setData('code', e.target.value.replace(/\D/g, '').slice(0, 6))}
                                     className="w-full px-4 py-4 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition bg-gray-50 text-center text-3xl font-bold tracking-[0.5em]"
-                                    placeholder="──────"
-                                    maxLength={6}
-                                    autoFocus
+                                    placeholder="──────" maxLength={6} autoFocus
                                 />
                                 {form2FA.errors.code && (
                                     <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
@@ -615,24 +635,14 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                                     </p>
                                 )}
                             </div>
-
-                            <p className="text-xs text-gray-400">
-                                ⏱ El código expira en <strong>10 minutos</strong>. Si no lo recibes, cancela e inicia el proceso nuevamente.
-                            </p>
-
+                            <p className="text-xs text-gray-400">⏱ El código expira en <strong>10 minutos</strong>. Si no lo recibes, cancela e inicia el proceso nuevamente.</p>
                             <div className="flex gap-3 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={cancelar2FA}
-                                    className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 transition text-sm"
-                                >
+                                <button type="button" onClick={cancelar2FA}
+                                        className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 transition text-sm">
                                     Cancelar
                                 </button>
-                                <button
-                                    type="submit"
-                                    disabled={form2FA.processing || form2FA.data.code.length !== 6}
-                                    className="flex-1 py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                >
+                                <button type="submit" disabled={form2FA.processing || form2FA.data.code.length !== 6}
+                                        className="flex-1 py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                                     {form2FA.processing ? (
                                         <>
                                             <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">

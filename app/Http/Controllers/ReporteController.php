@@ -7,6 +7,7 @@ use App\Models\VentaDetalle;
 use App\Models\Producto;
 use App\Models\Cliente;
 use App\Models\Proveedor;
+use App\Models\GrupoCategoria;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -24,7 +25,6 @@ class ReporteController extends Controller
         $mes   = Carbon::now()->startOfMonth();
         $ayer  = Carbon::yesterday();
 
-        // KPIs rápidos para el hub
         $kpis = [
             'ventas_hoy'       => Venta::whereDate('created_at', $hoy)->sum('total'),
             'ventas_mes'       => Venta::where('created_at', '>=', $mes)->sum('total'),
@@ -57,13 +57,11 @@ class ReporteController extends Controller
 
         $ventas = $query->orderBy('created_at', 'desc')->get();
 
-        // KPIs del período
         $totalIngresos    = $ventas->sum('total');
         $totalDescuentos  = $ventas->sum('descuento');
         $totalPendiente   = $ventas->where('estado', 'Pendiente')->sum('saldo_pendiente');
         $ticketPromedio   = $ventas->count() ? $ventas->avg('total') : 0;
 
-        // Ventas por día (para gráfica de línea)
         $ventasPorDia = $ventas->groupBy(fn($v) => Carbon::parse($v->created_at)->toDateString())
             ->map(fn($grupo) => [
                 'fecha'  => Carbon::parse($grupo->first()->created_at)->format('d/m'),
@@ -71,17 +69,14 @@ class ReporteController extends Controller
                 'count'  => $grupo->count(),
             ])->values();
 
-        // Ventas por método de pago (para gráfica dona)
         $porMetodoPago = $ventas->groupBy('metodo_pago')
             ->map(fn($g) => ['metodo' => $g->first()->metodo_pago, 'total' => $g->sum('total'), 'count' => $g->count()])
             ->values();
 
-        // Ventas por estado
         $porEstado = $ventas->groupBy('estado')
             ->map(fn($g) => ['estado' => $g->first()->estado, 'total' => $g->sum('total'), 'count' => $g->count()])
             ->values();
 
-        // Top 10 productos más vendidos en el período
         $productosTop = VentaDetalle::with('producto')
             ->whereHas('venta', fn($q) => $q->whereBetween(DB::raw('DATE(created_at)'), [$desde, $hasta]))
             ->select('producto_id', DB::raw('SUM(cantidad) as total_cantidad'), DB::raw('SUM(subtotal) as total_ingresos'))
@@ -114,37 +109,34 @@ class ReporteController extends Controller
     }
 
     /* ─────────────────────────────────────────────────────────────
-     |  INVENTARIO — Reporte de stock con precio compra y venta
+     |  INVENTARIO
      ─────────────────────────────────────────────────────────────*/
     public function inventario(): Response
     {
         $productos = Producto::whereNull('deleted_at')->orderBy('categoria')->orderBy('nombre')->get();
 
-        // KPIs
         $kpis = [
-            'total_productos'        => $productos->where('activo', 1)->count(),
-            'valor_inventario_venta' => $productos->sum(fn($p) => $p->precio * $p->stock),
-            'valor_inventario_compra'=> $productos->sum(fn($p) => ($p->precio_compra ?? 0) * $p->stock),
-            'ganancia_potencial'     => $productos->sum(fn($p) => (($p->precio - ($p->precio_compra ?? 0)) * $p->stock)),
-            'bajo_stock'             => $productos->filter(fn($p) => $p->stock > 0 && $p->stock <= $p->stock_minimo)->count(),
-            'agotados'               => $productos->where('stock', 0)->count(),
-            'en_stock'               => $productos->filter(fn($p) => $p->stock > $p->stock_minimo)->count(),
+            'total_productos'         => $productos->where('activo', 1)->count(),
+            'valor_inventario_venta'  => $productos->sum(fn($p) => $p->precio * $p->stock),
+            'valor_inventario_compra' => $productos->sum(fn($p) => ($p->precio_compra ?? 0) * $p->stock),
+            'ganancia_potencial'      => $productos->sum(fn($p) => (($p->precio - ($p->precio_compra ?? 0)) * $p->stock)),
+            'bajo_stock'              => $productos->filter(fn($p) => $p->stock > 0 && $p->stock <= $p->stock_minimo)->count(),
+            'agotados'                => $productos->where('stock', 0)->count(),
+            'en_stock'                => $productos->filter(fn($p) => $p->stock > $p->stock_minimo)->count(),
         ];
 
-        // Por categoría
         $porCategoria = $productos->groupBy('categoria')
             ->map(fn($g) => [
-                'categoria'              => $g->first()->categoria,
-                'total_productos'        => $g->count(),
-                'total_stock'            => $g->sum('stock'),
-                'valor_venta'            => $g->sum(fn($p) => $p->precio * $p->stock),
-                'valor_compra'           => $g->sum(fn($p) => ($p->precio_compra ?? 0) * $p->stock),
-                'ganancia_potencial'     => $g->sum(fn($p) => (($p->precio - ($p->precio_compra ?? 0)) * $p->stock)),
-                'bajo_stock'             => $g->filter(fn($p) => $p->stock > 0 && $p->stock <= $p->stock_minimo)->count(),
-                'agotados'               => $g->where('stock', 0)->count(),
+                'categoria'          => $g->first()->categoria,
+                'total_productos'    => $g->count(),
+                'total_stock'        => $g->sum('stock'),
+                'valor_venta'        => $g->sum(fn($p) => $p->precio * $p->stock),
+                'valor_compra'       => $g->sum(fn($p) => ($p->precio_compra ?? 0) * $p->stock),
+                'ganancia_potencial' => $g->sum(fn($p) => (($p->precio - ($p->precio_compra ?? 0)) * $p->stock)),
+                'bajo_stock'         => $g->filter(fn($p) => $p->stock > 0 && $p->stock <= $p->stock_minimo)->count(),
+                'agotados'           => $g->where('stock', 0)->count(),
             ])->values();
 
-        // Productos críticos (agotados o bajo stock)
         $criticos = $productos->filter(fn($p) => $p->stock <= $p->stock_minimo)
             ->sortBy('stock')
             ->values();
@@ -153,7 +145,7 @@ class ReporteController extends Controller
     }
 
     /* ─────────────────────────────────────────────────────────────
-     |  CLIENTES — Reporte de comportamiento de clientes
+     |  CLIENTES
      ─────────────────────────────────────────────────────────────*/
     public function clientes(): Response
     {
@@ -176,15 +168,14 @@ class ReporteController extends Controller
             ->values();
 
         $kpis = [
-            'total_clientes'    => $clientes->count(),
-            'clientes_activos'  => $clientes->where('activo', 1)->count(),
-            'con_deuda'         => $clientes->where('saldo_total', '>', 0)->count(),
-            'total_deuda'       => $clientes->sum('saldo_total'),
-            'mejor_cliente'     => $clientes->first()['nombre'] ?? '-',
-            'ingreso_total'     => $clientes->sum('total_compras'),
+            'total_clientes'   => $clientes->count(),
+            'clientes_activos' => $clientes->where('activo', 1)->count(),
+            'con_deuda'        => $clientes->where('saldo_total', '>', 0)->count(),
+            'total_deuda'      => $clientes->sum('saldo_total'),
+            'mejor_cliente'    => $clientes->first()['nombre'] ?? '-',
+            'ingreso_total'    => $clientes->sum('total_compras'),
         ];
 
-        // Frecuencia de compra
         $frecuencia = [
             ['label' => '1 compra',    'count' => $clientes->where('num_compras', 1)->count()],
             ['label' => '2-5 compras', 'count' => $clientes->whereBetween('num_compras', [2, 5])->count()],
@@ -195,28 +186,21 @@ class ReporteController extends Controller
     }
 
     /* ─────────────────────────────────────────────────────────────
-     |  FINANCIERO — Ingresos, descuentos, métodos de pago
+     |  FINANCIERO
      ─────────────────────────────────────────────────────────────*/
     public function financiero(): Response
     {
-        // Últimos 6 meses
         $meses = collect(range(5, 0))->map(fn($i) => Carbon::now()->subMonths($i));
 
         $porMes = $meses->map(fn($mes) => [
-            'mes'      => $mes->format('M Y'),
-            'ingresos' => Venta::whereYear('created_at', $mes->year)
-                ->whereMonth('created_at', $mes->month)
-                ->sum('total'),
-            'descuentos' => Venta::whereYear('created_at', $mes->year)
-                ->whereMonth('created_at', $mes->month)
-                ->sum('descuento'),
-            'num_ventas' => Venta::whereYear('created_at', $mes->year)
-                ->whereMonth('created_at', $mes->month)
-                ->count(),
+            'mes'        => $mes->format('M Y'),
+            'ingresos'   => Venta::whereYear('created_at', $mes->year)->whereMonth('created_at', $mes->month)->sum('total'),
+            'descuentos' => Venta::whereYear('created_at', $mes->year)->whereMonth('created_at', $mes->month)->sum('descuento'),
+            'num_ventas' => Venta::whereYear('created_at', $mes->year)->whereMonth('created_at', $mes->month)->count(),
         ]);
 
-        $mesActual = Carbon::now()->startOfMonth();
-        $mesAnterior = Carbon::now()->subMonth()->startOfMonth();
+        $mesActual      = Carbon::now()->startOfMonth();
+        $mesAnterior    = Carbon::now()->subMonth()->startOfMonth();
         $finMesAnterior = Carbon::now()->subMonth()->endOfMonth();
 
         $ingresosMesActual   = Venta::where('created_at', '>=', $mesActual)->sum('total');
@@ -225,40 +209,37 @@ class ReporteController extends Controller
             ? (($ingresosMesActual - $ingresosMesAnterior) / $ingresosMesAnterior) * 100
             : 0;
 
-        // Distribución métodos de pago (todos los tiempos)
         $metodosPago = Venta::select('metodo_pago', DB::raw('SUM(total) as total'), DB::raw('COUNT(*) as count'))
             ->groupBy('metodo_pago')
             ->get();
 
         $kpis = [
-            'ingresos_mes'       => $ingresosMesActual,
-            'ingresos_mes_ant'   => $ingresosMesAnterior,
-            'crecimiento'        => round($crecimiento, 1),
-            'total_descuentos'   => Venta::where('created_at', '>=', $mesActual)->sum('descuento'),
-            'total_pendiente'    => Venta::where('estado', 'Pendiente')->sum('saldo_pendiente'),
-            'ingresos_totales'   => Venta::sum('total'),
+            'ingresos_mes'     => $ingresosMesActual,
+            'ingresos_mes_ant' => $ingresosMesAnterior,
+            'crecimiento'      => round($crecimiento, 1),
+            'total_descuentos' => Venta::where('created_at', '>=', $mesActual)->sum('descuento'),
+            'total_pendiente'  => Venta::where('estado', 'Pendiente')->sum('saldo_pendiente'),
+            'ingresos_totales' => Venta::sum('total'),
         ];
 
         return Inertia::render('Reportes/Financiero', compact('porMes', 'metodosPago', 'kpis'));
     }
 
     /* ─────────────────────────────────────────────────────────────
-     |  EJECUTIVO — Dashboard gerencial
+     |  EJECUTIVO
      ─────────────────────────────────────────────────────────────*/
     public function ejecutivo(): Response
     {
-        $hoy     = Carbon::today();
-        $mes     = Carbon::now()->startOfMonth();
-        $semana  = Carbon::now()->startOfWeek();
+        $hoy    = Carbon::today();
+        $mes    = Carbon::now()->startOfMonth();
+        $semana = Carbon::now()->startOfWeek();
 
-        // Ventas por día últimos 30 días
         $ultimos30 = collect(range(29, 0))->map(fn($i) => [
-            'fecha'  => Carbon::now()->subDays($i)->format('d/m'),
-            'total'  => Venta::whereDate('created_at', Carbon::now()->subDays($i))->sum('total'),
-            'count'  => Venta::whereDate('created_at', Carbon::now()->subDays($i))->count(),
+            'fecha' => Carbon::now()->subDays($i)->format('d/m'),
+            'total' => Venta::whereDate('created_at', Carbon::now()->subDays($i))->sum('total'),
+            'count' => Venta::whereDate('created_at', Carbon::now()->subDays($i))->count(),
         ]);
 
-        // Top 5 productos del mes
         $topProductos = VentaDetalle::with('producto')
             ->whereHas('venta', fn($q) => $q->where('created_at', '>=', $mes))
             ->select('producto_id', DB::raw('SUM(cantidad) as qty'), DB::raw('SUM(subtotal) as revenue'))
@@ -273,7 +254,6 @@ class ReporteController extends Controller
                 'revenue'   => $d->revenue,
             ]);
 
-        // Top 5 clientes del mes
         $topClientes = Venta::with('cliente')
             ->where('created_at', '>=', $mes)
             ->select('cliente_id', DB::raw('SUM(total) as total'), DB::raw('COUNT(*) as count'))
@@ -288,22 +268,23 @@ class ReporteController extends Controller
             ]);
 
         $kpis = [
-            'ventas_hoy'       => Venta::whereDate('created_at', $hoy)->sum('total'),
-            'ventas_semana'    => Venta::where('created_at', '>=', $semana)->sum('total'),
-            'ventas_mes'       => Venta::where('created_at', '>=', $mes)->sum('total'),
-            'num_ventas_hoy'   => Venta::whereDate('created_at', $hoy)->count(),
-            'num_ventas_mes'   => Venta::where('created_at', '>=', $mes)->count(),
-            'ticket_promedio'  => Venta::where('created_at', '>=', $mes)->avg('total') ?? 0,
-            'bajo_stock'       => Producto::whereNull('deleted_at')->whereRaw('stock <= stock_minimo')->count(),
-            'agotados'         => Producto::whereNull('deleted_at')->where('stock', 0)->count(),
-            'clientes_activos' => Cliente::whereNull('deleted_at')->where('activo', 1)->count(),
-            'saldo_pendiente'  => Venta::where('estado', 'Pendiente')->sum('saldo_pendiente'),
+            'ventas_hoy'      => Venta::whereDate('created_at', $hoy)->sum('total'),
+            'ventas_semana'   => Venta::where('created_at', '>=', $semana)->sum('total'),
+            'ventas_mes'      => Venta::where('created_at', '>=', $mes)->sum('total'),
+            'num_ventas_hoy'  => Venta::whereDate('created_at', $hoy)->count(),
+            'num_ventas_mes'  => Venta::where('created_at', '>=', $mes)->count(),
+            'ticket_promedio' => Venta::where('created_at', '>=', $mes)->avg('total') ?? 0,
+            'bajo_stock'      => Producto::whereNull('deleted_at')->whereRaw('stock <= stock_minimo')->count(),
+            'agotados'        => Producto::whereNull('deleted_at')->where('stock', 0)->count(),
+            'clientes_activos'=> Cliente::whereNull('deleted_at')->where('activo', 1)->count(),
+            'saldo_pendiente' => Venta::where('estado', 'Pendiente')->sum('saldo_pendiente'),
         ];
 
         return Inertia::render('Reportes/Ejecutivo', compact('ultimos30', 'topProductos', 'topClientes', 'kpis'));
     }
+
     /* ─────────────────────────────────────────────────────────────
-     |  RENTABILIDAD — RF-06.4
+     |  RENTABILIDAD
      ─────────────────────────────────────────────────────────────*/
     public function rentabilidad(Request $request): Response
     {
@@ -344,12 +325,12 @@ class ReporteController extends Controller
 
         $porCategoria = $detalles->groupBy('categoria')
             ->map(fn($g) => [
-                'categoria'       => $g->first()['categoria'],
-                'unidades'        => $g->sum('unidades_vendidas'),
-                'ingresos'        => $g->sum('ingreso_total'),
-                'costos'          => $g->sum('costo_total'),
-                'ganancia'        => $g->sum('ganancia_bruta'),
-                'margen_promedio' => round($g->avg('margen'), 1),
+                'categoria'      => $g->first()['categoria'],
+                'unidades'       => $g->sum('unidades_vendidas'),
+                'ingresos'       => $g->sum('ingreso_total'),
+                'costos'         => $g->sum('costo_total'),
+                'ganancia'       => $g->sum('ganancia_bruta'),
+                'margen_promedio'=> round($g->avg('margen'), 1),
             ])
             ->sortByDesc('ganancia')
             ->values();
@@ -372,43 +353,74 @@ class ReporteController extends Controller
 
     /* ─────────────────────────────────────────────────────────────
      |  VENTAS POR CATEGORÍA — RF-06.6
+     |
+     |  CORRECCIÓN: ahora agrupa por GRUPO real (GrupoCategoria)
+     |  en lugar de detectar "Dama"/"Caballero" por string.
+     |  Así cualquier grupo nuevo creado por el admin aparece
+     |  automáticamente en la comparativa y en la gráfica.
      ─────────────────────────────────────────────────────────────*/
     public function ventasCategoria(Request $request): Response
     {
         $desde = $request->get('desde', Carbon::now()->startOfMonth()->toDateString());
         $hasta = $request->get('hasta', Carbon::today()->toDateString());
 
+        // ── 1. Obtener todos los grupos de categoría activos ──────
+        $grupos = GrupoCategoria::orderBy('orden')->orderBy('nombre')->get();
+
+        // Mapa: "NombreGrupo - NombreSubcat" => "NombreGrupo"
+        // Cubre el formato label_completo que usa el campo `categoria` en productos
+        $mapaGrupos = [];
+        foreach ($grupos as $grupo) {
+            foreach ($grupo->subcategorias as $sub) {
+                $mapaGrupos[$grupo->nombre . ' - ' . $sub->nombre] = $grupo->nombre;
+            }
+            // También mapear el nombre del grupo solo (por si hay productos sin subcategoría)
+            $mapaGrupos[$grupo->nombre] = $grupo->nombre;
+        }
+
+        // ── 2. Obtener detalles de ventas del período ─────────────
         $detalles = VentaDetalle::with('producto')
             ->whereHas('venta', fn($q) => $q->whereBetween(DB::raw('DATE(created_at)'), [$desde, $hasta]))
             ->select('producto_id', DB::raw('SUM(cantidad) as unidades'), DB::raw('SUM(subtotal) as ingresos'))
             ->groupBy('producto_id')
             ->get();
 
-        $porCategoria = $detalles->groupBy(fn($d) => $d->producto?->categoria ?? 'Sin categoría')
+        // ── 3. Agrupar por subcategoría (label_completo) ──────────
+        $porCategoria = $detalles
+            ->groupBy(fn($d) => $d->producto?->categoria ?? 'Sin categoría')
             ->map(fn($g, $cat) => [
                 'categoria' => $cat,
                 'unidades'  => (int) $g->sum('unidades'),
                 'ingresos'  => (float) $g->sum('ingresos'),
                 'productos' => $g->count(),
-                'grupo'     => str_starts_with($cat, 'Dama') ? 'Dama' : (str_starts_with($cat, 'Caballero') ? 'Caballero' : 'Otro'),
+                // Resolver el grupo al que pertenece esta subcategoría
+                'grupo'     => $mapaGrupos[$cat] ?? 'Otro',
             ])
             ->sortByDesc('ingresos')
             ->values();
 
-        $dama      = $porCategoria->where('grupo', 'Dama');
-        $caballero = $porCategoria->where('grupo', 'Caballero');
+        // ── 4. Comparativa dinámica: un bloque por cada grupo ─────
+        //    (antes solo Dama/Caballero, ahora todos los grupos)
+        $comparativa = $porCategoria
+            ->groupBy('grupo')
+            ->map(fn($g, $nombreGrupo) => [
+                'grupo'    => $nombreGrupo,
+                'unidades' => $g->sum('unidades'),
+                'ingresos' => $g->sum('ingresos'),
+            ])
+            ->sortByDesc('ingresos')
+            ->values();
 
-        $comparativa = [
-            ['grupo' => 'Dama',      'unidades' => $dama->sum('unidades'),      'ingresos' => $dama->sum('ingresos')],
-            ['grupo' => 'Caballero', 'unidades' => $caballero->sum('unidades'), 'ingresos' => $caballero->sum('ingresos')],
-        ];
-
+        // ── 5. KPIs ───────────────────────────────────────────────
         $kpis = [
-            'total_ingresos'     => $porCategoria->sum('ingresos'),
-            'total_unidades'     => $porCategoria->sum('unidades'),
-            'categoria_top'      => $porCategoria->first()['categoria'] ?? '—',
-            'ingresos_dama'      => $dama->sum('ingresos'),
-            'ingresos_caballero' => $caballero->sum('ingresos'),
+            'total_ingresos'  => $porCategoria->sum('ingresos'),
+            'total_unidades'  => $porCategoria->sum('unidades'),
+            'categoria_top'   => $porCategoria->first()['categoria'] ?? '—',
+            // Mantener claves legacy para compatibilidad si las usan otros sitios
+            'ingresos_dama'      => $comparativa->firstWhere('grupo', 'Dama')['ingresos'] ?? 0,
+            'ingresos_caballero' => $comparativa->firstWhere('grupo', 'Caballero')['ingresos'] ?? 0,
+            // Nuevo: todos los grupos como array para que el frontend los pueda iterar
+            'por_grupo'          => $comparativa->values(),
         ];
 
         return Inertia::render('Reportes/VentasCategoria', [

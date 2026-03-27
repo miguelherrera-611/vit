@@ -188,7 +188,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/cartera', [VentaController::class, 'cartera'])
             ->middleware('role:admin')
             ->name('cartera');
-        Route::patch('/{venta}/anular', [VentaController::class, 'anular'])
+        Route::post('/{venta}/anular', [VentaController::class, 'anular'])
             ->middleware('role:admin')
             ->name('anular');
     });

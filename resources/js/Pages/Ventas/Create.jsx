@@ -1,15 +1,244 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, useForm, router } from '@inertiajs/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+
+const CLIENTES_POR_PAGINA = 6;
+
+const normalize = (s) =>
+    (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+// ── Dropdown custom de clientes con buscador + paginación ────────────────────
+function ClienteSelect({ clientes, value, onChange, error }) {
+    const [open, setOpen]         = useState(false);
+    const [busqueda, setBusqueda] = useState('');
+    const [pagina, setPagina]     = useState(1);
+    const ref                     = useRef(null);
+    const inputRef                = useRef(null);
+
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, []);
+
+    useEffect(() => {
+        if (open) {
+            setPagina(1);
+            setTimeout(() => inputRef.current?.focus(), 60);
+        } else {
+            setBusqueda('');
+        }
+    }, [open]);
+
+    useEffect(() => { setPagina(1); }, [busqueda]);
+
+    // Opción "Cliente general" siempre primera
+    const opcionGeneral = { id: '', nombre: 'Cliente general (sin cuenta)', telefono: null };
+
+    const clientesFiltrados = useMemo(() => {
+        const q = normalize(busqueda);
+        if (!q) return clientes;
+        return clientes.filter(c =>
+            normalize(c.nombre).includes(q) ||
+            normalize(c.telefono).includes(q) ||
+            normalize(c.documento).includes(q)
+        );
+    }, [clientes, busqueda]);
+
+    const totalPaginas  = Math.ceil(clientesFiltrados.length / CLIENTES_POR_PAGINA);
+    const clientesPag   = clientesFiltrados.slice(
+        (pagina - 1) * CLIENTES_POR_PAGINA,
+        pagina * CLIENTES_POR_PAGINA
+    );
+
+    const seleccionado = value
+        ? clientes.find(c => String(c.id) === String(value))
+        : null;
+
+    return (
+        <div ref={ref} className="relative">
+            {/* Trigger */}
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition text-sm bg-gray-50
+                    ${error ? 'border-red-400' :
+                    open  ? 'border-blue-500 ring-2 ring-blue-100 bg-white' :
+                        'border-gray-200 hover:border-gray-300'}`}
+            >
+                <span className={seleccionado ? 'text-gray-800 font-medium' : 'text-gray-500'}>
+                    {seleccionado ? seleccionado.nombre : 'Cliente general (sin cuenta)'}
+                </span>
+                <svg className={`w-4 h-4 text-gray-400 flex-shrink-0 ml-2 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            {/* Panel */}
+            {open && (
+                <div className="absolute z-50 mt-1.5 w-full bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
+                     style={{ animation: 'dropdownIn 0.16s cubic-bezier(0.16,1,0.3,1)' }}>
+
+                    {/* Buscador */}
+                    <div className="px-3 pt-3 pb-2 border-b border-gray-100">
+                        <div className="relative">
+                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={busqueda}
+                                onChange={(e) => setBusqueda(e.target.value)}
+                                placeholder="Buscar por nombre, teléfono o documento..."
+                                className="w-full pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-gray-50"
+                            />
+                            {busqueda && (
+                                <button type="button" onClick={() => setBusqueda('')}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1.5 px-1">
+                            {busqueda
+                                ? `${clientesFiltrados.length} resultado${clientesFiltrados.length !== 1 ? 's' : ''} para "${busqueda}"`
+                                : `${clientes.length} clientes registrados`}
+                        </p>
+                    </div>
+
+                    {/* Opción cliente general — siempre visible */}
+                    {!busqueda && (
+                        <button
+                            type="button"
+                            onClick={() => { onChange(''); setOpen(false); }}
+                            className={`w-full flex items-center gap-3 px-4 py-3 text-left border-b border-gray-50 transition
+                                ${!value ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                        >
+                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                            <span className={`text-sm font-medium ${!value ? 'text-blue-700' : 'text-gray-700'}`}>
+                                Cliente general (sin cuenta)
+                            </span>
+                            {!value && (
+                                <svg className="w-4 h-4 text-blue-600 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                                </svg>
+                            )}
+                        </button>
+                    )}
+
+                    {/* Lista de clientes */}
+                    <div>
+                        {clientesPag.length === 0 ? (
+                            <div className="px-4 py-8 text-center">
+                                <p className="text-sm text-gray-400">Sin resultados para <strong>"{busqueda}"</strong></p>
+                                <button type="button" onClick={() => setBusqueda('')}
+                                        className="mt-2 text-xs text-blue-600 hover:underline">
+                                    Limpiar búsqueda
+                                </button>
+                            </div>
+                        ) : (
+                            clientesPag.map((c, i) => {
+                                const sel = String(c.id) === String(value);
+                                const iniciales = c.nombre.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+                                return (
+                                    <button key={c.id} type="button"
+                                            onClick={() => { onChange(String(c.id)); setOpen(false); }}
+                                            className={`w-full flex items-center gap-3 px-4 py-3 text-left transition
+                                            ${sel ? 'bg-blue-50' : 'hover:bg-gray-50'}
+                                            ${i < clientesPag.length - 1 ? 'border-b border-gray-50' : ''}`}
+                                    >
+                                        {/* Avatar con iniciales */}
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
+                                            ${sel ? 'bg-blue-200 text-blue-800' : 'bg-indigo-100 text-indigo-700'}`}>
+                                            {iniciales}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className={`text-sm font-medium truncate ${sel ? 'text-blue-700' : 'text-gray-800'}`}>
+                                                {c.nombre}
+                                            </p>
+                                            {c.telefono && (
+                                                <p className="text-xs text-gray-400 truncate">{c.telefono}</p>
+                                            )}
+                                        </div>
+                                        {sel && (
+                                            <svg className="w-4 h-4 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        )}
+                                    </button>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    {/* Paginación */}
+                    {totalPaginas > 1 && (
+                        <div className="flex items-center justify-between px-3 py-2.5 border-t border-gray-100 bg-gray-50">
+                            <button type="button"
+                                    onClick={() => setPagina(p => Math.max(1, p - 1))}
+                                    disabled={pagina === 1}
+                                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-600 rounded-lg hover:bg-white transition disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                                Anterior
+                            </button>
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(n => (
+                                    <button key={n} type="button" onClick={() => setPagina(n)}
+                                            className={`w-7 h-7 rounded-lg text-xs font-semibold transition
+                                            ${n === pagina ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-white'}`}>
+                                        {n}
+                                    </button>
+                                ))}
+                            </div>
+                            <button type="button"
+                                    onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}
+                                    disabled={pagina === totalPaginas}
+                                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-600 rounded-lg hover:bg-white transition disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                Siguiente
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Acceso rápido a crear cliente */}
+                    <div className="px-3 py-2 border-t border-gray-100 bg-gray-50">
+                        <Link href="/clientes/crear"
+                              className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-800 font-medium transition">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Registrar nuevo cliente
+                        </Link>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function VentasCreate({ productos = [], clientes = [] }) {
-    const [busquedaProducto, setBusquedaProducto] = useState('');
-    const [items, setItems]                       = useState([]);
-    const [avisoClienteGeneral, setAvisoClienteGeneral] = useState(false);
-    const [ventaExitosa, setVentaExitosa]               = useState(null);
-
-    // Guardamos tipo y total ANTES del post porque reset() los borra
-    const pendingMeta = useRef(null);
+    const [busquedaProducto, setBusquedaProducto]           = useState('');
+    const [items, setItems]                                 = useState([]);
+    const [avisoClienteGeneral, setAvisoClienteGeneral]     = useState(false);
+    const [ventaExitosa, setVentaExitosa]                   = useState(null);
+    const pendingMeta                                        = useRef(null);
 
     const { data, setData, post, processing, errors, clearErrors, reset } = useForm({
         cliente_id:   '',
@@ -24,7 +253,6 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
 
     useEffect(() => {
         if (errors.items) clearErrors('items');
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [items]);
 
     const productosFiltrados = productos.filter(p =>
@@ -35,51 +263,37 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
     const agregarProducto = (producto) => {
         const existe = items.find(i => i.producto_id === producto.id);
         if (existe) {
-            const nuevosItems = items.map(i =>
+            const nuevos = items.map(i =>
                 i.producto_id === producto.id
                     ? { ...i, cantidad: Math.min(i.cantidad + 1, producto.stock) }
                     : i
             );
-            setItems(nuevosItems);
-            setData('items', nuevosItems);
+            setItems(nuevos); setData('items', nuevos);
         } else {
-            const nuevosItems = [...items, {
+            const nuevos = [...items, {
                 producto_id:     producto.id,
                 nombre:          producto.nombre,
                 precio_unitario: producto.precio,
                 cantidad:        1,
                 stock_max:       producto.stock,
             }];
-            setItems(nuevosItems);
-            setData('items', nuevosItems);
+            setItems(nuevos); setData('items', nuevos);
         }
         setBusquedaProducto('');
     };
 
     const actualizarCantidad = (idx, cantidad) => {
-        const nuevosItems = items.map((item, i) => {
-            if (i === idx) {
-                const cant = Math.max(1, Math.min(parseInt(cantidad) || 1, item.stock_max));
-                return { ...item, cantidad: cant };
-            }
-            return item;
+        const nuevos = items.map((item, i) => {
+            if (i !== idx) return item;
+            const cant = Math.max(1, Math.min(parseInt(cantidad) || 1, item.stock_max));
+            return { ...item, cantidad: cant };
         });
-        setItems(nuevosItems);
-        setData('items', nuevosItems);
-    };
-
-    const actualizarPrecio = (idx, precio) => {
-        const nuevosItems = items.map((item, i) =>
-            i === idx ? { ...item, precio_unitario: parseFloat(precio) || 0 } : item
-        );
-        setItems(nuevosItems);
-        setData('items', nuevosItems);
+        setItems(nuevos); setData('items', nuevos);
     };
 
     const eliminarItem = (idx) => {
-        const nuevosItems = items.filter((_, i) => i !== idx);
-        setItems(nuevosItems);
-        setData('items', nuevosItems);
+        const nuevos = items.filter((_, i) => i !== idx);
+        setItems(nuevos); setData('items', nuevos);
     };
 
     const cambiarTipoVenta = (tipo) => {
@@ -101,22 +315,19 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
     const esContado         = data.tipo_venta === 'Contado';
     const pagoInsuficiente  = data.pagado !== '' && pagado < total && total > 0;
     const mostrarAvisoDeuda = esClienteGeneral && esContado && pagoInsuficiente && items.length > 0;
-
-    const hayErrorStock   = !!errors.items;
-    const submitBloqueado = mostrarAvisoDeuda || hayErrorStock;
+    const hayErrorStock     = !!errors.items;
+    const submitBloqueado   = mostrarAvisoDeuda || hayErrorStock;
 
     const formatCurrency = (v) =>
         new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
 
     const fechaMinima = () => {
-        const d = new Date();
-        d.setDate(d.getDate() + 1);
+        const d = new Date(); d.setDate(d.getDate() + 1);
         return d.toISOString().split('T')[0];
     };
 
     const fechaSugerida = (tipo) => {
-        const d = new Date();
-        d.setDate(d.getDate() + (tipo === 'Separado' ? 30 : 60));
+        const d = new Date(); d.setDate(d.getDate() + (tipo === 'Separado' ? 30 : 60));
         return d.toISOString().split('T')[0];
     };
 
@@ -127,36 +338,23 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
 
     const submit = (e) => {
         e.preventDefault();
-
         if (esClienteGeneral && esContado && pagado < total && total > 0) {
             setAvisoClienteGeneral(true);
-            setTimeout(() => {
-                document.getElementById('aviso-cliente-general')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 50);
+            setTimeout(() => document.getElementById('aviso-cliente-general')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
             return;
         }
-
-        // Guardamos meta ANTES del post
         pendingMeta.current = { tipo_venta: data.tipo_venta, total };
-
         post('/ventas', {
-            preserveState: true,   // <-- evita que Inertia desmonte el componente
+            preserveState: true,
             preserveScroll: true,
             onSuccess: () => {
                 const meta = pendingMeta.current;
-                // Reset completo
-                setItems([]);
-                setBusquedaProducto('');
-                setAvisoClienteGeneral(false);
-                reset();
-                // Mostrar modal
+                setItems([]); setBusquedaProducto(''); setAvisoClienteGeneral(false); reset();
                 setVentaExitosa(meta);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             },
             onError: () => {
-                setTimeout(() => {
-                    document.getElementById('aviso-stock')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 50);
+                setTimeout(() => document.getElementById('aviso-stock')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
             },
         });
     };
@@ -173,6 +371,13 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
 
     return (
         <AppLayout>
+            <style>{`
+                @keyframes dropdownIn {
+                    from { opacity:0; transform:translateY(-6px) scale(0.98); }
+                    to   { opacity:1; transform:translateY(0)     scale(1);   }
+                }
+            `}</style>
+
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
                 <div className="bg-white border-b border-gray-200">
                     <div className="max-w-7xl mx-auto px-6 py-6">
@@ -197,6 +402,7 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                             {/* ── Panel izquierdo ── */}
                             <div className="lg:col-span-3 space-y-6">
 
+                                {/* Buscar producto */}
                                 <div className="bg-white rounded-2xl shadow-sm p-6">
                                     <h2 className="text-lg font-semibold text-gray-900 mb-4">Agregar Productos</h2>
                                     <div className="relative">
@@ -218,12 +424,8 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                                 <p className="text-sm text-gray-500 p-4">Sin resultados</p>
                                             ) : (
                                                 productosFiltrados.map(p => (
-                                                    <button
-                                                        key={p.id}
-                                                        type="button"
-                                                        onClick={() => agregarProducto(p)}
-                                                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-blue-50 transition text-left border-b border-gray-50 last:border-0"
-                                                    >
+                                                    <button key={p.id} type="button" onClick={() => agregarProducto(p)}
+                                                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-blue-50 transition text-left border-b border-gray-50 last:border-0">
                                                         <div>
                                                             <p className="font-medium text-gray-800 text-sm">{p.nombre}</p>
                                                             <p className="text-xs text-gray-400">{p.categoria}</p>
@@ -239,13 +441,11 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                     )}
                                 </div>
 
-                                <div className={
-                                    'bg-white rounded-2xl shadow-sm overflow-hidden transition ' +
-                                    (hayErrorStock ? 'ring-2 ring-red-400' : '')
-                                }>
+                                {/* Carrito de artículos */}
+                                <div className={`bg-white rounded-2xl shadow-sm overflow-hidden transition ${hayErrorStock ? 'ring-2 ring-red-400' : ''}`}>
                                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                                         <h2 className="text-lg font-semibold text-gray-900">Artículos</h2>
-                                        <span className="text-sm text-gray-500">{items.length} items</span>
+                                        <span className="text-sm text-gray-500">{items.length} item{items.length !== 1 ? 's' : ''}</span>
                                     </div>
 
                                     {items.length === 0 ? (
@@ -260,30 +460,39 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                     ) : (
                                         <div className="divide-y divide-gray-50">
                                             {items.map((item, idx) => (
-                                                <div key={idx} className="px-6 py-4 flex items-center space-x-4">
+                                                <div key={idx} className="px-6 py-4 flex items-center gap-4">
                                                     <div className="flex-1 min-w-0">
                                                         <p className="font-medium text-gray-800 truncate">{item.nombre}</p>
-                                                        <p className="text-xs text-gray-400 mt-0.5">Stock disponible: {item.stock_max}</p>
+                                                        <p className="text-xs text-gray-400 mt-0.5">
+                                                            Stock: {item.stock_max} · {formatCurrency(item.precio_unitario)} c/u
+                                                        </p>
                                                     </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <button type="button" onClick={() => actualizarCantidad(idx, item.cantidad - 1)} className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-100 transition">
+
+                                                    {/* Controles de cantidad */}
+                                                    <div className="flex items-center gap-1.5">
+                                                        <button type="button" onClick={() => actualizarCantidad(idx, item.cantidad - 1)}
+                                                                className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-100 transition">
                                                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" /></svg>
                                                         </button>
-                                                        <input type="number" value={item.cantidad} onChange={(e) => actualizarCantidad(idx, e.target.value)} className="w-14 text-center border border-gray-200 rounded-lg py-1.5 text-sm focus:outline-none focus:border-blue-500" min="1" max={item.stock_max} />
-                                                        <button type="button" onClick={() => actualizarCantidad(idx, item.cantidad + 1)} className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-100 transition">
+                                                        <input type="number" value={item.cantidad}
+                                                               onChange={(e) => actualizarCantidad(idx, e.target.value)}
+                                                               className="w-12 text-center border border-gray-200 rounded-lg py-1.5 text-sm focus:outline-none focus:border-blue-500"
+                                                               min="1" max={item.stock_max} />
+                                                        <button type="button" onClick={() => actualizarCantidad(idx, item.cantidad + 1)}
+                                                                className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-100 transition">
                                                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
                                                         </button>
                                                     </div>
-                                                    <div className="w-32">
-                                                        <div className="relative">
-                                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                                                            <input type="number" value={item.precio_unitario} onChange={(e) => actualizarPrecio(idx, e.target.value)} className="w-full pl-5 pr-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500" min="0" />
-                                                        </div>
-                                                    </div>
+
+                                                    {/* Subtotal — solo lectura, sin input de precio */}
                                                     <div className="w-24 text-right">
-                                                        <p className="font-semibold text-gray-900 text-sm">{formatCurrency(item.cantidad * item.precio_unitario)}</p>
+                                                        <p className="font-semibold text-gray-900 text-sm">
+                                                            {formatCurrency(item.cantidad * item.precio_unitario)}
+                                                        </p>
                                                     </div>
-                                                    <button type="button" onClick={() => eliminarItem(idx)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition">
+
+                                                    <button type="button" onClick={() => eliminarItem(idx)}
+                                                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition">
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                                                     </button>
                                                 </div>
@@ -305,21 +514,19 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                             {/* ── Panel derecho ── */}
                             <div className="lg:col-span-2 space-y-6">
 
+                                {/* Cliente — dropdown custom */}
                                 <div className="bg-white rounded-2xl shadow-sm p-6">
                                     <h2 className="text-lg font-semibold text-gray-900 mb-4">Cliente</h2>
-                                    <select
+                                    <ClienteSelect
+                                        clientes={clientes}
                                         value={data.cliente_id}
-                                        onChange={(e) => { setData('cliente_id', e.target.value); setAvisoClienteGeneral(false); }}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition bg-gray-50 text-sm"
-                                    >
-                                        <option value="">Cliente general (sin cuenta)</option>
-                                        {clientes.map(c => (
-                                            <option key={c.id} value={c.id}>{c.nombre} {c.apellido || ''}</option>
-                                        ))}
-                                    </select>
-                                    {errors.cliente_id && <p className="mt-1 text-sm text-red-600">{errors.cliente_id}</p>}
+                                        onChange={(id) => { setData('cliente_id', id); setAvisoClienteGeneral(false); }}
+                                        error={errors.cliente_id}
+                                    />
+                                    {errors.cliente_id && <p className="mt-1.5 text-sm text-red-600">{errors.cliente_id}</p>}
                                 </div>
 
+                                {/* Tipo de venta */}
                                 <div className="bg-white rounded-2xl shadow-sm p-6">
                                     <h2 className="text-lg font-semibold text-gray-900 mb-4">Tipo de Venta</h2>
                                     <div className="grid grid-cols-3 gap-2 mb-4">
@@ -338,21 +545,17 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                                 </svg>
                                                 <label className="text-sm font-medium text-amber-800">
-                                                    Fecha límite de pago {data.tipo_venta === 'Separado' ? '(separado)' : '(crédito)'}
+                                                    Fecha límite {data.tipo_venta === 'Separado' ? '(separado)' : '(crédito)'}
                                                 </label>
                                             </div>
-                                            <input
-                                                type="date"
-                                                value={data.fecha_limite}
-                                                onChange={(e) => setData('fecha_limite', e.target.value)}
-                                                min={fechaMinima()}
-                                                className="w-full px-4 py-2.5 border border-amber-300 rounded-xl focus:outline-none focus:border-amber-500 bg-white text-sm"
-                                            />
-                                            <div className="flex gap-2 mt-2">
-                                                <button type="button" onClick={() => setData('fecha_limite', fechaSugerida(data.tipo_venta))} className="text-xs text-amber-700 underline hover:text-amber-900">
-                                                    {data.tipo_venta === 'Separado' ? 'Sugerir 30 días' : 'Sugerir 60 días'}
-                                                </button>
-                                            </div>
+                                            <input type="date" value={data.fecha_limite}
+                                                   onChange={(e) => setData('fecha_limite', e.target.value)}
+                                                   min={fechaMinima()}
+                                                   className="w-full px-4 py-2.5 border border-amber-300 rounded-xl focus:outline-none focus:border-amber-500 bg-white text-sm" />
+                                            <button type="button" onClick={() => setData('fecha_limite', fechaSugerida(data.tipo_venta))}
+                                                    className="text-xs text-amber-700 underline hover:text-amber-900 mt-2">
+                                                {data.tipo_venta === 'Separado' ? 'Sugerir 30 días' : 'Sugerir 60 días'}
+                                            </button>
                                             {errors.fecha_limite && <p className="mt-1 text-xs text-red-600">{errors.fecha_limite}</p>}
                                             <p className="mt-2 text-xs text-amber-600">
                                                 {data.tipo_venta === 'Separado'
@@ -374,6 +577,7 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                     </div>
                                 </div>
 
+                                {/* Resumen financiero */}
                                 <div className="bg-white rounded-2xl shadow-sm p-6">
                                     <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumen</h2>
                                     <div className="space-y-3 mb-4">
@@ -385,7 +589,10 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                             <span className="text-gray-500">Descuento</span>
                                             <div className="relative w-32">
                                                 <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                                                <input type="number" value={data.descuento} onChange={(e) => setData('descuento', e.target.value)} className="w-full pl-5 pr-2 py-1 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:border-blue-500" min="0" />
+                                                <input type="number" value={data.descuento}
+                                                       onChange={(e) => setData('descuento', e.target.value)}
+                                                       className="w-full pl-5 pr-2 py-1 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:border-blue-500"
+                                                       min="0" />
                                             </div>
                                         </div>
                                         <div className="border-t border-gray-100 pt-3 flex justify-between">
@@ -400,13 +607,11 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                         </label>
                                         <div className="relative">
                                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
-                                            <input
-                                                type="number"
-                                                value={data.pagado}
-                                                onChange={(e) => { setData('pagado', e.target.value); if (avisoClienteGeneral) setAvisoClienteGeneral(false); }}
-                                                className={'w-full pl-8 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition bg-gray-50 text-lg font-semibold ' + (mostrarAvisoDeuda ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-gray-200 focus:border-blue-500 focus:ring-blue-100')}
-                                                placeholder="0" min="0"
-                                            />
+                                            <input type="number" value={data.pagado}
+                                                   onChange={(e) => { setData('pagado', e.target.value); if (avisoClienteGeneral) setAvisoClienteGeneral(false); }}
+                                                   className={'w-full pl-8 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition bg-gray-50 text-lg font-semibold ' +
+                                                       (mostrarAvisoDeuda ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-gray-200 focus:border-blue-500 focus:ring-blue-100')}
+                                                   placeholder="0" min="0" />
                                         </div>
 
                                         {data.pagado !== '' && pagado >= total && total > 0 && (
@@ -425,6 +630,7 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                     </div>
                                 </div>
 
+                                {/* Aviso stock */}
                                 {hayErrorStock && (
                                     <div id="aviso-stock" className="bg-red-50 border border-red-300 rounded-2xl p-5 shadow-sm">
                                         <div className="flex items-start gap-3">
@@ -444,6 +650,7 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                     </div>
                                 )}
 
+                                {/* Aviso cliente general */}
                                 {mostrarAvisoDeuda && (
                                     <div id="aviso-cliente-general" className="bg-red-50 border border-red-300 rounded-2xl p-5 shadow-sm">
                                         <div className="flex items-start gap-3 mb-3">
@@ -462,7 +669,8 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                         </div>
                                         <div className="space-y-2 mt-4">
                                             <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-2">¿Qué deseas hacer?</p>
-                                            <button type="button" onClick={() => { setData('pagado', total.toString()); setAvisoClienteGeneral(false); }}
+                                            <button type="button"
+                                                    onClick={() => { setData('pagado', total.toString()); setAvisoClienteGeneral(false); }}
                                                     className="w-full flex items-center gap-3 px-4 py-3 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition text-left">
                                                 <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
                                                 <div>
@@ -490,6 +698,7 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                     </div>
                                 )}
 
+                                {/* Notas */}
                                 <div className="bg-white rounded-2xl shadow-sm p-6">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Notas (opcional)</label>
                                     <textarea value={data.notas} onChange={(e) => setData('notas', e.target.value)} rows={2}
@@ -497,16 +706,11 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                               placeholder="Observaciones de la venta..." />
                                 </div>
 
-                                <button
-                                    type="submit"
-                                    disabled={processing || items.length === 0 || submitBloqueado}
-                                    className={
-                                        'w-full py-4 px-6 rounded-xl font-semibold text-lg transition duration-200 ' +
-                                        (submitBloqueado
-                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                            : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none')
-                                    }
-                                >
+                                <button type="submit" disabled={processing || items.length === 0 || submitBloqueado}
+                                        className={'w-full py-4 px-6 rounded-xl font-semibold text-lg transition duration-200 ' +
+                                            (submitBloqueado
+                                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none')}>
                                     {processing ? 'Procesando...' : 'Registrar Venta • ' + formatCurrency(total)}
                                 </button>
                             </div>

@@ -38,6 +38,8 @@ const PAGE_STYLES = `
         -webkit-backdrop-filter: blur(32px) saturate(180%);
         border-bottom: 1px solid rgba(255,255,255,0.68);
         box-shadow: 0 4px 24px rgba(200,100,30,0.07), inset 0 1px 0 rgba(255,255,255,0.85);
+        position: relative;
+        z-index: 20;
     }
 
     /* glass panel (replaces white bg-white cards) */
@@ -52,7 +54,8 @@ const PAGE_STYLES = `
             0 3px 12px rgba(180,90,20,0.05),
             inset 0 1.5px 0 rgba(255,255,255,0.85),
             inset 0 -1px 0 rgba(180,90,20,0.03);
-        position: relative; overflow: hidden;
+        position: relative;
+        z-index: 1;
     }
     .glass-panel::before {
         content:''; position:absolute; top:0; left:0; right:0; height:1px;
@@ -196,7 +199,7 @@ const PAGE_STYLES = `
         border:1px solid rgba(255,255,255,0.72);
         border-radius:18px;
         box-shadow: 0 16px 48px rgba(180,90,20,0.12), inset 0 1px 0 rgba(255,255,255,0.9);
-        overflow:hidden; z-index:40;
+        overflow:hidden; z-index:9999;
         animation: dropIn 0.18s cubic-bezier(0.16,1,0.3,1);
     }
     @keyframes dropIn { from{opacity:0;transform:translateY(-6px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }

@@ -2,210 +2,420 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (v) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v ?? 0);
 
-/* Gráfica de barras horizontales */
-function HBarChart({ data, valueKey, colorFn }) {
+// Paleta de colores por índice — soporta N grupos dinámicos
+const PALETTE = [
+    { bar: 'rgba(236,72,153,0.75)',  bg: 'rgba(236,72,153,0.08)',  border: 'rgba(236,72,153,0.25)',  text: 'rgba(157,23,77,0.9)',   label: 'text-pink-700'   },
+    { bar: 'rgba(99,102,241,0.75)',  bg: 'rgba(99,102,241,0.08)',  border: 'rgba(99,102,241,0.25)',  text: 'rgba(55,48,163,0.9)',   label: 'text-indigo-700' },
+    { bar: 'rgba(16,185,129,0.75)',  bg: 'rgba(16,185,129,0.08)',  border: 'rgba(16,185,129,0.25)',  text: 'rgba(4,120,87,0.9)',    label: 'text-emerald-700'},
+    { bar: 'rgba(245,158,11,0.75)',  bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.25)',  text: 'rgba(146,64,14,0.9)',   label: 'text-amber-700'  },
+    { bar: 'rgba(59,130,246,0.75)',  bg: 'rgba(59,130,246,0.08)',  border: 'rgba(59,130,246,0.25)',  text: 'rgba(30,64,175,0.9)',   label: 'text-blue-700'   },
+    { bar: 'rgba(168,85,247,0.75)',  bg: 'rgba(168,85,247,0.08)',  border: 'rgba(168,85,247,0.25)',  text: 'rgba(88,28,135,0.9)',   label: 'text-purple-700' },
+    { bar: 'rgba(249,115,22,0.75)',  bg: 'rgba(249,115,22,0.08)',  border: 'rgba(249,115,22,0.25)',  text: 'rgba(154,52,18,0.9)',   label: 'text-orange-700' },
+    { bar: 'rgba(71,85,105,0.75)',   bg: 'rgba(71,85,105,0.08)',   border: 'rgba(71,85,105,0.25)',   text: 'rgba(30,41,59,0.9)',    label: 'text-slate-700'  },
+];
+
+const getColor = (index) => PALETTE[index % PALETTE.length];
+
+// ── Gráfica de barras horizontales ────────────────────────────────────────────
+function HBarChart({ data, valueKey, grupoColorMap }) {
     const max = Math.max(...data.map(d => d[valueKey] || 0), 1);
+    if (data.length === 0) {
+        return <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'rgba(150,80,20,0.45)', padding: '2rem 0' }}>Sin datos para el período</p>;
+    }
     return (
-        <div className="space-y-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
             {data.map(d => {
-                const pct = (d[valueKey] / max) * 100;
+                const pct   = (d[valueKey] / max) * 100;
+                const color = grupoColorMap[d.grupo]?.bar ?? 'rgba(180,90,20,0.5)';
+                const val   = d[valueKey];
                 return (
                     <div key={d.categoria}>
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm font-medium text-gray-700 truncate max-w-[55%]">{d.categoria}</span>
-                            <span className="text-sm font-bold text-gray-900">{typeof d[valueKey] === 'number' && d[valueKey] > 1000 ? fmt(d[valueKey]) : d[valueKey]}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                            <span style={{ fontSize: '0.82rem', fontWeight: '500', color: '#2d1a08', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>
+                                {d.categoria}
+                            </span>
+                            <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#2d1a08', flexShrink: 0 }}>
+                                {typeof val === 'number' && val > 1000 ? fmt(val) : val}
+                            </span>
                         </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2.5">
-                            <div className={`h-2.5 rounded-full ${colorFn(d)}`} style={{ width: `${pct}%` }} />
+                        <div style={{ width: '100%', background: 'rgba(180,90,20,0.1)', borderRadius: '99px', height: '8px' }}>
+                            <div style={{ width: `${pct}%`, height: '8px', borderRadius: '99px', background: color, transition: 'width 0.4s ease' }} />
                         </div>
                     </div>
                 );
             })}
-            {data.length === 0 && <p className="text-sm text-gray-400 text-center py-6">Sin datos para el período</p>}
         </div>
     );
 }
 
-/* Mini gráfica de dona con SVG */
-function DonaChart({ dama, caballero }) {
-    const total = (dama || 0) + (caballero || 0);
-    if (total === 0) return <p className="text-sm text-gray-400 text-center py-8">Sin datos</p>;
+// ── Gráfica de dona dinámica (N grupos) ───────────────────────────────────────
+function DonaChart({ comparativa, grupoColorMap }) {
+    const total = comparativa.reduce((s, c) => s + (c.ingresos || 0), 0);
+    if (total === 0) {
+        return <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'rgba(150,80,20,0.45)', padding: '2rem 0' }}>Sin datos</p>;
+    }
 
-    const pctDama = total > 0 ? (dama / total) * 100 : 0;
-    const pctCab  = 100 - pctDama;
-    const r = 40, cx = 60, cy = 60, stroke = 24;
+    const r = 42, cx = 60, cy = 60, strokeW = 22;
     const circ = 2 * Math.PI * r;
-    const dashDama = (pctDama / 100) * circ;
-    const dashCab  = circ - dashDama;
+
+    // Calcular segmentos
+    let offset = 0;
+    const segments = comparativa.map((c, i) => {
+        const pct  = c.ingresos / total;
+        const dash = pct * circ;
+        const seg  = { pct, dash, offset, color: grupoColorMap[c.grupo]?.bar ?? `rgba(180,90,20,0.5)`, grupo: c.grupo };
+        offset += dash;
+        return seg;
+    });
 
     return (
-        <div className="flex flex-col items-center">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <svg width="120" height="120" viewBox="0 0 120 120">
-                {/* Fondo */}
-                <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f3f4f6" strokeWidth={stroke} />
-                {/* Caballero */}
-                <circle cx={cx} cy={cy} r={r} fill="none" stroke="#6366f1" strokeWidth={stroke}
-                        strokeDasharray={`${dashCab} ${dashDama}`}
-                        strokeDashoffset={-dashDama} transform={`rotate(-90 ${cx} ${cy})`} />
-                {/* Dama */}
-                <circle cx={cx} cy={cy} r={r} fill="none" stroke="#ec4899" strokeWidth={stroke}
-                        strokeDasharray={`${dashDama} ${dashCab}`}
-                        strokeDashoffset="0" transform={`rotate(-90 ${cx} ${cy})`} />
-                <text x={cx} y={cy - 6} textAnchor="middle" className="text-xs" fontSize="10" fill="#6b7280">Total</text>
-                <text x={cx} y={cy + 8} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600">
-                    {pctDama.toFixed(0)}% / {pctCab.toFixed(0)}%
+                {/* Base */}
+                <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(180,90,20,0.1)" strokeWidth={strokeW} />
+                {/* Segmentos */}
+                {segments.map((s, i) => (
+                    <circle key={i} cx={cx} cy={cy} r={r} fill="none"
+                            stroke={s.color} strokeWidth={strokeW}
+                            strokeDasharray={`${s.dash} ${circ - s.dash}`}
+                            strokeDashoffset={-s.offset}
+                            transform={`rotate(-90 ${cx} ${cy})`} />
+                ))}
+                <text x={cx} y={cy - 5} textAnchor="middle" fontSize="9" fill="rgba(150,80,20,0.6)">Total</text>
+                <text x={cx} y={cy + 8} textAnchor="middle" fontSize="10" fill="#2d1a08" fontWeight="600">
+                    {comparativa.length} grupos
                 </text>
             </svg>
-            <div className="flex gap-4 mt-2">
-                <span className="flex items-center gap-1.5 text-xs text-gray-600"><span className="w-3 h-3 rounded bg-pink-400 inline-block"/>Dama</span>
-                <span className="flex items-center gap-1.5 text-xs text-gray-600"><span className="w-3 h-3 rounded bg-indigo-400 inline-block"/>Caballero</span>
+
+            {/* Leyenda */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center', marginTop: '0.75rem' }}>
+                {segments.map((s, i) => (
+                    <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'rgba(120,60,10,0.8)' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: s.color, flexShrink: 0 }} />
+                        {s.grupo} <span style={{ color: 'rgba(150,80,20,0.5)' }}>({(s.pct * 100).toFixed(0)}%)</span>
+                    </span>
+                ))}
             </div>
         </div>
     );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 export default function VentasCategoria({ porCategoria = [], comparativa = [], kpis = {}, filtros = {} }) {
     const [desde, setDesde] = useState(filtros.desde ?? '');
     const [hasta, setHasta] = useState(filtros.hasta ?? '');
-    const [vista, setVista] = useState('ingresos'); // 'ingresos' | 'unidades'
+    const [vista, setVista] = useState('ingresos');
 
     const aplicar = () => router.get('/reportes/ventas-categoria', { desde, hasta }, { preserveState: true });
 
-    const colorFn = (d) => d.grupo === 'Dama' ? 'bg-pink-400' : d.grupo === 'Caballero' ? 'bg-indigo-400' : 'bg-gray-400';
+    // Construir mapa grupo → color (dinámico)
+    const grupoColorMap = {};
+    comparativa.forEach((c, i) => { grupoColorMap[c.grupo] = getColor(i); });
 
-    const dama      = comparativa.find(c => c.grupo === 'Dama') ?? {};
-    const caballero = comparativa.find(c => c.grupo === 'Caballero') ?? {};
+    const GLASS_BG = `
+        radial-gradient(ellipse 75% 60% at 0%   0%,   rgba(255,210,170,0.22) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 55% at 100% 100%, rgba(255,195,145,0.18) 0%, transparent 55%),
+        radial-gradient(ellipse 55% 50% at 75%  10%,  rgba(255,215,175,0.16) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 45% at 15%  85%,  rgba(255,205,155,0.17) 0%, transparent 55%),
+        linear-gradient(145deg, #fdf6f0 0%, #fdf3ec 35%, #fef5ef 70%, #fef8f4 100%)
+    `;
 
     return (
         <AppLayout>
-            <div className="min-h-screen bg-gray-50">
-                <div className="bg-white border-b border-gray-200">
-                    <div className="max-w-7xl mx-auto px-6 py-8">
-                        <div className="flex items-center gap-4">
-                            <Link href="/reportes" className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+                .vc-bg {
+                    min-height: 100vh;
+                    font-family: 'Inter', -apple-system, sans-serif;
+                    background: ${GLASS_BG};
+                }
+                @keyframes staggerUp {
+                    from { opacity:0; transform:translateY(16px); }
+                    to   { opacity:1; transform:translateY(0); }
+                }
+                .vc-a1 { animation: staggerUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
+                .vc-a2 { animation: staggerUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.12s both; }
+                .vc-a3 { animation: staggerUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.19s both; }
+                .vc-a4 { animation: staggerUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.26s both; }
+                .vc-a5 { animation: staggerUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.33s both; }
+
+                .vc-glass {
+                    background: rgba(255,255,255,0.04);
+                    backdrop-filter: blur(22px) saturate(150%);
+                    -webkit-backdrop-filter: blur(22px) saturate(150%);
+                    border-radius: 24px;
+                    border: 1px solid rgba(255,255,255,0.65);
+                    box-shadow: 0 16px 48px rgba(180,90,20,0.1), 0 4px 14px rgba(180,90,20,0.06),
+                        inset 0 1.5px 0 rgba(255,255,255,0.88);
+                    position: relative; overflow: hidden;
+                }
+                .vc-glass::before {
+                    content: '';
+                    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95) 30%, rgba(255,255,255,0.95) 70%, transparent);
+                    pointer-events: none; z-index: 1;
+                }
+                .vc-header {
+                    background: rgba(255,255,255,0.08);
+                    backdrop-filter: blur(40px) saturate(180%);
+                    -webkit-backdrop-filter: blur(40px) saturate(180%);
+                    border-bottom: 1px solid rgba(255,255,255,0.68);
+                    box-shadow: 0 4px 24px rgba(200,100,30,0.07), inset 0 1px 0 rgba(255,255,255,0.85);
+                    position: relative; z-index: 2;
+                }
+                .vc-date-input {
+                    width: 100%; padding: 0.55rem 0.85rem;
+                    background: rgba(255,255,255,0.06);
+                    border: 1px solid rgba(255,255,255,0.55);
+                    border-radius: 12px;
+                    font-size: 0.82rem; color: #2d1a08;
+                    font-family: 'Inter', sans-serif; outline: none;
+                    backdrop-filter: blur(10px);
+                    transition: all 0.18s;
+                    box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+                }
+                .vc-date-input:focus {
+                    border-color: rgba(220,38,38,0.4);
+                    box-shadow: 0 0 0 3px rgba(220,38,38,0.06), inset 0 1px 0 rgba(255,255,255,0.8);
+                }
+                .vc-btn-apply {
+                    padding: 0.55rem 1.4rem;
+                    background: rgba(220,38,38,0.1);
+                    border: 1px solid rgba(220,38,38,0.35);
+                    border-radius: 12px;
+                    font-size: 0.82rem; font-weight: 600;
+                    color: rgba(185,28,28,0.9);
+                    cursor: pointer;
+                    font-family: 'Inter', sans-serif;
+                    transition: all 0.18s;
+                    box-shadow: 0 2px 8px rgba(220,38,38,0.08), inset 0 1px 0 rgba(255,120,120,0.2);
+                    white-space: nowrap;
+                }
+                .vc-btn-apply:hover {
+                    background: rgba(220,38,38,0.16);
+                    border-color: rgba(220,38,38,0.5);
+                    transform: translateY(-1px);
+                }
+                .vc-toggle-btn {
+                    padding: 0.4rem 0.85rem;
+                    font-size: 0.78rem; font-weight: 500;
+                    border: none; cursor: pointer;
+                    font-family: 'Inter', sans-serif;
+                    transition: all 0.15s;
+                }
+                .vc-table-row { transition: background 0.15s; border-bottom: 1px solid rgba(255,255,255,0.3); }
+                .vc-table-row:hover { background: rgba(255,255,255,0.12); }
+                .vc-table-row:last-child { border-bottom: none; }
+            `}</style>
+
+            <div className="vc-bg">
+
+                {/* ── Header ── */}
+                <div className="vc-header">
+                    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <Link href="/reportes" style={{
+                                width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.65)',
+                                borderRadius: '10px', color: 'rgba(150,80,20,0.6)',
+                                textDecoration: 'none', transition: 'all 0.18s',
+                                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.72)',
+                            }}>
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                                 </svg>
                             </Link>
                             <div>
-                                <h1 className="text-3xl font-light text-gray-900">Ventas por Categoría</h1>
-                                <p className="mt-1 text-sm text-gray-500">Rendimiento por subcategoría y comparativa Dama vs Caballero</p>
+                                <h1 style={{ fontSize: '1.65rem', fontWeight: '300', color: '#2d1a08', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                                    Ventas por Categoría
+                                </h1>
+                                <p style={{ marginTop: '0.3rem', fontSize: '0.85rem', color: 'rgba(150,80,20,0.6)' }}>
+                                    Rendimiento por subcategoría · {comparativa.length} grupo{comparativa.length !== 1 ? 's' : ''} activo{comparativa.length !== 1 ? 's' : ''}
+                                </p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-                    {/* Filtros */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <div className="flex-1">
-                                <label className="text-xs text-gray-500 block mb-1">Desde</label>
-                                <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
-                                       className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400" />
+                <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+                    {/* ── Filtro de fechas ── */}
+                    <div className="vc-glass vc-a1" style={{ padding: '1.25rem 1.5rem' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem', alignItems: 'flex-end' }}>
+                            <div style={{ flex: 1, minWidth: '140px' }}>
+                                <label style={{ fontSize: '0.72rem', fontWeight: '600', color: 'rgba(150,80,20,0.55)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
+                                    Desde
+                                </label>
+                                <input type="date" value={desde} onChange={e => setDesde(e.target.value)} className="vc-date-input" />
                             </div>
-                            <div className="flex-1">
-                                <label className="text-xs text-gray-500 block mb-1">Hasta</label>
-                                <input type="date" value={hasta} onChange={e => setHasta(e.target.value)}
-                                       className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400" />
+                            <div style={{ flex: 1, minWidth: '140px' }}>
+                                <label style={{ fontSize: '0.72rem', fontWeight: '600', color: 'rgba(150,80,20,0.55)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
+                                    Hasta
+                                </label>
+                                <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} className="vc-date-input" />
                             </div>
-                            <div className="flex items-end">
-                                <button onClick={aplicar}
-                                        className="px-6 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-sm font-medium transition">
-                                    Aplicar
-                                </button>
-                            </div>
+                            <button onClick={aplicar} className="vc-btn-apply">Aplicar filtro</button>
                         </div>
                     </div>
 
-                    {/* KPIs */}
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                    {/* ── KPIs ── */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }} className="vc-a2">
                         {[
-                            { label: 'Total ingresos',       value: fmt(kpis.total_ingresos),     color: 'text-gray-900'    },
-                            { label: 'Unidades vendidas',    value: kpis.total_unidades ?? 0,      color: 'text-blue-600'    },
-                            { label: 'Subcategoría top',     value: kpis.categoria_top,            color: 'text-pink-600', small: true },
-                            { label: 'Ingresos Dama',        value: fmt(kpis.ingresos_dama),       color: 'text-pink-600'    },
-                            { label: 'Ingresos Caballero',   value: fmt(kpis.ingresos_caballero),  color: 'text-indigo-600'  },
-                        ].map(({ label, value, color, small }) => (
-                            <div key={label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{label}</p>
-                                <p className={`${small ? 'text-sm' : 'text-xl'} font-bold mt-2 ${color} truncate`}>{value}</p>
+                            { label: 'Total ingresos',    value: fmt(kpis.total_ingresos),  color: '#2d1a08',              accent: 'rgba(180,90,20,0.8)',   accentBg: 'rgba(180,90,20,0.07)'   },
+                            { label: 'Unidades vendidas', value: kpis.total_unidades ?? 0,  color: 'rgba(30,64,175,0.9)',   accent: 'rgba(59,130,246,0.8)',  accentBg: 'rgba(59,130,246,0.07)'  },
+                            { label: 'Subcategoría top',  value: kpis.categoria_top,        color: 'rgba(157,23,77,0.9)',   accent: 'rgba(236,72,153,0.8)', accentBg: 'rgba(236,72,153,0.07)', small: true },
+                            // KPIs dinámicos: uno por cada grupo
+                            ...(kpis.por_grupo ?? []).map((g, i) => ({
+                                label: `Ingresos ${g.grupo}`,
+                                value: fmt(g.ingresos),
+                                color: grupoColorMap[g.grupo]?.text ?? '#2d1a08',
+                                accent: grupoColorMap[g.grupo]?.bar ?? 'rgba(180,90,20,0.8)',
+                                accentBg: grupoColorMap[g.grupo]?.bg ?? 'rgba(180,90,20,0.07)',
+                            })),
+                        ].map(({ label, value, color, accent, accentBg, small }) => (
+                            <div key={label} className="vc-glass" style={{ padding: '1.3rem' }}>
+                                <div style={{
+                                    width: '34px', height: '34px', borderRadius: '10px',
+                                    background: accentBg, border: `1px solid ${accent.replace(/[\d.]+\)$/, '0.2)')}`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.8rem',
+                                }}>
+                                    <svg width="16" height="16" fill="none" stroke={accent} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <p style={{ fontSize: small ? '0.95rem' : '1.5rem', fontWeight: '600', color, letterSpacing: '-0.02em', lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {value}
+                                </p>
+                                <p style={{ fontSize: '0.76rem', color: 'rgba(150,80,20,0.6)', marginTop: '0.3rem' }}>{label}</p>
                             </div>
                         ))}
                     </div>
 
-                    {/* Gráfica barras + dona */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* ── Barras + Dona ── */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.25rem' }} className="vc-a3">
+
                         {/* Barras horizontales */}
-                        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                            <div className="flex items-center justify-between mb-5">
+                        <div className="vc-glass" style={{ padding: '1.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                                 <div>
-                                    <h2 className="text-base font-semibold text-gray-900">Ranking de subcategorías</h2>
-                                    <p className="text-xs text-gray-400 mt-0.5">Ordenado por mayor a menor</p>
+                                    <h2 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2d1a08', margin: 0 }}>Ranking de subcategorías</h2>
+                                    <p style={{ fontSize: '0.76rem', color: 'rgba(150,80,20,0.55)', marginTop: '0.2rem' }}>Ordenado de mayor a menor</p>
                                 </div>
-                                <div className="flex rounded-lg overflow-hidden border border-gray-200">
+                                {/* Toggle Ingresos / Unidades */}
+                                <div style={{ display: 'flex', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.55)' }}>
                                     {[['ingresos', 'Ingresos'], ['unidades', 'Unidades']].map(([k, l]) => (
-                                        <button key={k} onClick={() => setVista(k)}
-                                                className={`px-3 py-1.5 text-xs font-medium transition ${vista === k ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+                                        <button key={k} onClick={() => setVista(k)} className="vc-toggle-btn"
+                                                style={{
+                                                    background: vista === k ? 'rgba(220,38,38,0.12)' : 'rgba(255,255,255,0.06)',
+                                                    color: vista === k ? 'rgba(185,28,28,0.9)' : 'rgba(120,60,10,0.7)',
+                                                    fontWeight: vista === k ? '600' : '500',
+                                                    borderRight: k === 'ingresos' ? '1px solid rgba(255,255,255,0.45)' : 'none',
+                                                }}>
                                             {l}
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                            <HBarChart data={porCategoria} valueKey={vista} colorFn={colorFn} />
+                            <HBarChart data={porCategoria} valueKey={vista} grupoColorMap={grupoColorMap} />
                         </div>
 
-                        {/* Dona Dama vs Caballero */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                            <h2 className="text-base font-semibold text-gray-900 mb-1">Dama vs Caballero</h2>
-                            <p className="text-xs text-gray-400 mb-5">Distribución de ingresos por género</p>
-                            <DonaChart dama={kpis.ingresos_dama} caballero={kpis.ingresos_caballero} />
-                            <div className="mt-6 space-y-3">
-                                {comparativa.map(c => (
-                                    <div key={c.grupo} className={`rounded-xl p-4 ${c.grupo === 'Dama' ? 'bg-pink-50' : 'bg-indigo-50'}`}>
-                                        <p className={`text-sm font-semibold ${c.grupo === 'Dama' ? 'text-pink-700' : 'text-indigo-700'}`}>{c.grupo}</p>
-                                        <p className={`text-lg font-bold mt-1 ${c.grupo === 'Dama' ? 'text-pink-600' : 'text-indigo-600'}`}>{fmt(c.ingresos)}</p>
-                                        <p className="text-xs text-gray-500 mt-0.5">{c.unidades} unidades vendidas</p>
-                                    </div>
-                                ))}
+                        {/* Dona + bloques por grupo */}
+                        <div className="vc-glass" style={{ padding: '1.5rem' }}>
+                            <h2 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2d1a08', marginBottom: '0.3rem' }}>
+                                Comparativa por grupo
+                            </h2>
+                            <p style={{ fontSize: '0.76rem', color: 'rgba(150,80,20,0.55)', marginBottom: '1.25rem' }}>
+                                Distribución de ingresos · {comparativa.length} grupo{comparativa.length !== 1 ? 's' : ''}
+                            </p>
+
+                            {/* Gráfica de dona dinámica */}
+                            <DonaChart comparativa={comparativa} grupoColorMap={grupoColorMap} />
+
+                            {/* Bloques por grupo — dinámicos */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '1.25rem' }}>
+                                {comparativa.map((c, i) => {
+                                    const col = getColor(i);
+                                    return (
+                                        <div key={c.grupo} style={{
+                                            padding: '0.9rem 1rem',
+                                            background: col.bg,
+                                            border: `1px solid ${col.border}`,
+                                            borderRadius: '14px',
+                                        }}>
+                                            <p style={{ fontSize: '0.82rem', fontWeight: '600', color: col.text, margin: 0 }}>{c.grupo}</p>
+                                            <p style={{ fontSize: '1.25rem', fontWeight: '700', color: col.text, margin: '0.2rem 0 0', letterSpacing: '-0.02em' }}>
+                                                {fmt(c.ingresos)}
+                                            </p>
+                                            <p style={{ fontSize: '0.72rem', color: 'rgba(120,60,10,0.55)', marginTop: '0.15rem' }}>
+                                                {c.unidades} unidades vendidas
+                                            </p>
+                                        </div>
+                                    );
+                                })}
+                                {comparativa.length === 0 && (
+                                    <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'rgba(150,80,20,0.4)', padding: '1rem 0' }}>
+                                        Sin ventas en el período
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    {/* Tabla ranking detallada */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div className="px-6 py-5 border-b border-gray-100">
-                            <h2 className="text-base font-semibold text-gray-900">Tabla completa por subcategoría</h2>
+                    {/* ── Tabla detallada ── */}
+                    <div className="vc-glass vc-a4" style={{ overflow: 'hidden' }}>
+                        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.38)' }}>
+                            <h2 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2d1a08', margin: 0 }}>
+                                Tabla completa por subcategoría
+                            </h2>
+                            <p style={{ fontSize: '0.76rem', color: 'rgba(150,80,20,0.55)', marginTop: '0.2rem' }}>
+                                {porCategoria.length} subcategoría{porCategoria.length !== 1 ? 's' : ''} con ventas en el período
+                            </p>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-gray-50 border-b border-gray-100">
-                                <tr>
-                                    {['#', 'Subcategoría', 'Género', 'Productos', 'Unidades', 'Ingresos'].map(h => (
-                                        <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                <tr style={{ borderBottom: '1px solid rgba(180,90,20,0.12)' }}>
+                                    {['#', 'Subcategoría', 'Grupo', 'Productos distintos', 'Unidades vendidas', 'Ingresos'].map(h => (
+                                        <th key={h} style={{
+                                            padding: '0.75rem 1.25rem', textAlign: 'left',
+                                            fontSize: '0.67rem', fontWeight: '600',
+                                            color: 'rgba(150,80,20,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase',
+                                        }}>{h}</th>
                                     ))}
                                 </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                {porCategoria.map((cat, i) => (
-                                    <tr key={cat.categoria} className="hover:bg-gray-50">
-                                        <td className="px-6 py-3 text-sm text-gray-400 font-medium">{i + 1}</td>
-                                        <td className="px-6 py-3 text-sm font-medium text-gray-900">{cat.categoria}</td>
-                                        <td className="px-6 py-3">
-                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cat.grupo === 'Dama' ? 'bg-pink-100 text-pink-700' : cat.grupo === 'Caballero' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>
-                                                    {cat.grupo}
-                                                </span>
+                                <tbody>
+                                {porCategoria.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="6" style={{ padding: '3rem', textAlign: 'center', fontSize: '0.88rem', color: 'rgba(150,80,20,0.4)' }}>
+                                            Sin ventas en el período seleccionado
                                         </td>
-                                        <td className="px-6 py-3 text-sm text-gray-600">{cat.productos}</td>
-                                        <td className="px-6 py-3 text-sm font-semibold text-gray-900">{cat.unidades}</td>
-                                        <td className="px-6 py-3 text-sm font-bold text-pink-600">{fmt(cat.ingresos)}</td>
                                     </tr>
-                                ))}
-                                {porCategoria.length === 0 && (
-                                    <tr><td colSpan="6" className="px-6 py-10 text-center text-gray-400">Sin ventas en el período seleccionado</td></tr>
+                                ) : (
+                                    porCategoria.map((cat, i) => {
+                                        const col = grupoColorMap[cat.grupo] ?? { bg: 'rgba(180,90,20,0.06)', border: 'rgba(180,90,20,0.15)', text: 'rgba(120,60,10,0.7)' };
+                                        return (
+                                            <tr key={cat.categoria} className="vc-table-row">
+                                                <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.82rem', color: 'rgba(150,80,20,0.45)', fontWeight: '600' }}>{i + 1}</td>
+                                                <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.87rem', fontWeight: '600', color: '#2d1a08' }}>{cat.categoria}</td>
+                                                <td style={{ padding: '0.85rem 1.25rem' }}>
+                                                    <span style={{
+                                                        fontSize: '0.72rem', fontWeight: '600', padding: '0.2rem 0.65rem',
+                                                        borderRadius: '20px', background: col.bg, border: `1px solid ${col.border}`, color: col.text,
+                                                    }}>
+                                                        {cat.grupo}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: 'rgba(120,60,10,0.7)' }}>{cat.productos}</td>
+                                                <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.87rem', fontWeight: '700', color: '#2d1a08' }}>{cat.unidades}</td>
+                                                <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.87rem', fontWeight: '700', color: col.text }}>{fmt(cat.ingresos)}</td>
+                                            </tr>
+                                        );
+                                    })
                                 )}
                                 </tbody>
                             </table>

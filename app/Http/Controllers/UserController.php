@@ -30,11 +30,17 @@ class UserController extends Controller
             // Inventario
             ['key' => 'ver_inventario',     'label' => 'Ver Inventario'],
             ['key' => 'ajustar_inventario', 'label' => 'Ajustar Inventario'],
+            ['key' => 'ver_kardex',         'label' => 'Ver Kardex de Productos'],
 
             // Ventas
             ['key' => 'ver_ventas',         'label' => 'Ver Ventas'],
             ['key' => 'crear_ventas',       'label' => 'Crear Ventas'],
             ['key' => 'anular_ventas',      'label' => 'Anular Ventas'],
+            ['key' => 'ver_cartera',        'label' => 'Ver Cartera / Deudas'],
+
+            // Abonos
+            ['key' => 'ver_abonos',         'label' => 'Ver Abonos'],
+            ['key' => 'crear_abonos',       'label' => 'Registrar Abonos'],
 
             // Clientes
             ['key' => 'gestionar_clientes',    'label' => 'Gestionar Clientes'],
@@ -45,9 +51,13 @@ class UserController extends Controller
             ['key' => 'editar_proveedores',    'label' => 'Editar Proveedores'],
 
             // Reportes
-            ['key' => 'ver_reportes_ventas',      'label' => 'Ver Reportes de Ventas'],
-            ['key' => 'ver_reportes_inventario',  'label' => 'Ver Reportes de Inventario'],
-            ['key' => 'ver_reportes_financieros', 'label' => 'Ver Reportes Financieros'],
+            ['key' => 'ver_reportes_ventas',        'label' => 'Reportes de Ventas'],
+            ['key' => 'ver_reportes_inventario',    'label' => 'Reportes de Inventario'],
+            ['key' => 'ver_reportes_financieros',   'label' => 'Reportes Financieros'],
+            ['key' => 'ver_reportes_clientes',      'label' => 'Reportes de Clientes'],
+            ['key' => 'ver_reportes_rentabilidad',  'label' => 'Reportes de Rentabilidad'],
+            ['key' => 'ver_reportes_categorias',    'label' => 'Reportes por Categoría'],
+            ['key' => 'ver_reportes_ejecutivo',     'label' => 'Reporte Ejecutivo'],
 
             // Categorías
             ['key' => 'gestionar_categorias', 'label' => 'Gestionar Categorías'],
@@ -57,6 +67,45 @@ class UserController extends Controller
 
             // Registros
             ['key' => 'ver_registros',        'label' => 'Ver Registros de Actividad'],
+        ];
+    }
+
+    /**
+     * Permisos predeterminados para el rol Empleado/Vendedor.
+     * Basados en RF-03, RF-04, RF-05 del documento de requisitos.
+     * Representan las funciones mínimas que todo empleado necesita para operar.
+     *
+     * Se exponen al frontend para que el botón "Permisos predeterminados"
+     * los marque automáticamente en el formulario de creación/edición.
+     */
+    public function permisosDefaultEmpleado(): array
+    {
+        return [
+            // Ver catálogo — RF-04.1 "Empleado busca producto"
+            'ver_productos',
+
+            // Inventario en solo lectura — RF-03 "Consulta de inventario (solo lectura)"
+            'ver_inventario',
+
+            // Ventas — RF-04.1 rol principal del empleado/vendedor
+            'ver_ventas',
+            'crear_ventas',
+
+            // Clientes — RF-05.1 "Registro de Clientes (Empleado/Admin)"
+            'gestionar_clientes',
+
+            // Abonos — RF-05.2 "Gestión de Abonos (Empleado/Admin)"
+            'ver_abonos',
+            'crear_abonos',
+
+            // Cartera — necesario para ver deudas al registrar abonos — RF-05.3
+            'ver_cartera',
+
+            // Proveedores solo lectura — útil al consultar info de productos
+            'ver_proveedores',
+
+            // Reporte de ventas propias del día — RF-04.4
+            'ver_reportes_ventas',
         ];
     }
 
@@ -72,7 +121,6 @@ class UserController extends Controller
                 'rol'              => $u->roles->first()?->name ?? 'sin_rol',
                 'permisos'         => $u->getAllPermissions()->pluck('name')->toArray(),
                 'activo'           => $u->activo,
-                // Exponer estado de bloqueo para que el admin pueda ver y desbloquear
                 'bloqueado'        => $u->estaBloqueado(),
                 'intentos_fallidos'=> $u->intentos_fallidos,
                 'bloqueado_hasta'  => $u->bloqueado_hasta?->format('d/m/Y H:i'),
@@ -88,6 +136,7 @@ class UserController extends Controller
     {
         return Inertia::render('Usuarios/Create', [
             'permisos_disponibles' => $this->permisosDisponibles(),
+            'permisos_default'     => $this->permisosDefaultEmpleado(),
         ]);
     }
 
@@ -150,6 +199,7 @@ class UserController extends Controller
                 'permisos' => $user->getDirectPermissions()->pluck('name')->toArray(),
             ],
             'permisos_disponibles' => $this->permisosDisponibles(),
+            'permisos_default'     => $this->permisosDefaultEmpleado(),
         ]);
     }
 
