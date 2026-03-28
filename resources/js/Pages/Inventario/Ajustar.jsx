@@ -45,7 +45,7 @@ const STYLES = `
         border:1px solid rgba(255,255,255,0.65); border-radius:24px;
         box-shadow:0 16px 48px rgba(180,90,20,0.1),0 4px 14px rgba(180,90,20,0.06),
             inset 0 1.5px 0 rgba(255,255,255,0.88);
-        position:relative; padding:1.75rem;
+        position:relative; overflow:hidden; padding:1.75rem;
     }
     .aj-glass::before {
         content:''; position:absolute; top:0; left:0; right:0; height:1px;
@@ -59,7 +59,6 @@ const STYLES = `
         font-size:0.72rem; font-weight:700; color:rgba(185,28,28,0.8);
     }
     .aj-step-title { font-size:0.97rem; font-weight:600; color:#2d1a08; }
-    /* Trigger de dropdowns */
     .aj-trigger {
         width:100%; display:flex; align-items:center; justify-content:space-between;
         padding:0.75rem 1rem;
@@ -69,19 +68,19 @@ const STYLES = `
         box-shadow:0 3px 12px rgba(160,80,10,0.07),inset 0 1px 0 rgba(255,255,255,0.75);
         text-align:left;
     }
-    .aj-trigger.open   { border-color:rgba(200,140,80,0.65); background:rgba(255,255,255,0.12); }
-    .aj-trigger.error  { border-color:rgba(220,38,38,0.45); }
-    /* Panel del dropdown renderizado via portal */
+    .aj-trigger.open  { border-color:rgba(200,140,80,0.65); background:rgba(255,255,255,0.12); }
+    .aj-trigger.error { border-color:rgba(220,38,38,0.45); }
     @keyframes ajDrop {
         from { opacity:0; transform:translateY(-6px) scale(0.98); }
         to   { opacity:1; transform:translateY(0) scale(1); }
     }
-    .aj-portal {
-        position:absolute; z-index:9999;
-        background:rgba(255,248,240,0.98);
+    .aj-panel {
+        position:fixed; z-index:999999;
+        background:rgba(255,248,240,0.99);
         backdrop-filter:blur(32px) saturate(180%); -webkit-backdrop-filter:blur(32px) saturate(180%);
         border:1px solid rgba(255,255,255,0.72); border-radius:18px;
-        box-shadow:0 24px 64px rgba(180,90,20,0.18),inset 0 1px 0 rgba(255,255,255,0.9);
+        box-shadow:0 24px 64px rgba(180,90,20,0.2),0 8px 24px rgba(180,90,20,0.1),
+                   inset 0 1px 0 rgba(255,255,255,0.9);
         overflow:hidden; animation:ajDrop 0.17s cubic-bezier(0.16,1,0.3,1);
         font-family:'Inter',-apple-system,sans-serif;
     }
@@ -117,7 +116,6 @@ const STYLES = `
         width:24px; height:24px; border-radius:7px; cursor:pointer;
         font-size:0.72rem; font-weight:600; border:none; font-family:'Inter',sans-serif; transition:all 0.12s;
     }
-    /* Textarea / input glass */
     .aj-textarea {
         width:100%; padding:0.8rem 1rem;
         background:rgba(255,255,255,0.06); border:1px solid rgba(200,140,80,0.4); border-radius:14px;
@@ -133,7 +131,6 @@ const STYLES = `
     }
     .aj-error { margin-top:0.3rem; font-size:0.78rem; color:rgba(185,28,28,0.85); }
     .aj-hint  { margin-top:0.3rem; font-size:0.74rem; color:rgba(150,80,20,0.5); }
-    /* Botones principales */
     .aj-btn-submit {
         flex:1; display:flex; align-items:center; justify-content:center; gap:0.45rem;
         padding:0.85rem 1.5rem;
@@ -163,27 +160,47 @@ const STYLES = `
     .aj-a4 { animation:ajUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.26s both; }
 `;
 
-// ── Dropdown de motivo ────────────────────────────────────────────────────────
-function MotivoSelect({ value, onChange, options, placeholder, error }) {
-    const [open, setOpen]   = useState(false);
-    const [pos,  setPos]    = useState({ top: 0, left: 0, width: 0 });
-    const trigRef           = useRef(null);
-    const panelRef          = useRef(null);
-
-    const calcPos = () => {
-        if (!trigRef.current) return;
-        const r = trigRef.current.getBoundingClientRect();
-        setPos({ top: r.bottom + window.scrollY + 6, left: r.left + window.scrollX, width: r.width });
-    };
+// ── Hook: mantiene la posición fixed sincronizada con el trigger en todo momento
+// Escucha scroll en TODOS los contenedores (capture:true) y resize
+function useAnchoredPanel(trigRef, open) {
+    const [pos, setPos] = useState({ top: -9999, left: 0, width: 0 });
 
     useEffect(() => {
         if (!open) return;
-        const onMouse = (e) => {
+
+        function update() {
+            if (!trigRef.current) return;
+            const r = trigRef.current.getBoundingClientRect();
+            setPos({ top: r.bottom + 6, left: r.left, width: r.width });
+        }
+
+        update();
+        window.addEventListener('scroll', update, true); // true = capture, atrapa scroll de cualquier padre
+        window.addEventListener('resize', update);
+        return () => {
+            window.removeEventListener('scroll', update, true);
+            window.removeEventListener('resize', update);
+        };
+    }, [open]);
+
+    return pos;
+}
+
+// ── Dropdown de motivo ────────────────────────────────────────────────────────
+function MotivoSelect({ value, onChange, options, placeholder, error }) {
+    const [open, setOpen] = useState(false);
+    const trigRef         = useRef(null);
+    const panelRef        = useRef(null);
+    const pos             = useAnchoredPanel(trigRef, open);
+
+    useEffect(() => {
+        if (!open) return;
+        const h = (e) => {
             if (!trigRef.current?.contains(e.target) && !panelRef.current?.contains(e.target))
                 setOpen(false);
         };
-        document.addEventListener('mousedown', onMouse);
-        return () => document.removeEventListener('mousedown', onMouse);
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
     }, [open]);
 
     const selected = options.find(o => o.value === value);
@@ -191,7 +208,7 @@ function MotivoSelect({ value, onChange, options, placeholder, error }) {
     return (
         <>
             <button type="button" ref={trigRef}
-                    onClick={() => { calcPos(); setOpen(o => !o); }}
+                    onClick={() => setOpen(o => !o)}
                     className={`aj-trigger${open ? ' open' : ''}${error ? ' error' : ''}`}>
                 <span style={{ color: selected ? '#2d1a08' : 'rgba(180,100,30,0.38)', fontWeight: selected ? '500' : '400', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {selected ? <><span>{selected.icon}</span><span>{selected.label}</span></> : placeholder}
@@ -203,7 +220,7 @@ function MotivoSelect({ value, onChange, options, placeholder, error }) {
             </button>
 
             {open && createPortal(
-                <div ref={panelRef} className="aj-portal" style={{ top: pos.top, left: pos.left, width: pos.width }}>
+                <div ref={panelRef} className="aj-panel" style={{ top: pos.top, left: pos.left, width: pos.width }}>
                     {options.map((opt, i) => {
                         const sel = opt.value === value;
                         return (
@@ -231,19 +248,25 @@ function MotivoSelect({ value, onChange, options, placeholder, error }) {
     );
 }
 
-// ── Dropdown de producto con buscador + paginación ──────────────────────────
+// ── Dropdown de producto con buscador + paginación ───────────────────────────
 function ProductoSelect({ productos, value, onChange, error }) {
     const [open,     setOpen]     = useState(false);
     const [busqueda, setBusqueda] = useState('');
     const [pagina,   setPagina]   = useState(1);
-    const ref                     = useRef(null);
+    const trigRef                 = useRef(null);
+    const panelRef                = useRef(null);
     const inputRef                = useRef(null);
+    const pos                     = useAnchoredPanel(trigRef, open);
 
     useEffect(() => {
-        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        if (!open) return;
+        const h = (e) => {
+            if (!trigRef.current?.contains(e.target) && !panelRef.current?.contains(e.target))
+                setOpen(false);
+        };
         document.addEventListener('mousedown', h);
         return () => document.removeEventListener('mousedown', h);
-    }, []);
+    }, [open]);
 
     useEffect(() => {
         if (open) {
@@ -272,10 +295,8 @@ function ProductoSelect({ productos, value, onChange, error }) {
     };
 
     return (
-        // overflow:visible es CLAVE — el panel absoluto puede salir del contenedor
-        <div ref={ref} style={{ position: 'relative', overflow: 'visible' }}>
-            {/* Trigger */}
-            <button type="button"
+        <>
+            <button type="button" ref={trigRef}
                     onClick={() => setOpen(o => !o)}
                     className={`aj-trigger${open ? ' open' : ''}${error ? ' error' : ''}`}>
                 {selected ? (
@@ -294,10 +315,8 @@ function ProductoSelect({ productos, value, onChange, error }) {
                 </svg>
             </button>
 
-            {/* Panel — position:absolute relativo al wrapper, NO usa portal */}
-            {open && (
-                <div className="aj-portal" style={{ top: 'calc(100% + 6px)', left: 0, right: 0, position: 'absolute' }}>
-                    {/* Buscador */}
+            {open && createPortal(
+                <div ref={panelRef} className="aj-panel" style={{ top: pos.top, left: pos.left, width: pos.width }}>
                     <div className="aj-search-wrap">
                         <div style={{ position: 'relative' }}>
                             <svg style={{ position: 'absolute', left: '0.62rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(180,100,30,0.4)', pointerEvents: 'none' }}
@@ -322,7 +341,6 @@ function ProductoSelect({ productos, value, onChange, error }) {
                         </p>
                     </div>
 
-                    {/* Lista */}
                     <div style={{ maxHeight: '260px', overflowY: 'auto' }}>
                         {pagActual.length === 0 ? (
                             <div style={{ padding: '1.5rem', textAlign: 'center' }}>
@@ -359,7 +377,6 @@ function ProductoSelect({ productos, value, onChange, error }) {
                         })}
                     </div>
 
-                    {/* Paginador */}
                     {totalPags > 1 && (
                         <div className="aj-pager">
                             <button type="button" className="aj-pager-btn" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}>
@@ -388,11 +405,13 @@ function ProductoSelect({ productos, value, onChange, error }) {
                             </button>
                         </div>
                     )}
-                </div>
+                </div>,
+                document.body
             )}
-        </div>
+        </>
     );
 }
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function InventarioAjustar({ productos = [] }) {
@@ -428,7 +447,6 @@ export default function InventarioAjustar({ productos = [] }) {
             <style>{STYLES}</style>
             <div className="aj-bg">
 
-                {/* ── Header ── */}
                 <div className="aj-hdr">
                     <div style={{ maxWidth: '780px', margin: '0 auto', padding: '1.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
@@ -454,8 +472,8 @@ export default function InventarioAjustar({ productos = [] }) {
                     <form onSubmit={submit}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-                            {/* ── Paso 1: Producto ── */}
-                            <div className="aj-glass aj-a1" style={{ overflow: 'visible' }}>
+                            {/* Paso 1 */}
+                            <div className="aj-glass aj-a1">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
                                     <div className="aj-step-num">1</div>
                                     <h2 className="aj-step-title">Producto a Ajustar</h2>
@@ -488,14 +506,13 @@ export default function InventarioAjustar({ productos = [] }) {
                                 )}
                             </div>
 
-                            {/* ── Paso 2: Tipo + Cantidad + Motivo ── */}
+                            {/* Paso 2 */}
                             <div className="aj-glass aj-a2">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
                                     <div className="aj-step-num">2</div>
                                     <h2 className="aj-step-title">Tipo de Ajuste</h2>
                                 </div>
 
-                                {/* Tipo */}
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '1.25rem' }}>
                                     {[
                                         { tipo: 'incremento', label: 'Incremento', sub: 'Aumentar stock', icon: 'M12 4v16m8-8H4', color: { on: 'rgba(16,185,129,0.9)', border: 'rgba(16,185,129,0.4)', bg: 'rgba(16,185,129,0.07)', iconBg: 'rgba(16,185,129,0.15)' } },
@@ -528,7 +545,6 @@ export default function InventarioAjustar({ productos = [] }) {
                                     })}
                                 </div>
 
-                                {/* Cantidad + Motivo */}
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                     <div>
                                         <label className="aj-label">Cantidad <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span></label>
@@ -540,7 +556,7 @@ export default function InventarioAjustar({ productos = [] }) {
                                         }}>
                                             <button type="button"
                                                     onClick={() => setData('cantidad', String(Math.max(1, parseInt(data.cantidad || 1) - 1)))}
-                                                    style={{ padding: '0.75rem 1rem', fontSize: '1.2rem', fontWeight: '600', color: 'rgba(150,80,20,0.7)', background: 'none', border: 'none', cursor: 'pointer', transition: 'background 0.13s', flexShrink: 0 }}>
+                                                    style={{ padding: '0.75rem 1rem', fontSize: '1.2rem', fontWeight: '600', color: 'rgba(150,80,20,0.7)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
                                                 −
                                             </button>
                                             <input type="number" value={data.cantidad}
@@ -549,7 +565,7 @@ export default function InventarioAjustar({ productos = [] }) {
                                                    min="1" />
                                             <button type="button"
                                                     onClick={() => setData('cantidad', String(parseInt(data.cantidad || 0) + 1))}
-                                                    style={{ padding: '0.75rem 1rem', fontSize: '1.2rem', fontWeight: '600', color: 'rgba(150,80,20,0.7)', background: 'none', border: 'none', cursor: 'pointer', transition: 'background 0.13s', flexShrink: 0 }}>
+                                                    style={{ padding: '0.75rem 1rem', fontSize: '1.2rem', fontWeight: '600', color: 'rgba(150,80,20,0.7)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
                                                 +
                                             </button>
                                         </div>
@@ -569,7 +585,6 @@ export default function InventarioAjustar({ productos = [] }) {
                                     </div>
                                 </div>
 
-                                {/* Preview resultado */}
                                 {productoSeleccionado && resultado !== null && (
                                     <div style={{
                                         marginTop: '1.25rem', padding: '1rem 1.25rem', borderRadius: '16px',
@@ -600,7 +615,7 @@ export default function InventarioAjustar({ productos = [] }) {
                                 )}
                             </div>
 
-                            {/* ── Paso 3: Observaciones ── */}
+                            {/* Paso 3 */}
                             <div className="aj-glass aj-a3">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.4rem' }}>
                                     <div className="aj-step-num">3</div>
@@ -624,7 +639,7 @@ export default function InventarioAjustar({ productos = [] }) {
                                 </div>
                             </div>
 
-                            {/* ── Botones ── */}
+                            {/* Botones */}
                             <div className="aj-a4" style={{ display: 'flex', gap: '0.85rem' }}>
                                 <button type="submit" disabled={processing} className="aj-btn-submit">
                                     {processing ? 'Aplicando...' : 'Aplicar Ajuste'}
