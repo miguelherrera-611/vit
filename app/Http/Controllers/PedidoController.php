@@ -235,7 +235,7 @@ class PedidoController extends Controller
             'rechazado'   => Pedido::where('estado', 'rechazado')->count(),
         ];
 
-        return Inertia::render('Admin/Pedidos/Index', [
+        return Inertia::render('Admin/Pedidos', [
             'pedidos' => $pedidos,
             'conteos' => $conteos,
             'filtro'  => $request->estado ?? '',
