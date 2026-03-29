@@ -24,22 +24,14 @@ return new class extends Migration
         // Agregar grupo_id a la tabla categorias (subcategorías)
         Schema::table('categorias', function (Blueprint $table) {
             $table->foreignId('grupo_id')
-                  ->nullable()
-                  ->after('id')
-                  ->constrained('grupos_categoria')
-                  ->nullOnDelete();
+                ->nullable()
+                ->after('id')
+                ->constrained('grupos_categoria')
+                ->nullOnDelete();
         });
 
         // Insertar grupos base: Dama y Caballero
         $ahora = now();
-        $grupos = DB::table('grupos_categoria')->insertGetId([
-            'nombre'     => 'placeholder', // dummy para obtener IDs
-            'created_at' => $ahora,
-            'updated_at' => $ahora,
-        ]);
-
-        // Resetear y hacer insert correcto
-        DB::table('grupos_categoria')->truncate();
 
         DB::table('grupos_categoria')->insert([
             [
@@ -66,14 +58,14 @@ return new class extends Migration
 
         if ($grupoDama) {
             DB::table('categorias')
-              ->where('tipo', 'dama')
-              ->update(['grupo_id' => $grupoDama->id]);
+                ->where('tipo', 'dama')
+                ->update(['grupo_id' => $grupoDama->id]);
         }
 
         if ($grupoCaballero) {
             DB::table('categorias')
-              ->where('tipo', 'caballero')
-              ->update(['grupo_id' => $grupoCaballero->id]);
+                ->where('tipo', 'caballero')
+                ->update(['grupo_id' => $grupoCaballero->id]);
         }
     }
 

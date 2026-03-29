@@ -100,12 +100,6 @@ class UserController extends Controller
 
             // Cartera — necesario para ver deudas al registrar abonos — RF-05.3
             'ver_cartera',
-
-            // Proveedores solo lectura — útil al consultar info de productos
-            'ver_proveedores',
-
-            // Reporte de ventas propias del día — RF-04.4
-            'ver_reportes_ventas',
         ];
     }
 
