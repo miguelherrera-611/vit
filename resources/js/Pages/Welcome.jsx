@@ -1,3 +1,5 @@
+// resources/js/Pages/Welcome.jsx
+// ARCHIVO COMPLETO — igual al original + botón "Crear cuenta" en el header
 import { Link } from '@inertiajs/react';
 
 export default function Welcome({ canLogin }) {
@@ -73,7 +75,7 @@ export default function Welcome({ canLogin }) {
                 .logo-icon::after { content:''; position:absolute; inset:0; border-radius:14px; background:linear-gradient(145deg,rgba(255,255,255,0.22) 0%,transparent 60%); }
                 .logo-text { font-size:1.4rem; font-weight:300; color:#2d1a08; letter-spacing:-0.03em; }
 
-                /* login button — water drop */
+                /* Botones del header */
                 .glass-login-btn {
                     padding: 0.6rem 1.4rem;
                     border-radius: 14px;
@@ -110,6 +112,41 @@ export default function Welcome({ canLogin }) {
                     color:rgba(160,20,20,1);
                 }
 
+                /* Botón ghost para "Iniciar sesión" */
+                .glass-ghost-btn {
+                    padding: 0.6rem 1.2rem;
+                    border-radius: 14px;
+                    font-family: 'Inter', sans-serif;
+                    font-size: 0.875rem; font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    background: rgba(255,255,255,0.08);
+                    color: rgba(120,60,10,0.75);
+                    border: 1px solid rgba(200,140,80,0.3);
+                    backdrop-filter: blur(12px);
+                    text-decoration: none;
+                    display: inline-block;
+                    letter-spacing: -0.01em;
+                }
+                .glass-ghost-btn:hover {
+                    background: rgba(255,255,255,0.16);
+                    color: rgba(90,40,5,0.9);
+                    border-color: rgba(200,140,80,0.5);
+                }
+
+                /* Enlace al catálogo */
+                .catalogo-link {
+                    padding: 0.6rem 1.2rem; border-radius:14px;
+                    font-family:'Inter',sans-serif; font-size:0.875rem; font-weight:500;
+                    color:rgba(150,80,20,0.7); text-decoration:none;
+                    border:1px solid transparent; transition:all 0.18s;
+                }
+                .catalogo-link:hover {
+                    background:rgba(255,255,255,0.12);
+                    border-color:rgba(200,140,80,0.2);
+                    color:rgba(120,55,10,0.9);
+                }
+
                 /* MAIN */
                 .welcome-main { flex:1; display:flex; align-items:center; justify-content:center; padding:4rem 2rem; position:relative; z-index:2; }
                 .hero-inner { max-width:900px; width:100%; text-align:center; animation:fadeUp 0.85s cubic-bezier(0.16,1,0.3,1) both; }
@@ -129,7 +166,44 @@ export default function Welcome({ canLogin }) {
                 .hero-title { font-size:4rem; font-weight:300; color:#2d1a08; letter-spacing:-0.04em; line-height:1; margin-bottom:1.25rem; }
                 .hero-sub { font-size:1.1rem; color:rgba(150,80,20,0.65); font-weight:400; line-height:1.7; margin-bottom:3.5rem; }
 
-                /* GLASS CARD — same as admin */
+                .hero-cta-row { display:flex; align-items:center; justify-content:center; gap:1rem; flex-wrap:wrap; margin-bottom:3rem; }
+
+                .btn-hero-primary {
+                    padding:0.9rem 2rem; border-radius:16px;
+                    font-family:'Inter',sans-serif; font-size:0.95rem; font-weight:600;
+                    text-decoration:none; transition:all 0.28s cubic-bezier(0.16,1,0.3,1);
+                    position:relative; overflow:hidden;
+                    background:rgba(220,38,38,0.1); color:rgba(185,28,28,0.95);
+                    border:1px solid rgba(220,38,38,0.45);
+                    box-shadow:0 8px 28px rgba(220,38,38,0.14),inset 0 1.5px 0 rgba(255,120,120,0.3);
+                    display:inline-block;
+                }
+                .btn-hero-primary::after {
+                    content:''; position:absolute; top:0; left:-120%; width:80%; height:100%;
+                    background:linear-gradient(105deg,transparent 20%,rgba(255,255,255,0.18) 50%,transparent 80%);
+                    transition:left 0.55s ease; pointer-events:none;
+                }
+                .btn-hero-primary:hover::after { left:130%; }
+                .btn-hero-primary:hover {
+                    transform:translateY(-3px); background:rgba(220,38,38,0.16);
+                    box-shadow:0 16px 40px rgba(220,38,38,0.18),inset 0 1.5px 0 rgba(255,120,120,0.4);
+                }
+
+                .btn-hero-ghost {
+                    padding:0.9rem 1.75rem; border-radius:16px;
+                    font-family:'Inter',sans-serif; font-size:0.95rem; font-weight:500;
+                    text-decoration:none; transition:all 0.2s ease;
+                    background:rgba(255,255,255,0.06); color:rgba(120,60,10,0.8);
+                    border:1px solid rgba(200,140,80,0.3);
+                    box-shadow:inset 0 1px 0 rgba(255,255,255,0.7);
+                    display:inline-block;
+                }
+                .btn-hero-ghost:hover {
+                    background:rgba(255,255,255,0.14); color:rgba(90,40,5,0.95);
+                    border-color:rgba(200,140,80,0.5); transform:translateY(-2px);
+                }
+
+                /* GLASS CARD — igual al original */
                 .glass-card {
                     background: rgba(255,255,255,0.04);
                     backdrop-filter: blur(22px) saturate(150%);
@@ -199,11 +273,22 @@ export default function Welcome({ canLogin }) {
                             </div>
                             <span className="logo-text">Vitali Store</span>
                         </div>
-                        {canLogin && (
-                            <Link href="/login" className="glass-login-btn">
-                                Iniciar Sesión
-                            </Link>
-                        )}
+
+                        {/* Navegación */}
+                        <div style={{display:'flex',alignItems:'center',gap:'0.5rem',flexWrap:'wrap'}}>
+                            <Link href="/catalogo" className="catalogo-link">Ver catálogo</Link>
+
+                            {canLogin && (
+                                <>
+                                    <Link href="/login" className="glass-ghost-btn">
+                                        Iniciar sesión
+                                    </Link>
+                                    <Link href="/registro" className="glass-login-btn">
+                                        Crear cuenta
+                                    </Link>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </header>
 
@@ -221,6 +306,16 @@ export default function Welcome({ canLogin }) {
                             Sistema integral de gestión para control de inventario,<br/>
                             ventas y administración de tu negocio.
                         </p>
+
+                        {/* CTAs para el cliente */}
+                        <div className="hero-cta-row">
+                            <Link href="/catalogo" className="btn-hero-primary">
+                                Explorar catálogo →
+                            </Link>
+                            <Link href="/registro" className="btn-hero-ghost">
+                                Crear cuenta gratis
+                            </Link>
+                        </div>
 
                         <div className="features-grid">
                             <div className="anim-1">

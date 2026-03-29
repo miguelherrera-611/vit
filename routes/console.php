@@ -9,7 +9,7 @@ Schedule::call(function () {
     $command = 'C:\xampp\mysql\bin\mysqldump.exe -u root vitalistore > "' . $backupPath . '"';
 
     exec($command);
-})->everyMinute('02:00')->name('backup-db-diario');
+})->dailyAt('02:00')->name('backup-db-diario');
 
 Schedule::call(function () {
     $files = glob(storage_path('app/backups/*.sql'));

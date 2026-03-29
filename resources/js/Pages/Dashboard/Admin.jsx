@@ -1,4 +1,8 @@
 // resources/js/Pages/Dashboard/Admin.jsx
+// ─────────────────────────────────────────────────────────────────────────────
+// ARCHIVO COMPLETO — igual al original + módulo "Pedidos" con badge de
+// notificación cuando hay pedidos en revisión.
+// ─────────────────────────────────────────────────────────────────────────────
 import AppLayout from '@/Layouts/AppLayout';
 import { usePage, Link } from '@inertiajs/react';
 
@@ -103,18 +107,19 @@ export default function Admin() {
                     transform:translateY(-1px); color:rgba(100,45,5,0.95);
                 }
 
-                .anim-1 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
-                .anim-2 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.10s both; }
-                .anim-3 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.15s both; }
-                .anim-4 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.20s both; }
-                .anim-5 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.25s both; }
-                .anim-6 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.30s both; }
-                .anim-7 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.35s both; }
-                .anim-8 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.40s both; }
-                .anim-9 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.45s both; }
+                .anim-1  { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
+                .anim-2  { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.10s both; }
+                .anim-3  { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.15s both; }
+                .anim-4  { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.20s both; }
+                .anim-5  { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.25s both; }
+                .anim-6  { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.30s both; }
+                .anim-7  { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.35s both; }
+                .anim-8  { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.40s both; }
+                .anim-9  { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.45s both; }
                 .anim-10 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.50s both; }
                 .anim-11 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.55s both; }
                 .anim-12 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.60s both; }
+                .anim-13 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.65s both; }
             `}</style>
 
             <div className="admin-bg">
@@ -134,6 +139,32 @@ export default function Admin() {
                                         Bienvenid@, {auth.user.name}
                                     </p>
                                 </div>
+                                {/* Badge de pedidos en revisión */}
+                                {stats.pedidos_revision > 0 && (
+                                    <Link href="/admin/pedidos?estado=revision" style={{textDecoration:'none'}}>
+                                        <div style={{
+                                            display:'flex',alignItems:'center',gap:'0.5rem',
+                                            padding:'0.5rem 1rem',
+                                            background:'rgba(245,158,11,0.1)',
+                                            border:'1px solid rgba(245,158,11,0.35)',
+                                            borderRadius:'40px',
+                                            cursor:'pointer',
+                                        }}>
+                                            <span style={{
+                                                display:'inline-flex',alignItems:'center',justifyContent:'center',
+                                                width:'22px',height:'22px',
+                                                background:'rgba(220,38,38,0.9)',
+                                                borderRadius:'50%',
+                                                fontSize:'0.7rem',fontWeight:'700',color:'white',
+                                            }}>
+                                                {stats.pedidos_revision}
+                                            </span>
+                                            <span style={{fontSize:'0.82rem',fontWeight:'500',color:'rgba(146,64,14,0.9)'}}>
+                                                pedido{stats.pedidos_revision !== 1 ? 's' : ''} en revisión
+                                            </span>
+                                        </div>
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -143,16 +174,16 @@ export default function Admin() {
                         {/* Stats */}
                         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:'1.25rem',marginBottom:'2.5rem'}}>
                             <div className="anim-1">
-                                <StatsCard icon="box"   value={stats.productos_activos} label="Productos Activos" accent="rgba(59,130,246,0.8)"  accentBg="rgba(59,130,246,0.07)" />
+                                <StatsCard icon="box"    value={stats.productos_activos}  label="Productos Activos"   accent="rgba(59,130,246,0.8)"  accentBg="rgba(59,130,246,0.07)" />
                             </div>
                             <div className="anim-2">
-                                <StatsCard icon="cart"  value={stats.ventas_hoy}        label="Ventas del Día"    accent="rgba(16,185,129,0.8)"  accentBg="rgba(16,185,129,0.07)" />
+                                <StatsCard icon="cart"   value={stats.ventas_hoy}         label="Ventas del Día"      accent="rgba(16,185,129,0.8)"  accentBg="rgba(16,185,129,0.07)" />
                             </div>
                             <div className="anim-3">
-                                <StatsCard icon="alert" value={stats.stock_bajo}        label="Stock Bajo"        accent="rgba(245,158,11,0.85)" accentBg="rgba(245,158,11,0.07)" />
+                                <StatsCard icon="alert"  value={stats.stock_bajo}         label="Stock Bajo"          accent="rgba(245,158,11,0.85)" accentBg="rgba(245,158,11,0.07)" />
                             </div>
                             <div className="anim-4">
-                                <StatsCard icon="money" value={stats.ventas_mes}        label="Ventas del Mes"    accent="rgba(220,38,38,0.8)"   accentBg="rgba(220,38,38,0.07)" />
+                                <StatsCard icon="money"  value={stats.ventas_mes}         label="Ventas del Mes"      accent="rgba(220,38,38,0.8)"   accentBg="rgba(220,38,38,0.07)" />
                             </div>
                         </div>
 
@@ -161,18 +192,19 @@ export default function Admin() {
                         </p>
 
                         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:'1.25rem'}}>
-                            <div className="anim-1"><ActionCard title="Productos"   description="Gestionar catálogo e inventario"             icon="box"       accent="rgba(59,130,246,0.75)"  href="/productos"      /></div>
-                            <div className="anim-2"><ActionCard title="Ventas"      description="Registrar y consultar ventas"                icon="cart"      accent="rgba(16,185,129,0.75)"  href="/ventas"         /></div>
-                            <div className="anim-3"><ActionCard title="Abonos"      description="Gestionar abonos de créditos y separados"   icon="credit"    accent="rgba(168,85,247,0.75)"  href="/abonos"         /></div>
-                            <div className="anim-4"><ActionCard title="Cartera"     description="Deudas activas y clientes con saldo"        icon="wallet"    accent="rgba(245,158,11,0.8)"   href="/ventas/cartera" /></div>
-                            <div className="anim-5"><ActionCard title="Reportes"    description="Analíticas y estadísticas"                  icon="chart"     accent="rgba(139,92,246,0.75)"  href="/reportes"       /></div>
-                            <div className="anim-6"><ActionCard title="Inventario"  description="Control de stock y almacén"                 icon="warehouse" accent="rgba(249,115,22,0.8)"   href="/inventario"     /></div>
-                            <div className="anim-7"><ActionCard title="Clientes"    description="Gestionar base de clientes"                 icon="users"     accent="rgba(236,72,153,0.75)"  href="/clientes"       /></div>
-                            <div className="anim-8"><ActionCard title="Proveedores" description="Administrar proveedores"                    icon="building"  accent="rgba(99,102,241,0.75)"  href="/proveedores"    /></div>
-                            <div className="anim-9"><ActionCard title="Categorías"  description="Grupos y subcategorías de productos"        icon="tag"       accent="rgba(20,184,166,0.75)"  href="/categorias"     /></div>
-                            <div className="anim-10"><ActionCard title="Papelera"   description="Elementos eliminados · se purgan en 30 días" icon="trash"    accent="rgba(220,38,38,0.75)"   href="/papelera"       /></div>
-                            <div className="anim-11"><ActionCard title="Usuarios"   description="Crear usuarios, asignar roles y permisos"   icon="users-cog" accent="rgba(220,38,38,0.75)"   href="/usuarios"       /></div>
-                            <div className="anim-12"><ActionCard title="Registros"  description="Historial de actividad del sistema"         icon="log"       accent="rgba(71,85,105,0.8)"    href="/registros"      /></div>
+                            <div className="anim-1"><ActionCard title="Productos"    description="Gestionar catálogo e inventario"              icon="box"        accent="rgba(59,130,246,0.75)"   href="/productos"           /></div>
+                            <div className="anim-2"><ActionCard title="Ventas"       description="Registrar y consultar ventas"                 icon="cart"       accent="rgba(16,185,129,0.75)"   href="/ventas"              /></div>
+                            <div className="anim-3"><ActionCard title="Pedidos"      description="Pedidos de clientes · revisar comprobantes"   icon="package"    accent="rgba(245,158,11,0.85)"   href="/admin/pedidos"       badge={stats.pedidos_revision} /></div>
+                            <div className="anim-4"><ActionCard title="Abonos"       description="Gestionar abonos de créditos y separados"    icon="credit"     accent="rgba(168,85,247,0.75)"   href="/abonos"              /></div>
+                            <div className="anim-5"><ActionCard title="Cartera"      description="Deudas activas y clientes con saldo"         icon="wallet"     accent="rgba(245,158,11,0.8)"    href="/ventas/cartera"      /></div>
+                            <div className="anim-6"><ActionCard title="Reportes"     description="Analíticas y estadísticas"                   icon="chart"      accent="rgba(139,92,246,0.75)"   href="/reportes"            /></div>
+                            <div className="anim-7"><ActionCard title="Inventario"   description="Control de stock y almacén"                  icon="warehouse"  accent="rgba(249,115,22,0.8)"    href="/inventario"          /></div>
+                            <div className="anim-8"><ActionCard title="Clientes"     description="Gestionar base de clientes"                  icon="users"      accent="rgba(236,72,153,0.75)"   href="/clientes"            /></div>
+                            <div className="anim-9"><ActionCard title="Proveedores"  description="Administrar proveedores"                     icon="building"   accent="rgba(99,102,241,0.75)"   href="/proveedores"         /></div>
+                            <div className="anim-10"><ActionCard title="Categorías"  description="Grupos y subcategorías de productos"         icon="tag"        accent="rgba(20,184,166,0.75)"   href="/categorias"          /></div>
+                            <div className="anim-11"><ActionCard title="Papelera"    description="Elementos eliminados · se purgan en 30 días" icon="trash"      accent="rgba(220,38,38,0.75)"    href="/papelera"            /></div>
+                            <div className="anim-12"><ActionCard title="Usuarios"    description="Crear usuarios, asignar roles y permisos"    icon="users-cog"  accent="rgba(220,38,38,0.75)"    href="/usuarios"            /></div>
+                            <div className="anim-13"><ActionCard title="Registros"   description="Historial de actividad del sistema"          icon="log"        accent="rgba(71,85,105,0.8)"     href="/registros"           /></div>
                         </div>
                     </div>
                 </div>
@@ -205,7 +237,7 @@ function StatsCard({ icon, value, label, accent, accentBg }) {
     );
 }
 
-function ActionCard({ title, description, icon, accent, href }) {
+function ActionCard({ title, description, icon, accent, href, badge }) {
     const icons = {
         box:       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />,
         cart:      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />,
@@ -219,9 +251,26 @@ function ActionCard({ title, description, icon, accent, href }) {
         wallet:    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />,
         tag:       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />,
         log:       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />,
+        package:   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4M12 11l8-4M12 11L4 7M12 11v10" />,
     };
+
     return (
-        <div className="glass-card" style={{padding:'1.75rem'}}>
+        <div className="glass-card" style={{padding:'1.75rem',position:'relative'}}>
+            {/* Badge de notificación */}
+            {badge > 0 && (
+                <div style={{
+                    position:'absolute',top:'1rem',right:'1rem',
+                    width:'24px',height:'24px',
+                    background:'rgba(220,38,38,0.9)',
+                    borderRadius:'50%',
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                    fontSize:'0.72rem',fontWeight:'700',color:'white',
+                    boxShadow:'0 2px 8px rgba(220,38,38,0.35)',
+                    zIndex:2,
+                }}>
+                    {badge}
+                </div>
+            )}
             <div style={{
                 width:'52px',height:'52px',borderRadius:'18px',
                 display:'flex',alignItems:'center',justifyContent:'center',

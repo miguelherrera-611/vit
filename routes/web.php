@@ -16,6 +16,11 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\UserController;
+// ── NUEVOS ──────────────────────────────────────────────────────────────────
+use App\Http\Controllers\CatalogoController;
+use App\Http\Controllers\PedidoController;
+use App\Http\Controllers\ClienteDashboardController;
+use App\Http\Controllers\Auth\ClienteRegisterController;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Bienvenida
@@ -25,6 +30,7 @@ Route::get('/', function () {
         $user = auth()->user();
         if ($user->hasRole('admin'))    return redirect()->route('dashboard.admin');
         if ($user->hasRole('empleado')) return redirect()->route('dashboard.empleado');
+        if ($user->hasRole('cliente'))  return redirect()->route('cliente.dashboard');
         return redirect()->route('dashboard');
     }
     return Inertia::render('Welcome', [
@@ -32,6 +38,24 @@ Route::get('/', function () {
         'canRegister' => Route::has('register'),
     ]);
 })->name('welcome');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NUEVO — Registro público solo para clientes (solo guests)
+// ─────────────────────────────────────────────────────────────────────────────
+Route::middleware('guest')->group(function () {
+    Route::get('/registro', [ClienteRegisterController::class, 'create'])->name('registro.cliente');
+    Route::post('/registro', [ClienteRegisterController::class, 'store'])->name('registro.cliente.store');
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NUEVO — Catálogo público (sin autenticación)
+// ─────────────────────────────────────────────────────────────────────────────
+Route::prefix('catalogo')->name('catalogo.')->group(function () {
+    Route::get('/', [CatalogoController::class, 'index'])->name('index');
+    Route::get('/producto/{producto}', [CatalogoController::class, 'producto'])->name('producto');
+    Route::get('/{grupo}', [CatalogoController::class, 'grupo'])->name('grupo');
+    Route::get('/{grupo}/{subcat}', [CatalogoController::class, 'subcategoria'])->name('subcategoria');
+});
 
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -43,6 +67,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $user = auth()->user();
         if ($user->hasRole('admin'))    return redirect()->route('dashboard.admin');
         if ($user->hasRole('empleado')) return redirect()->route('dashboard.empleado');
+        if ($user->hasRole('cliente'))  return redirect()->route('cliente.dashboard');
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
@@ -53,6 +78,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard/empleado', [DashboardController::class, 'empleado'])
         ->middleware('role:empleado')
         ->name('dashboard.empleado');
+
+    // ── NUEVO — Dashboard cliente ────────────────────────────────────────────
+    Route::get('/cliente/dashboard', [ClienteDashboardController::class, 'index'])
+        ->middleware('role:cliente')
+        ->name('cliente.dashboard');
+
+    // ── NUEVO — Pedidos del cliente ──────────────────────────────────────────
+    Route::prefix('cliente')->name('cliente.')->middleware('role:cliente')->group(function () {
+        Route::get('/mis-pedidos', [PedidoController::class, 'misPedidos'])->name('mis_pedidos');
+        Route::get('/checkout', [PedidoController::class, 'checkout'])->name('checkout');
+        Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
+        Route::get('/pedidos/{pedido}/confirmacion', [PedidoController::class, 'confirmacion'])->name('pedido.confirmacion');
+        Route::patch('/pedidos/{pedido}/confirmar-entrega', [PedidoController::class, 'confirmarEntrega'])->name('pedido.confirmar_entrega');
+    });
+
+    // ── NUEVO — Pedidos del admin ────────────────────────────────────────────
+    Route::prefix('admin/pedidos')->name('admin.pedidos.')->middleware('role:admin')->group(function () {
+        Route::get('/', [PedidoController::class, 'adminIndex'])->name('index');
+        Route::patch('/{pedido}/estado', [PedidoController::class, 'adminCambiarEstado'])->name('estado');
+    });
 
     // ─────────────────────────────────────────────────────────────────────────
     // Perfil
