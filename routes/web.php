@@ -168,6 +168,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('role_or_permission:admin|eliminar_productos')
             ->name('destroy');
 
+        Route::delete('/{producto}/fotos/{foto}', [ProductoController::class, 'eliminarFoto'])
+            ->middleware('role_or_permission:admin|editar_productos')
+            ->name('fotos.destroy');
+
         Route::get('/{producto}', [ProductoController::class, 'show'])
             ->middleware('role_or_permission:admin|ver_productos')
             ->name('show');

@@ -22,12 +22,16 @@ class Pedido extends Model
         'total',
         'estado',
         'notas_admin',
+        'motivo_rechazo',
+        'mensaje_rechazo',
+        'stock_descontado',
         'email_cliente',
     ];
 
     protected $casts = [
-        'subtotal' => 'decimal:2',
-        'total'    => 'decimal:2',
+        'subtotal'          => 'decimal:2',
+        'total'             => 'decimal:2',
+        'stock_descontado'  => 'boolean',
     ];
 
     // ── Relaciones ───────────────────────────────────────────────

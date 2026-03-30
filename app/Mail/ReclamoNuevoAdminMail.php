@@ -1,14 +1,42 @@
 <?php
+// app/Mail/ReclamoNuevoAdminMail.php
 
-// ── app/Mail/ReclamoNuevoAdminMail.php ───────────────────────
+namespace App\Mail;
+
 use App\Models\Reclamo;
-class ReclamoNuevoAdminMail extends Mailable {
+use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Queue\SerializesModels;
+
+class ReclamoNuevoAdminMail extends Mailable
+{
     use Queueable, SerializesModels;
+
     public Reclamo $reclamo;
-    public function __construct(Reclamo $reclamo) { $this->reclamo = $reclamo; }
-    public function envelope(): Envelope {
-        return new Envelope(subject: "🆘 Nuevo reclamo de cliente — VitaliStore");
+
+    public function __construct(Reclamo $reclamo)
+    {
+        $this->reclamo = $reclamo;
     }
-    public function content(): Content { return new Content(view: 'emails.reclamo-nuevo-admin'); }
-    public function attachments(): array { return []; }
+
+    public function envelope(): Envelope
+    {
+        return new Envelope(
+            subject: "🆘 Nuevo reclamo de cliente — VitaliStore",
+        );
+    }
+
+    public function content(): Content
+    {
+        return new Content(
+            view: 'emails.reclamo-nuevo-admin',
+        );
+    }
+
+    public function attachments(): array
+    {
+        return [];
+    }
 }

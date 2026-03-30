@@ -42,13 +42,17 @@ const ACCIONES = {
 
 const METODO_EMOJIS = { Nequi: '💜', Daviplata: '🔴', Bancolombia: '🟡', Davivienda: '🏠' };
 
+// ✅ Helper para imagen — compatible con URL completa o ruta relativa
+const imgSrc = (imagen) => {
+    if (!imagen) return null;
+    return imagen.startsWith('http') ? imagen : `/storage/${imagen}`;
+};
+
 export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodosPago, contacto }) {
     const { flash } = usePage().props;
 
-    // Panel detalle
     const [detalle, setDetalle]     = useState(null);
-    // Modal de cambio de estado
-    const [modalEstado, setModalEstado] = useState(null); // { pedidoId, nuevoEstado }
+    const [modalEstado, setModalEstado] = useState(null);
     const [password, setPassword]   = useState('');
     const [notas, setNotas]         = useState('');
     const [motivo, setMotivo]       = useState('');
@@ -56,29 +60,24 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
     const [pwError, setPwError]     = useState('');
     const [processing, setProcessing] = useState(false);
 
-    // Modal de datos de pago
     const [modalPago, setModalPago]   = useState(false);
-    const [pagoEditing, setPagoEditing] = useState(null); // ConfigPago item
+    const [pagoEditing, setPagoEditing] = useState(null);
     const [pagoNumero, setPagoNumero]  = useState('');
     const [pagoQrFile, setPagoQrFile]  = useState(null);
     const [pagoEliminarQr, setPagoEliminarQr] = useState(false);
     const [pagoProcessing, setPagoProcessing]   = useState(false);
 
-    // Modal de contacto
     const [modalContacto, setModalContacto] = useState(false);
     const [contactoForm, setContactoForm]   = useState({ ...contacto });
     const [contactoProcessing, setContactoProcessing] = useState(false);
 
-    // Modal eliminar historial
     const [modalHistorial, setModalHistorial] = useState(false);
     const [historialPw, setHistorialPw]         = useState('');
     const [historialProcessing, setHistorialProcessing] = useState(false);
 
-    // Búsqueda y filtro
     const [filtroActivo, setFiltroActivo] = useState(filtro || '');
     const [buscarInput, setBuscarInput]   = useState(buscar || '');
 
-    // ── Filtrar / Buscar ──────────────────────────────────────────
     const filtrarPor = (estado) => {
         const nuevo = filtroActivo === estado ? '' : estado;
         setFiltroActivo(nuevo);
@@ -90,7 +89,6 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
         router.get('/admin/pedidos', { ...(filtroActivo ? { estado: filtroActivo } : {}), ...(buscarInput ? { buscar: buscarInput } : {}) }, { preserveState: true });
     };
 
-    // ── Abrir modal de cambio de estado ──────────────────────────
     const abrirModalEstado = (pedidoId, nuevoEstado) => {
         setModalEstado({ pedidoId, nuevoEstado });
         setPassword(''); setPwError(''); setNotas(''); setMotivo(''); setMensajeLibre('');
@@ -108,19 +106,11 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
             mensaje_rechazo: mensajeLibre || undefined,
         }, {
             preserveScroll: true,
-            onSuccess: () => {
-                setProcessing(false);
-                setModalEstado(null);
-                setDetalle(null);
-            },
-            onError: (errs) => {
-                setProcessing(false);
-                if (errs.password) setPwError(errs.password);
-            },
+            onSuccess: () => { setProcessing(false); setModalEstado(null); setDetalle(null); },
+            onError: (errs) => { setProcessing(false); if (errs.password) setPwError(errs.password); },
         });
     };
 
-    // ── Guardar datos de pago ─────────────────────────────────────
     const guardarPago = () => {
         if (!pagoEditing) return;
         setPagoProcessing(true);
@@ -137,7 +127,6 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
         });
     };
 
-    // ── Guardar contacto ──────────────────────────────────────────
     const guardarContacto = () => {
         setContactoProcessing(true);
         router.post('/admin/pedidos/contacto', { ...contactoForm, _method: 'PATCH' }, {
@@ -147,7 +136,6 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
         });
     };
 
-    // ── Eliminar historial ────────────────────────────────────────
     const eliminarHistorial = () => {
         setHistorialProcessing(true);
         router.post('/admin/pedidos/eliminar-historial', { password: historialPw }, {
@@ -263,7 +251,6 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                             <h1 style={{fontSize:'1.75rem',fontWeight:'300',color:'#2d1a08',letterSpacing:'-0.04em',marginBottom:'0.3rem'}}>Pedidos de clientes</h1>
                             <p style={{fontSize:'0.82rem',color:'rgba(150,80,20,0.6)'}}>Gestiona y verifica los pedidos recibidos</p>
                         </div>
-                        {/* Botones de acciones globales */}
                         <div style={{display:'flex',gap:'0.6rem',flexWrap:'wrap',alignItems:'center'}}>
                             <button className="tab-btn" onClick={() => setModalPago(true)}
                                     style={{background:'rgba(59,130,246,0.09)',border:'1px solid rgba(59,130,246,0.28)',color:'rgba(29,78,216,0.9)'}}>
@@ -299,7 +286,7 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                         )}
                     </form>
 
-                    {/* Filtros por estado */}
+                    {/* Filtros */}
                     <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap',marginBottom:'1.75rem'}}>
                         <button className="tab-btn"
                                 style={{ background:!filtroActivo?'rgba(220,38,38,0.1)':'rgba(255,255,255,0.06)',
@@ -321,7 +308,6 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
 
                     {/* Tabla */}
                     <div className="adm-glass anim-1">
-                        {/* Cabecera */}
                         <div style={{display:'grid',gridTemplateColumns:'1fr 1.2fr 1fr auto auto auto',
                             gap:'0.5rem',padding:'0.75rem 1.25rem',
                             borderBottom:'1px solid rgba(200,140,80,0.12)',background:'rgba(255,255,255,0.02)'}}>
@@ -385,11 +371,10 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                 </div>
             </div>
 
-            {/* ── Panel lateral detalle ─────────────────────────── */}
+            {/* Panel lateral detalle */}
             {detalle && (
                 <div className="modal-overlay" onClick={() => setDetalle(null)}>
                     <div className="detalle-panel" onClick={e => e.stopPropagation()}>
-                        {/* Header */}
                         <div style={{padding:'1.5rem',borderBottom:'1px solid rgba(200,140,80,0.12)',
                             display:'flex',alignItems:'center',justifyContent:'space-between',
                             position:'sticky',top:0,background:'rgba(255,250,245,0.97)',zIndex:1,backdropFilter:'blur(20px)'}}>
@@ -429,7 +414,6 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                                 <Row label="Fecha"  value={detalle.created_at} />
                             </Section>
 
-                            {/* Comprobante */}
                             {detalle.comprobante && (
                                 <div style={{marginBottom:'1.5rem'}}>
                                     <p style={{fontSize:'0.66rem',fontWeight:'700',color:'rgba(150,80,20,0.5)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'0.65rem'}}>Comprobante</p>
@@ -445,7 +429,6 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                                 </div>
                             )}
 
-                            {/* Motivo de rechazo (si aplica) */}
                             {detalle.estado === 'rechazado' && detalle.motivo_rechazo && (
                                 <div style={{marginBottom:'1.5rem',padding:'0.875rem 1rem',borderRadius:'12px',background:'rgba(220,38,38,0.06)',border:'1px solid rgba(220,38,38,0.2)'}}>
                                     <p style={{fontSize:'0.68rem',fontWeight:'700',color:'rgba(185,28,28,0.65)',textTransform:'uppercase',letterSpacing:'0.08em',margin:'0 0 0.3rem'}}>Motivo de rechazo</p>
@@ -454,13 +437,13 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                                 </div>
                             )}
 
-                            {/* Productos */}
                             <Section title={`Productos (${detalle.items.length})`}>
                                 {detalle.items.map((item, i) => (
                                     <div key={i} style={{display:'flex',alignItems:'center',gap:'0.65rem',padding:'0.65rem 0.875rem',
                                         borderBottom:i<detalle.items.length-1?'1px solid rgba(200,140,80,0.08)':'none'}}>
+                                        {/* ✅ CORREGIDO: compatible con URL completa o ruta relativa */}
                                         {item.imagen
-                                            ? <img src={`/storage/${item.imagen}`} alt={item.nombre} style={{width:'40px',height:'40px',borderRadius:'7px',objectFit:'cover',flexShrink:0}} />
+                                            ? <img src={imgSrc(item.imagen)} alt={item.nombre} style={{width:'40px',height:'40px',borderRadius:'7px',objectFit:'cover',flexShrink:0}} />
                                             : <div style={{width:'40px',height:'40px',borderRadius:'7px',background:'rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.1rem',flexShrink:0}}>👔</div>
                                         }
                                         <div style={{flex:1,minWidth:0}}>
@@ -472,7 +455,6 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                                 ))}
                             </Section>
 
-                            {/* Acciones de cambio de estado */}
                             {TRANSICIONES[detalle.estado]?.length > 0 && (
                                 <div style={{borderTop:'1px solid rgba(200,140,80,0.1)',paddingTop:'1.5rem',marginTop:'0.5rem'}}>
                                     <p style={{fontSize:'0.66rem',fontWeight:'700',color:'rgba(150,80,20,0.5)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'0.75rem'}}>Cambiar estado</p>
@@ -504,7 +486,7 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                 </div>
             )}
 
-            {/* ── Modal cambio de estado con contraseña ─────────── */}
+            {/* Modal cambio de estado */}
             {modalEstado && (
                 <div className="modal-center-overlay" onClick={() => setModalEstado(null)}>
                     <div className="modal-card" onClick={e => e.stopPropagation()}>
@@ -515,7 +497,6 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                             Ingresa tu contraseña para confirmar esta acción.
                         </p>
 
-                        {/* Notas admin */}
                         <div style={{marginBottom:'0.875rem'}}>
                             <label className="ck-label">Notas internas (opcional)</label>
                             <textarea className="ck-input" value={notas} onChange={e => setNotas(e.target.value)}
@@ -523,7 +504,6 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                                       style={{resize:'vertical'}} />
                         </div>
 
-                        {/* Rechazo: motivo + mensaje */}
                         {modalEstado.nuevoEstado === 'rechazado' && (
                             <>
                                 <div style={{marginBottom:'0.875rem'}}>
@@ -551,7 +531,6 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                             </>
                         )}
 
-                        {/* Contraseña */}
                         <div style={{marginBottom:'1rem'}}>
                             <label className="ck-label">🔒 Contraseña de administrador</label>
                             <input className="ck-input" type="password" value={password}
@@ -579,7 +558,7 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                 </div>
             )}
 
-            {/* ── Modal datos de pago ───────────────────────────── */}
+            {/* Modal datos de pago */}
             {modalPago && (
                 <div className="modal-center-overlay" onClick={() => { setModalPago(false); setPagoEditing(null); }}>
                     <div className="modal-card" style={{maxWidth:'520px'}} onClick={e => e.stopPropagation()}>
@@ -650,7 +629,7 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                 </div>
             )}
 
-            {/* ── Modal datos de contacto ───────────────────────── */}
+            {/* Modal datos de contacto */}
             {modalContacto && (
                 <div className="modal-center-overlay" onClick={() => setModalContacto(false)}>
                     <div className="modal-card" onClick={e => e.stopPropagation()}>
@@ -689,7 +668,7 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                 </div>
             )}
 
-            {/* ── Modal limpiar historial ───────────────────────── */}
+            {/* Modal limpiar historial */}
             {modalHistorial && (
                 <div className="modal-center-overlay" onClick={() => setModalHistorial(false)}>
                     <div className="modal-card" onClick={e => e.stopPropagation()}>

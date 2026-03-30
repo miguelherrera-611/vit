@@ -1,6 +1,5 @@
 <?php
 // app/Http/Controllers/PedidoController.php
-// VERSIÓN COMPLETA con todas las nuevas funcionalidades
 
 namespace App\Http\Controllers;
 
@@ -27,19 +26,17 @@ use Carbon\Carbon;
 
 class PedidoController extends Controller
 {
-    // ── CHECKOUT: mostrar formulario con datos de pago dinámicos ─
+    // ── CHECKOUT ─────────────────────────────────────────────────
 
     public function checkout(): Response
     {
-        // Cargar métodos de pago desde DB
         $metodosPago = ConfigPago::where('activo', true)->get()->map(fn($m) => [
-            'id'       => $m->metodo,
-            'label'    => $m->metodo,
-            'numero'   => $m->numero,
-            'qr_url'   => $m->qr_url,
+            'id'     => $m->metodo,
+            'label'  => $m->metodo,
+            'numero' => $m->numero,
+            'qr_url' => $m->qr_url,
         ]);
 
-        // Cargar datos de contacto (solo los que no estén vacíos)
         $contactoRaw = ConfigContacto::all()->pluck('valor', 'clave');
         $contacto = [
             'telefono1' => $contactoRaw['telefono1'] ?? '',
@@ -54,23 +51,23 @@ class PedidoController extends Controller
         ]);
     }
 
-    // ── STORE: crear pedido (sin bajar stock aquí) ───────────────
+    // ── STORE: crear pedido y bajar stock inmediatamente ─────────
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre_receptor'        => 'required|string|max:255',
-            'telefono_receptor'      => 'required|string|max:50',
-            'ciudad'                 => 'required|string|max:100',
-            'direccion'              => 'required|string|max:500',
-            'indicaciones'           => 'nullable|string|max:500',
-            'metodo_pago'            => 'required|in:Nequi,Daviplata,Bancolombia,Davivienda',
-            'comprobante_pago'       => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
-            'email_cliente'          => 'nullable|email|max:255',
-            'items'                  => 'required|array|min:1',
-            'items.*.producto_id'    => 'required|exists:productos,id',
-            'items.*.cantidad'       => 'required|integer|min:1',
-            'items.*.precio_unitario'=> 'required|numeric|min:0',
+            'nombre_receptor'         => 'required|string|max:255',
+            'telefono_receptor'       => 'required|string|max:50',
+            'ciudad'                  => 'required|string|max:100',
+            'direccion'               => 'required|string|max:500',
+            'indicaciones'            => 'nullable|string|max:500',
+            'metodo_pago'             => 'required|in:Nequi,Daviplata,Bancolombia,Davivienda',
+            'comprobante_pago'        => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
+            'email_cliente'           => 'nullable|email|max:255',
+            'items'                   => 'required|array|min:1',
+            'items.*.producto_id'     => 'required|exists:productos,id',
+            'items.*.cantidad'        => 'required|integer|min:1',
+            'items.*.precio_unitario' => 'required|numeric|min:0',
         ]);
 
         DB::beginTransaction();
@@ -94,21 +91,28 @@ class PedidoController extends Controller
                 'subtotal'          => $subtotal,
                 'total'             => $subtotal,
                 'estado'            => 'revision',
+                'stock_descontado'  => true, // ← stock ya se descuenta aquí
                 'email_cliente'     => $validated['email_cliente'] ?? auth()->user()?->email,
             ]);
 
             foreach ($validated['items'] as $item) {
-                $producto = Producto::find($item['producto_id']);
+                $producto = Producto::lockForUpdate()->find($item['producto_id']);
+
                 PedidoItem::create([
-                    'pedido_id'        => $pedido->id,
-                    'producto_id'      => $item['producto_id'],
-                    'nombre_producto'  => $producto?->nombre ?? 'Producto',
-                    'cantidad'         => $item['cantidad'],
-                    'precio_unitario'  => $item['precio_unitario'],
-                    'subtotal'         => $item['cantidad'] * $item['precio_unitario'],
-                    'imagen_producto'  => $producto?->imagen,
+                    'pedido_id'       => $pedido->id,
+                    'producto_id'     => $item['producto_id'],
+                    'nombre_producto' => $producto?->nombre ?? 'Producto',
+                    'cantidad'        => $item['cantidad'],
+                    'precio_unitario' => $item['precio_unitario'],
+                    'subtotal'        => $item['cantidad'] * $item['precio_unitario'],
+                    'imagen_producto' => $producto?->imagen,
                 ]);
-                // ← Stock NO baja aquí. Baja al aprobar el pedido.
+
+                // ← Bajar stock inmediatamente al crear el pedido
+                if ($producto) {
+                    $nuevoStock = max(0, $producto->stock - $item['cantidad']);
+                    $producto->update(['stock' => $nuevoStock]);
+                }
             }
 
             DB::commit();
@@ -177,12 +181,10 @@ class PedidoController extends Controller
                     'precio_unitario' => $i->precio_unitario,
                     'imagen'          => $i->imagen_producto,
                 ]),
-                // Datos de rechazo para mostrar al cliente
                 'motivo_rechazo'  => $p->motivo_rechazo,
                 'mensaje_rechazo' => $p->mensaje_rechazo,
             ]);
 
-        // Contacto para mostrar en caso de rechazo
         $contactoRaw = ConfigContacto::all()->pluck('valor', 'clave');
 
         return Inertia::render('Cliente/MisPedidos', [
@@ -201,7 +203,6 @@ class PedidoController extends Controller
 
         $pedido->update(['estado' => 'entregado']);
 
-        // Correo al admin
         $adminEmails = \App\Models\User::role('admin')->pluck('email')->toArray();
         if (!empty($adminEmails)) {
             Mail::to($adminEmails)->send(new AdminEntregaConfirmadaMail($pedido));
@@ -215,7 +216,7 @@ class PedidoController extends Controller
         return back()->with('success', '¡Gracias! Has confirmado la recepción de tu pedido.');
     }
 
-    // ── ADMIN: listar pedidos con paginación ─────────────────────
+    // ── ADMIN: listar pedidos ─────────────────────────────────────
 
     public function adminIndex(Request $request): Response
     {
@@ -260,7 +261,12 @@ class PedidoController extends Controller
                 'cantidad'        => $i->cantidad,
                 'precio_unitario' => $i->precio_unitario,
                 'subtotal'        => $i->subtotal,
-                'imagen'          => $i->imagen_producto,
+                // imagen con URL compatible tanto ruta relativa como absoluta
+                'imagen'          => $i->imagen_producto
+                    ? (str_starts_with($i->imagen_producto, 'http')
+                        ? $i->imagen_producto
+                        : asset('storage/' . $i->imagen_producto))
+                    : null,
             ]),
         ]);
 
@@ -272,16 +278,14 @@ class PedidoController extends Controller
             'rechazado'   => Pedido::where('estado', 'rechazado')->count(),
         ];
 
-        // Métodos de pago para modal de edición
         $metodosPago = ConfigPago::all()->map(fn($m) => [
-            'id'      => $m->id,
-            'metodo'  => $m->metodo,
-            'numero'  => $m->numero,
-            'qr_url'  => $m->qr_url,
-            'activo'  => $m->activo,
+            'id'     => $m->id,
+            'metodo' => $m->metodo,
+            'numero' => $m->numero,
+            'qr_url' => $m->qr_url,
+            'activo' => $m->activo,
         ]);
 
-        // Datos de contacto
         $contacto = ConfigContacto::all()->pluck('valor', 'clave');
 
         return Inertia::render('Admin/Pedidos', [
@@ -306,7 +310,6 @@ class PedidoController extends Controller
             'mensaje_rechazo' => 'nullable|string|max:1000',
         ]);
 
-        // Verificar contraseña
         if (!Hash::check($request->password, auth()->user()->password)) {
             return back()->withErrors(['password' => 'Contraseña incorrecta.']);
         }
@@ -319,31 +322,16 @@ class PedidoController extends Controller
             'notas_admin' => $request->notas_admin ?? $pedido->notas_admin,
         ];
 
-        // Datos de rechazo
         if ($request->estado === 'rechazado') {
             $datosActualizar['motivo_rechazo']  = $request->motivo_rechazo;
             $datosActualizar['mensaje_rechazo'] = $request->mensaje_rechazo;
         }
 
         // ── Lógica de stock ──────────────────────────────────────
-        if ($request->estado === 'aprobado' && $estadoAnterior === 'revision') {
-            // Bajar stock al aprobar
-            DB::beginTransaction();
-            try {
-                foreach ($pedido->items as $item) {
-                    $producto = Producto::lockForUpdate()->find($item->producto_id);
-                    if ($producto && $producto->stock >= $item->cantidad) {
-                        $producto->decrement('stock', $item->cantidad);
-                    }
-                }
-                $pedido->update($datosActualizar);
-                DB::commit();
-            } catch (\Exception $e) {
-                DB::rollBack();
-                return back()->withErrors(['error' => 'Error al actualizar stock: ' . $e->getMessage()]);
-            }
-        } elseif ($request->estado === 'rechazado' && $estadoAnterior === 'aprobado') {
-            // Devolver stock si se rechaza un pedido ya aprobado
+        // El stock ya bajó cuando el cliente creó el pedido (stock_descontado = true).
+        // Solo hay que devolver el stock si se rechaza el pedido.
+
+        if ($request->estado === 'rechazado' && $pedido->stock_descontado) {
             DB::beginTransaction();
             try {
                 foreach ($pedido->items as $item) {
@@ -352,6 +340,7 @@ class PedidoController extends Controller
                         $producto->increment('stock', $item->cantidad);
                     }
                 }
+                $datosActualizar['stock_descontado'] = false;
                 $pedido->update($datosActualizar);
                 DB::commit();
             } catch (\Exception $e) {
@@ -384,33 +373,30 @@ class PedidoController extends Controller
         return back()->with('success', "Pedido {$pedido->numero_pedido} actualizado.");
     }
 
-    // ── ADMIN: actualizar datos de pago ──────────────────────────
+    // ── ADMIN: actualizar datos de pago ───────────────────────────
 
     public function actualizarPago(Request $request, string $pagoId)
     {
         $request->validate([
-            'numero'    => 'nullable|string|max:100',
-            'qr_imagen' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072',
+            'numero'      => 'nullable|string|max:100',
+            'qr_imagen'   => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072',
             'eliminar_qr' => 'nullable|boolean',
         ]);
 
         $configPago = ConfigPago::findOrFail($pagoId);
         $cambios    = [];
 
-        // Cambio de número
         if ($request->filled('numero') && $request->numero !== $configPago->numero) {
             $cambios[] = "Número cambiado: '{$configPago->numero}' → '{$request->numero}'";
             $configPago->numero = $request->numero;
         }
 
-        // Eliminar QR
         if ($request->boolean('eliminar_qr') && $configPago->qr_imagen) {
             Storage::disk('public')->delete($configPago->qr_imagen);
             $cambios[] = "QR eliminado";
             $configPago->qr_imagen = null;
         }
 
-        // Nueva imagen QR
         if ($request->hasFile('qr_imagen')) {
             if ($configPago->qr_imagen) {
                 Storage::disk('public')->delete($configPago->qr_imagen);
@@ -422,7 +408,6 @@ class PedidoController extends Controller
 
         $configPago->save();
 
-        // Correo al admin con los cambios
         if (!empty($cambios)) {
             $adminEmails = \App\Models\User::role('admin')->pluck('email')->toArray();
             if (!empty($adminEmails)) {
@@ -437,7 +422,7 @@ class PedidoController extends Controller
         return back()->with('success', "Datos de {$configPago->metodo} actualizados.");
     }
 
-    // ── ADMIN: actualizar datos de contacto ──────────────────────
+    // ── ADMIN: actualizar datos de contacto ───────────────────────
 
     public function actualizarContacto(Request $request)
     {
@@ -459,7 +444,7 @@ class PedidoController extends Controller
         return back()->with('success', 'Datos de contacto actualizados.');
     }
 
-    // ── ADMIN: eliminar historial >1 mes a papelera ──────────────
+    // ── ADMIN: eliminar historial >1 mes a papelera ───────────────
 
     public function eliminarHistorial(Request $request)
     {

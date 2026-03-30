@@ -197,6 +197,17 @@ export default function ClienteDashboard({ stats, ultimosPedidos }) {
                             </div>
                         </Link>
 
+                        {/* ── NUEVO: botón Servicio al cliente ── */}
+                        <Link href="/cliente/servicio-cliente" className="action-link">
+                            <div style={{width:'36px',height:'36px',borderRadius:'10px',background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1rem',flexShrink:0}}>
+                                🆘
+                            </div>
+                            <div>
+                                <p style={{fontSize:'0.88rem',fontWeight:'600',color:'#2d1a08',margin:'0 0 0.1rem'}}>Servicio al cliente</p>
+                                <p style={{fontSize:'0.74rem',color:'rgba(150,80,20,0.55)',margin:0}}>Reclamos y soporte</p>
+                            </div>
+                        </Link>
+
                         <Link href="/profile" className="action-link">
                             <div style={{width:'36px',height:'36px',borderRadius:'10px',background:'rgba(16,185,129,0.08)',border:'1px solid rgba(16,185,129,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1rem',flexShrink:0}}>
                                 👤

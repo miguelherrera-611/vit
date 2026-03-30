@@ -11,14 +11,13 @@ export default function CatalogoGrupo({ grupo, subcategorias }) {
                 @keyframes staggerUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
 
                 .subcat-card {
-                    background: rgba(255,255,255,0.04);
-                    backdrop-filter: blur(22px) saturate(150%);
-                    -webkit-backdrop-filter: blur(22px) saturate(150%);
-                    border-radius: 24px; border: 1px solid rgba(255,255,255,0.65);
-                    box-shadow: 0 12px 40px rgba(180,90,20,0.07), 0 4px 14px rgba(180,90,20,0.04),
+                    background:rgba(255,255,255,0.04); backdrop-filter:blur(22px) saturate(150%);
+                    -webkit-backdrop-filter:blur(22px) saturate(150%); border-radius:24px;
+                    border:1px solid rgba(255,255,255,0.65);
+                    box-shadow:0 12px 40px rgba(180,90,20,0.07),0 4px 14px rgba(180,90,20,0.04),
                         inset 0 1.5px 0 rgba(255,255,255,0.88);
-                    overflow: hidden; transition: all 0.32s cubic-bezier(0.16,1,0.3,1);
-                    text-decoration: none; display: block; position: relative;
+                    overflow:hidden; transition:all 0.32s cubic-bezier(0.16,1,0.3,1);
+                    text-decoration:none; display:block; position:relative;
                 }
                 .subcat-card::before {
                     content:''; position:absolute; top:0; left:0; right:0; height:1px;
@@ -26,9 +25,9 @@ export default function CatalogoGrupo({ grupo, subcategorias }) {
                     pointer-events:none; z-index:1;
                 }
                 .subcat-card:hover {
-                    transform: translateY(-5px) scale(1.01);
-                    box-shadow: 0 24px 60px rgba(180,90,20,0.12), 0 8px 24px rgba(180,90,20,0.07);
-                    border-color: rgba(255,255,255,0.85);
+                    transform:translateY(-5px) scale(1.01);
+                    box-shadow:0 24px 60px rgba(180,90,20,0.12),0 8px 24px rgba(180,90,20,0.07);
+                    border-color:rgba(255,255,255,0.85);
                 }
                 .subcat-img { width:100%; height:200px; object-fit:cover; transition:transform 0.4s cubic-bezier(0.16,1,0.3,1); }
                 .subcat-card:hover .subcat-img { transform:scale(1.05); }
@@ -42,12 +41,12 @@ export default function CatalogoGrupo({ grupo, subcategorias }) {
                 .breadcrumb-link:hover { color:rgba(120,50,10,0.9); background:rgba(255,255,255,0.2); }
                 .breadcrumb-sep { color:rgba(150,80,20,0.3); font-size:0.8rem; }
 
-                .anim-1  { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
-                .anim-2  { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.11s both; }
-                .anim-3  { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.17s both; }
-                .anim-4  { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.23s both; }
-                .anim-5  { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.29s both; }
-                .anim-6  { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.35s both; }
+                .anim-1 { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
+                .anim-2 { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.11s both; }
+                .anim-3 { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.17s both; }
+                .anim-4 { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.23s both; }
+                .anim-5 { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.29s both; }
+                .anim-6 { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.35s both; }
             `}</style>
 
             <div style={{maxWidth:'1280px',margin:'0 auto',padding:'2.5rem 1.5rem 4rem'}}>
@@ -62,7 +61,7 @@ export default function CatalogoGrupo({ grupo, subcategorias }) {
                     <span style={{fontSize:'0.82rem',fontWeight:'600',color:'rgba(120,55,10,0.85)'}}>{grupo.nombre}</span>
                 </div>
 
-                {/* Encabezado del grupo */}
+                {/* Encabezado */}
                 <div style={{marginBottom:'3rem'}}>
                     <h1 style={{fontSize:'clamp(1.8rem,4vw,3rem)',fontWeight:'300',color:'#2d1a08',letterSpacing:'-0.04em',marginBottom:'0.5rem'}}>
                         {grupo.nombre}
@@ -74,7 +73,7 @@ export default function CatalogoGrupo({ grupo, subcategorias }) {
                     )}
                 </div>
 
-                {/* Grid de subcategorías */}
+                {/* Grid */}
                 {subcategorias.length === 0 ? (
                     <div style={{textAlign:'center',padding:'4rem 0'}}>
                         <p style={{fontSize:'1rem',color:'rgba(150,80,20,0.5)'}}>No hay subcategorías disponibles.</p>
@@ -89,25 +88,22 @@ export default function CatalogoGrupo({ grupo, subcategorias }) {
                             return (
                                 <div key={subcat.id} className={animClass}>
                                     <Link href={`/catalogo/${grupo.id}/${subcat.id}`} className="subcat-card">
-                                        {/* Imagen */}
                                         <div style={{overflow:'hidden',position:'relative'}}>
+                                            {/* ✅ imagen ya viene como URL completa desde el controller */}
                                             {subcat.imagen ? (
-                                                <img src={`/storage/${subcat.imagen}`} alt={subcat.nombre} className="subcat-img" />
+                                                <img src={subcat.imagen} alt={subcat.nombre} className="subcat-img" />
                                             ) : (
                                                 <div className="subcat-placeholder">👗</div>
                                             )}
                                             <div style={{
                                                 position:'absolute',top:'0.75rem',right:'0.75rem',
-                                                padding:'0.25rem 0.6rem',
-                                                background:'rgba(255,255,255,0.88)',
-                                                backdropFilter:'blur(8px)', borderRadius:'20px',
+                                                padding:'0.25rem 0.6rem',background:'rgba(255,255,255,0.88)',
+                                                backdropFilter:'blur(8px)',borderRadius:'20px',
                                                 fontSize:'0.7rem',fontWeight:'600',color:'rgba(120,55,10,0.8)',
                                             }}>
                                                 {subcat.total_productos} prendas
                                             </div>
                                         </div>
-
-                                        {/* Info */}
                                         <div style={{padding:'1.25rem'}}>
                                             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                                                 <div>

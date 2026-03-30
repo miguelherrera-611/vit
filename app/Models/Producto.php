@@ -1,4 +1,5 @@
 <?php
+// app/Models/Producto.php
 
 namespace App\Models;
 
@@ -16,8 +17,8 @@ class Producto extends Model
         'descripcion',
         'codigo_barras',
         'categoria',
-        'precio',          // precio de venta
-        'precio_compra',   // precio de compra (costo)
+        'precio',
+        'precio_compra',
         'stock',
         'stock_minimo',
         'imagen',
@@ -32,14 +33,12 @@ class Producto extends Model
         'stock_minimo'  => 'integer',
     ];
 
-    /** Margen de ganancia en % */
     public function getMargenAttribute(): float
     {
         if (!$this->precio_compra || $this->precio_compra == 0) return 0;
         return round((($this->precio - $this->precio_compra) / $this->precio_compra) * 100, 2);
     }
 
-    /** Ganancia unitaria bruta */
     public function getGananciaUnitariaAttribute(): float
     {
         return (float) ($this->precio - ($this->precio_compra ?? 0));
@@ -50,6 +49,12 @@ class Producto extends Model
     public function proveedores()
     {
         return $this->belongsToMany(Proveedor::class, 'producto_proveedor');
+    }
+
+    // Fotos adicionales del producto
+    public function fotos()
+    {
+        return $this->hasMany(ProductoFoto::class)->orderBy('orden');
     }
 
     // ── Scopes ──────────────────────────────────────────────────

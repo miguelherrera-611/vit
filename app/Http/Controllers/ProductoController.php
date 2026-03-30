@@ -4,6 +4,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Producto;
+use App\Models\ProductoFoto;
 use App\Models\Proveedor;
 use App\Models\GrupoCategoria;
 use App\Models\Registro;
@@ -14,9 +15,6 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductoController extends Controller
 {
-    /**
-     * Genera la lista de categorías agrupadas dinámicamente desde la DB.
-     */
     private function getCategorias(): array
     {
         return GrupoCategoria::where('activo', true)
@@ -39,7 +37,7 @@ class ProductoController extends Controller
 
     public function index(): Response
     {
-        $productos = Producto::with('proveedores')->orderBy('nombre')->get();
+        $productos = Producto::with(['proveedores', 'fotos'])->orderBy('nombre')->get();
 
         return Inertia::render('Productos/Index', [
             'productos' => $productos,
@@ -69,10 +67,11 @@ class ProductoController extends Controller
             'codigo_barras'  => 'nullable|string|unique:productos',
             'imagen'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'activo'         => 'boolean',
-
-            // proveedores
-            'proveedores'   => 'required|array|min:1',
-            'proveedores.*' => 'exists:proveedores,id',
+            'proveedores'    => 'required|array|min:1',
+            'proveedores.*'  => 'exists:proveedores,id',
+            // Fotos adicionales — array de imágenes
+            'fotos'          => 'nullable|array',
+            'fotos.*'        => 'image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         if ($request->hasFile('imagen')) {
@@ -82,14 +81,22 @@ class ProductoController extends Controller
         $validated['activo'] = $request->boolean('activo', true);
 
         $producto = Producto::create($validated);
-
-        // guardar proveedores
         $producto->proveedores()->sync($validated['proveedores']);
 
-        // ── Auditoría ────────────────────────────────────────────
+        // Guardar fotos adicionales
+        if ($request->hasFile('fotos')) {
+            foreach ($request->file('fotos') as $orden => $foto) {
+                $ruta = $foto->store('productos/fotos', 'public');
+                ProductoFoto::create([
+                    'producto_id' => $producto->id,
+                    'ruta'        => $ruta,
+                    'orden'       => $orden,
+                ]);
+            }
+        }
+
         Registro::registrar(
-            'crear',
-            'productos',
+            'crear', 'productos',
             "Producto \"{$producto->nombre}\" creado por " . auth()->user()->name,
             $producto
         );
@@ -100,7 +107,7 @@ class ProductoController extends Controller
 
     public function show(string $id): Response
     {
-        $producto = Producto::with('proveedores')->findOrFail($id);
+        $producto = Producto::with(['proveedores', 'fotos'])->findOrFail($id);
 
         return Inertia::render('Productos/Show', [
             'producto' => $producto,
@@ -109,7 +116,7 @@ class ProductoController extends Controller
 
     public function edit(string $id): Response
     {
-        $producto    = Producto::with('proveedores')->findOrFail($id);
+        $producto    = Producto::with(['proveedores', 'fotos'])->findOrFail($id);
         $proveedores = Proveedor::activos()->orderBy('nombre')->get();
 
         return Inertia::render('Productos/Edit', [
@@ -121,8 +128,8 @@ class ProductoController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $producto  = Producto::findOrFail($id);
-        $anterior  = $producto->toArray(); // snapshot antes de editar
+        $producto = Producto::findOrFail($id);
+        $anterior = $producto->toArray();
 
         $validated = $request->validate([
             'nombre'         => 'required|string|max:255',
@@ -135,31 +142,55 @@ class ProductoController extends Controller
             'codigo_barras'  => 'nullable|string|unique:productos,codigo_barras,' . $id,
             'imagen'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'activo'         => 'boolean',
-
-            // proveedores
-            'proveedores'   => 'required|array|min:1',
-            'proveedores.*' => 'exists:proveedores,id',
+            'proveedores'    => 'required|array|min:1',
+            'proveedores.*'  => 'exists:proveedores,id',
+            // Fotos adicionales nuevas
+            'fotos'          => 'nullable|array',
+            'fotos.*'        => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+            // IDs de fotos existentes a eliminar
+            'fotos_eliminar' => 'nullable|array',
+            'fotos_eliminar.*' => 'integer|exists:producto_fotos,id',
         ]);
 
         if ($request->hasFile('imagen')) {
             if ($producto->imagen) {
                 Storage::disk('public')->delete($producto->imagen);
             }
-
             $validated['imagen'] = $request->file('imagen')->store('productos', 'public');
         }
 
         $validated['activo'] = $request->boolean('activo', true);
-
         $producto->update($validated);
-
-        // actualizar proveedores
         $producto->proveedores()->sync($validated['proveedores']);
 
-        // ── Auditoría ────────────────────────────────────────────
+        // Eliminar fotos marcadas para borrar
+        if (!empty($validated['fotos_eliminar'])) {
+            $fotosAEliminar = ProductoFoto::whereIn('id', $validated['fotos_eliminar'])
+                ->where('producto_id', $producto->id)
+                ->get();
+
+            foreach ($fotosAEliminar as $foto) {
+                Storage::disk('public')->delete($foto->ruta);
+                $foto->delete();
+            }
+        }
+
+        // Agregar fotos nuevas
+        if ($request->hasFile('fotos')) {
+            $ordenActual = ProductoFoto::where('producto_id', $producto->id)->max('orden') ?? -1;
+            foreach ($request->file('fotos') as $foto) {
+                $ordenActual++;
+                $ruta = $foto->store('productos/fotos', 'public');
+                ProductoFoto::create([
+                    'producto_id' => $producto->id,
+                    'ruta'        => $ruta,
+                    'orden'       => $ordenActual,
+                ]);
+            }
+        }
+
         Registro::registrar(
-            'editar',
-            'productos',
+            'editar', 'productos',
             "Producto \"{$producto->nombre}\" editado por " . auth()->user()->name,
             $producto,
             $anterior,
@@ -174,23 +205,23 @@ class ProductoController extends Controller
     {
         $request->validate(['password' => 'required|string']);
 
-        if (! \Hash::check($request->password, auth()->user()->password)) {
+        if (!\Hash::check($request->password, auth()->user()->password)) {
             return back()->withErrors(['password' => 'Contraseña incorrecta.']);
         }
 
-        $producto = Producto::findOrFail($id);
+        $producto = Producto::with('fotos')->findOrFail($id);
+
+        // Eliminar fotos adicionales del storage
+        foreach ($producto->fotos as $foto) {
+            Storage::disk('public')->delete($foto->ruta);
+        }
 
         \App\Models\Papelera::archivar(
-            'producto',
-            $producto,
-            $producto->nombre,
-            auth()->user()->name
+            'producto', $producto, $producto->nombre, auth()->user()->name
         );
 
-        // ── Auditoría ────────────────────────────────────────────
         Registro::registrar(
-            'eliminar',
-            'productos',
+            'eliminar', 'productos',
             "Producto \"{$producto->nombre}\" movido a papelera por " . auth()->user()->name,
             $producto
         );
@@ -199,5 +230,19 @@ class ProductoController extends Controller
 
         return redirect()->route('productos.index')
             ->with('success', "Producto \"{$producto->nombre}\" movido a la papelera.");
+    }
+
+    // ── Eliminar una foto individual (llamada desde el frontend) ──
+
+    public function eliminarFoto(Request $request, string $productoId, string $fotoId)
+    {
+        $foto = ProductoFoto::where('id', $fotoId)
+            ->where('producto_id', $productoId)
+            ->firstOrFail();
+
+        Storage::disk('public')->delete($foto->ruta);
+        $foto->delete();
+
+        return back()->with('success', 'Foto eliminada.');
     }
 }

@@ -1,7 +1,7 @@
 // resources/js/Pages/Dashboard/Admin.jsx
 // ─────────────────────────────────────────────────────────────────────────────
 // ARCHIVO COMPLETO — igual al original + módulo "Pedidos" con badge de
-// notificación cuando hay pedidos en revisión.
+// notificación cuando hay pedidos en revisión + módulo "Reclamos"
 // ─────────────────────────────────────────────────────────────────────────────
 import AppLayout from '@/Layouts/AppLayout';
 import { usePage, Link } from '@inertiajs/react';
@@ -120,6 +120,7 @@ export default function Admin() {
                 .anim-11 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.55s both; }
                 .anim-12 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.60s both; }
                 .anim-13 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.65s both; }
+                .anim-14 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.70s both; }
             `}</style>
 
             <div className="admin-bg">
@@ -195,16 +196,18 @@ export default function Admin() {
                             <div className="anim-1"><ActionCard title="Productos"    description="Gestionar catálogo e inventario"              icon="box"        accent="rgba(59,130,246,0.75)"   href="/productos"           /></div>
                             <div className="anim-2"><ActionCard title="Ventas"       description="Registrar y consultar ventas"                 icon="cart"       accent="rgba(16,185,129,0.75)"   href="/ventas"              /></div>
                             <div className="anim-3"><ActionCard title="Pedidos"      description="Pedidos de clientes · revisar comprobantes"   icon="package"    accent="rgba(245,158,11,0.85)"   href="/admin/pedidos"       badge={stats.pedidos_revision} /></div>
-                            <div className="anim-4"><ActionCard title="Abonos"       description="Gestionar abonos de créditos y separados"    icon="credit"     accent="rgba(168,85,247,0.75)"   href="/abonos"              /></div>
-                            <div className="anim-5"><ActionCard title="Cartera"      description="Deudas activas y clientes con saldo"         icon="wallet"     accent="rgba(245,158,11,0.8)"    href="/ventas/cartera"      /></div>
-                            <div className="anim-6"><ActionCard title="Reportes"     description="Analíticas y estadísticas"                   icon="chart"      accent="rgba(139,92,246,0.75)"   href="/reportes"            /></div>
-                            <div className="anim-7"><ActionCard title="Inventario"   description="Control de stock y almacén"                  icon="warehouse"  accent="rgba(249,115,22,0.8)"    href="/inventario"          /></div>
-                            <div className="anim-8"><ActionCard title="Clientes"     description="Gestionar base de clientes"                  icon="users"      accent="rgba(236,72,153,0.75)"   href="/clientes"            /></div>
-                            <div className="anim-9"><ActionCard title="Proveedores"  description="Administrar proveedores"                     icon="building"   accent="rgba(99,102,241,0.75)"   href="/proveedores"         /></div>
-                            <div className="anim-10"><ActionCard title="Categorías"  description="Grupos y subcategorías de productos"         icon="tag"        accent="rgba(20,184,166,0.75)"   href="/categorias"          /></div>
-                            <div className="anim-11"><ActionCard title="Papelera"    description="Elementos eliminados · se purgan en 30 días" icon="trash"      accent="rgba(220,38,38,0.75)"    href="/papelera"            /></div>
-                            <div className="anim-12"><ActionCard title="Usuarios"    description="Crear usuarios, asignar roles y permisos"    icon="users-cog"  accent="rgba(220,38,38,0.75)"    href="/usuarios"            /></div>
-                            <div className="anim-13"><ActionCard title="Registros"   description="Historial de actividad del sistema"          icon="log"        accent="rgba(71,85,105,0.8)"     href="/registros"           /></div>
+                            {/* ── NUEVO: tarjeta Reclamos ── */}
+                            <div className="anim-4"><ActionCard title="Reclamos"     description="Quejas y reclamos de clientes"                icon="support"    accent="rgba(220,38,38,0.75)"    href="/admin/reclamos"      badge={stats.reclamos_pendientes} /></div>
+                            <div className="anim-5"><ActionCard title="Abonos"       description="Gestionar abonos de créditos y separados"    icon="credit"     accent="rgba(168,85,247,0.75)"   href="/abonos"              /></div>
+                            <div className="anim-6"><ActionCard title="Cartera"      description="Deudas activas y clientes con saldo"         icon="wallet"     accent="rgba(245,158,11,0.8)"    href="/ventas/cartera"      /></div>
+                            <div className="anim-7"><ActionCard title="Reportes"     description="Analíticas y estadísticas"                   icon="chart"      accent="rgba(139,92,246,0.75)"   href="/reportes"            /></div>
+                            <div className="anim-8"><ActionCard title="Inventario"   description="Control de stock y almacén"                  icon="warehouse"  accent="rgba(249,115,22,0.8)"    href="/inventario"          /></div>
+                            <div className="anim-9"><ActionCard title="Clientes"     description="Gestionar base de clientes"                  icon="users"      accent="rgba(236,72,153,0.75)"   href="/clientes"            /></div>
+                            <div className="anim-10"><ActionCard title="Proveedores" description="Administrar proveedores"                     icon="building"   accent="rgba(99,102,241,0.75)"   href="/proveedores"         /></div>
+                            <div className="anim-11"><ActionCard title="Categorías"  description="Grupos y subcategorías de productos"         icon="tag"        accent="rgba(20,184,166,0.75)"   href="/categorias"          /></div>
+                            <div className="anim-12"><ActionCard title="Papelera"    description="Elementos eliminados · se purgan en 30 días" icon="trash"      accent="rgba(220,38,38,0.75)"    href="/papelera"            /></div>
+                            <div className="anim-13"><ActionCard title="Usuarios"    description="Crear usuarios, asignar roles y permisos"    icon="users-cog"  accent="rgba(220,38,38,0.75)"    href="/usuarios"            /></div>
+                            <div className="anim-14"><ActionCard title="Registros"   description="Historial de actividad del sistema"          icon="log"        accent="rgba(71,85,105,0.8)"     href="/registros"           /></div>
                         </div>
                     </div>
                 </div>
@@ -252,6 +255,8 @@ function ActionCard({ title, description, icon, accent, href, badge }) {
         tag:       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />,
         log:       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />,
         package:   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4M12 11l8-4M12 11L4 7M12 11v10" />,
+        // ── NUEVO: icono para reclamos/soporte ──
+        support:   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />,
     };
 
     return (

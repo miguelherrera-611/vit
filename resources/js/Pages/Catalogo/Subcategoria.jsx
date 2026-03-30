@@ -8,15 +8,15 @@ const formatCOP = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', cur
 
 export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
     const { auth } = usePage().props;
-    const [carrito, setCarrito] = useState([]);
+    const [carrito, setCarrito]               = useState([]);
     const [carritoAbierto, setCarritoAbierto] = useState(false);
-    const [animando, setAnimando] = useState(null);
+    const [animando, setAnimando]             = useState(null);
 
-    // Persistir carrito en sessionStorage
     useEffect(() => {
         const saved = sessionStorage.getItem('vitali_carrito');
         if (saved) setCarrito(JSON.parse(saved));
     }, []);
+
     useEffect(() => {
         sessionStorage.setItem('vitali_carrito', JSON.stringify(carrito));
     }, [carrito]);
@@ -47,14 +47,12 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                 @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
 
                 .prod-card {
-                    background: rgba(255,255,255,0.04);
-                    backdrop-filter: blur(22px) saturate(150%);
-                    -webkit-backdrop-filter: blur(22px) saturate(150%);
-                    border-radius: 24px; border: 1px solid rgba(255,255,255,0.65);
-                    box-shadow: 0 12px 40px rgba(180,90,20,0.07), 0 4px 14px rgba(180,90,20,0.04),
+                    background:rgba(255,255,255,0.04); backdrop-filter:blur(22px) saturate(150%);
+                    -webkit-backdrop-filter:blur(22px) saturate(150%); border-radius:24px;
+                    border:1px solid rgba(255,255,255,0.65);
+                    box-shadow:0 12px 40px rgba(180,90,20,0.07),0 4px 14px rgba(180,90,20,0.04),
                         inset 0 1.5px 0 rgba(255,255,255,0.88);
-                    overflow: hidden; transition: all 0.32s cubic-bezier(0.16,1,0.3,1);
-                    position: relative;
+                    overflow:hidden; transition:all 0.32s cubic-bezier(0.16,1,0.3,1); position:relative;
                 }
                 .prod-card::before {
                     content:''; position:absolute; top:0; left:0; right:0; height:1px;
@@ -62,9 +60,9 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                     pointer-events:none; z-index:1;
                 }
                 .prod-card:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 24px 60px rgba(180,90,20,0.12), 0 8px 24px rgba(180,90,20,0.07);
-                    border-color: rgba(255,255,255,0.85);
+                    transform:translateY(-5px);
+                    box-shadow:0 24px 60px rgba(180,90,20,0.12),0 8px 24px rgba(180,90,20,0.07);
+                    border-color:rgba(255,255,255,0.85);
                 }
                 .prod-img { width:100%; height:240px; object-fit:cover; transition:transform 0.4s cubic-bezier(0.16,1,0.3,1); }
                 .prod-card:hover .prod-img { transform:scale(1.04); }
@@ -73,18 +71,14 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                 .btn-add {
                     width:100%; padding:0.75rem 1rem; border-radius:14px;
                     font-size:0.875rem; font-weight:600; cursor:pointer;
-                    font-family:'Inter',sans-serif; transition:all 0.2s ease;
-                    position:relative; overflow:hidden; border:none;
+                    font-family:'Inter',sans-serif; transition:all 0.2s ease; border:none;
                 }
                 .btn-add.disponible {
                     background:rgba(220,38,38,0.09); border:1px solid rgba(220,38,38,0.35);
                     color:rgba(185,28,28,0.95);
                     box-shadow:0 4px 14px rgba(220,38,38,0.1),inset 0 1px 0 rgba(255,120,120,0.2);
                 }
-                .btn-add.disponible:hover {
-                    background:rgba(220,38,38,0.15); transform:translateY(-1px);
-                    box-shadow:0 8px 20px rgba(220,38,38,0.15);
-                }
+                .btn-add.disponible:hover { background:rgba(220,38,38,0.15); transform:translateY(-1px); }
                 .btn-add.animando { animation:pulse 0.6s ease; }
                 .btn-add.agotado {
                     background:rgba(200,140,80,0.05); border:1px solid rgba(200,140,80,0.2);
@@ -92,11 +86,9 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                 }
                 .ver-detalle {
                     display:block; text-align:center; padding:0.45rem;
-                    font-size:0.78rem; color:rgba(150,80,20,0.55);
-                    text-decoration:none; transition:color 0.15s;
+                    font-size:0.78rem; color:rgba(150,80,20,0.55); text-decoration:none; transition:color 0.15s;
                 }
                 .ver-detalle:hover { color:rgba(120,50,10,0.85); }
-
                 .breadcrumb-link {
                     display:inline-flex; align-items:center; gap:0.3rem;
                     font-size:0.82rem; color:rgba(150,80,20,0.65); text-decoration:none;
@@ -135,7 +127,7 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                     </div>
                 </div>
 
-                {/* Grid de productos */}
+                {/* Grid */}
                 {productos.length === 0 ? (
                     <div style={{textAlign:'center',padding:'5rem 0',background:'rgba(255,255,255,0.04)',borderRadius:'24px',border:'1px solid rgba(255,255,255,0.65)'}}>
                         <div style={{fontSize:'3.5rem',marginBottom:'1rem'}}>🛍️</div>
@@ -150,29 +142,20 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                             const animClass = `anim-${Math.min((idx % 6) + 1, 6)}`;
                             return (
                                 <div key={prod.id} className={`prod-card ${animClass}`}>
-                                    {/* Imagen */}
                                     <div style={{overflow:'hidden',position:'relative'}}>
+                                        {/* ✅ imagen ya viene como URL completa desde el controller */}
                                         {prod.imagen ? (
-                                            <img src={`/storage/${prod.imagen}`} alt={prod.nombre} className="prod-img" />
+                                            <img src={prod.imagen} alt={prod.nombre} className="prod-img" />
                                         ) : (
                                             <div className="prod-placeholder">👔</div>
                                         )}
                                         {!prod.disponible && (
-                                            <div style={{
-                                                position:'absolute',inset:0,
-                                                background:'rgba(0,0,0,0.3)',
-                                                backdropFilter:'blur(2px)',
-                                                display:'flex',alignItems:'center',justifyContent:'center',
-                                            }}>
-                                                <span style={{
-                                                    padding:'0.4rem 1rem',background:'rgba(0,0,0,0.6)',
-                                                    borderRadius:'20px',fontSize:'0.78rem',fontWeight:'600',color:'white',
-                                                }}>Agotado</span>
+                                            <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.3)',backdropFilter:'blur(2px)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                                                <span style={{padding:'0.4rem 1rem',background:'rgba(0,0,0,0.6)',borderRadius:'20px',fontSize:'0.78rem',fontWeight:'600',color:'white'}}>Agotado</span>
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Info */}
                                     <div style={{padding:'1.25rem'}}>
                                         <Link href={`/catalogo/producto/${prod.id}`} style={{textDecoration:'none'}}>
                                             <h3 style={{fontSize:'0.95rem',fontWeight:'600',color:'#2d1a08',letterSpacing:'-0.01em',marginBottom:'0.25rem',lineHeight:'1.3'}}>
@@ -185,14 +168,12 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                                                 {prod.descripcion}
                                             </p>
                                         )}
-
                                         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'1rem'}}>
                                             <span style={{fontSize:'1.15rem',fontWeight:'700',color:'#2d1a08',letterSpacing:'-0.02em'}}>
                                                 {formatCOP(prod.precio)}
                                             </span>
                                             <span style={{
-                                                fontSize:'0.7rem',fontWeight:'600',
-                                                padding:'0.2rem 0.55rem',borderRadius:'20px',
+                                                fontSize:'0.7rem',fontWeight:'600',padding:'0.2rem 0.55rem',borderRadius:'20px',
                                                 background: prod.disponible ? 'rgba(16,185,129,0.1)' : 'rgba(200,140,80,0.1)',
                                                 color: prod.disponible ? 'rgba(4,120,87,0.85)' : 'rgba(150,80,20,0.5)',
                                                 border: prod.disponible ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(200,140,80,0.2)',
@@ -200,7 +181,6 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                                                 {prod.disponible ? `${prod.stock} disponibles` : 'Agotado'}
                                             </span>
                                         </div>
-
                                         <button
                                             className={`btn-add ${prod.disponible ? 'disponible' : 'agotado'} ${animando === prod.id ? 'animando' : ''}`}
                                             onClick={() => agregarAlCarrito(prod)}
@@ -215,7 +195,6 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                                                 </span>
                                             ) : 'No disponible'}
                                         </button>
-
                                         <Link href={`/catalogo/producto/${prod.id}`} className="ver-detalle">
                                             Ver detalle →
                                         </Link>
@@ -227,7 +206,6 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                 )}
             </div>
 
-            {/* Drawer del carrito */}
             <CarritoDrawer
                 open={carritoAbierto}
                 onClose={() => setCarritoAbierto(false)}

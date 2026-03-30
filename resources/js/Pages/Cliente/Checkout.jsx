@@ -44,11 +44,9 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
     }, []);
 
     const total              = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
-    // metodoSeleccionado ahora viene de las props dinámicas
     const metodoSeleccionado = metodosPago.find((m) => m.id === form.metodo_pago);
     const estiloSeleccionado = METODO_ESTILOS[form.metodo_pago] ?? {};
 
-    // Datos de contacto que no están vacíos
     const telefonos = [contacto.telefono1, contacto.telefono2].filter(Boolean);
     const correos   = [contacto.correo1,   contacto.correo2].filter(Boolean);
 
@@ -112,6 +110,12 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                 setProcessing(false);
             },
         });
+    };
+
+    // Helper para imagen — compatible con URL completa o ruta relativa
+    const imgSrc = (imagen) => {
+        if (!imagen) return null;
+        return imagen.startsWith('http') ? imagen : `/storage/${imagen}`;
     };
 
     if (carrito.length === 0) return null;
@@ -288,7 +292,6 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                                               rows={3} style={{ resize: 'vertical', minHeight: '80px' }} />
                                 </div>
 
-                                {/* ── NUEVO: datos de contacto de la tienda (solo si no están vacíos) ── */}
                                 {(telefonos.length > 0 || correos.length > 0) && (
                                     <div style={{
                                         marginTop: '1.25rem', padding: '0.875rem 1rem', borderRadius: '14px',
@@ -325,7 +328,6 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                                     Selecciona cómo realizarás la transferencia y adjunta el comprobante.
                                 </p>
 
-                                {/* ── Métodos de pago dinámicos desde DB ── */}
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.75rem' }}>
                                     {metodosPago.map((m) => {
                                         const estilo = METODO_ESTILOS[m.id] ?? { emoji: '💰', color: 'rgba(120,60,10,0.8)', bg: 'rgba(200,140,80,0.07)', border: 'rgba(200,140,80,0.28)' };
@@ -334,18 +336,12 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                                             <div
                                                 key={m.id}
                                                 className="metodo-card"
-                                                style={sel ? {
-                                                    background: estilo.bg,
-                                                    borderColor: estilo.border,
-                                                } : {}}
+                                                style={sel ? { background: estilo.bg, borderColor: estilo.border } : {}}
                                                 onClick={() => set('metodo_pago', m.id)}
                                             >
                                                 <div
                                                     className="radio-circle"
-                                                    style={sel ? {
-                                                        borderColor: estilo.color,
-                                                        background:  estilo.color,
-                                                    } : {}}
+                                                    style={sel ? { borderColor: estilo.color, background: estilo.color } : {}}
                                                 >
                                                     {sel && <div className="radio-dot" />}
                                                 </div>
@@ -360,7 +356,6 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                                                         {m.numero || 'Sin número configurado'}
                                                     </p>
                                                 </div>
-                                                {/* ── NUEVO: QR si existe ── */}
                                                 {m.qr_url && (
                                                     <img src={m.qr_url} alt="QR"
                                                          style={{ width: '38px', height: '38px', borderRadius: '7px', objectFit: 'cover', flexShrink: 0, marginLeft: 'auto' }} />
@@ -371,7 +366,6 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                                 </div>
                                 {errors.metodo_pago && <p className="ck-error" style={{ marginBottom: '1rem' }}>{errors.metodo_pago}</p>}
 
-                                {/* Info de la cuenta seleccionada */}
                                 {metodoSeleccionado && (
                                     <div style={{
                                         padding: '1rem 1.25rem', borderRadius: '14px', marginBottom: '1.75rem',
@@ -384,7 +378,6 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                                         <p style={{ fontSize: '0.9rem', fontWeight: '700', color: '#2d1a08', margin: '0 0 0.2rem' }}>
                                             {metodoSeleccionado.numero}
                                         </p>
-                                        {/* ── NUEVO: QR ampliado si existe ── */}
                                         {metodoSeleccionado.qr_url && (
                                             <div style={{ marginTop: '0.75rem' }}>
                                                 <p style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.55)', marginBottom: '0.4rem' }}>QR de pago:</p>
@@ -398,7 +391,6 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                                     </div>
                                 )}
 
-                                {/* ── NUEVO: datos de contacto en paso 2 (solo si no están vacíos) ── */}
                                 {(telefonos.length > 0 || correos.length > 0) && (
                                     <div style={{
                                         padding: '0.875rem 1rem', borderRadius: '14px', marginBottom: '1.5rem',
@@ -416,7 +408,6 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                                     </div>
                                 )}
 
-                                {/* Upload comprobante */}
                                 <label className="ck-label">Comprobante de pago</label>
                                 <div
                                     className={`upload-zone${form.comprobante ? ' has-file' : ''}`}
@@ -428,7 +419,6 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                                         style={{ display: 'none' }}
                                         onChange={handleComprobante}
                                     />
-
                                     {preview ? (
                                         <div>
                                             <img src={preview} alt="Comprobante"
@@ -480,8 +470,9 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                                     display: 'flex', gap: '0.75rem', padding: '0.75rem 0',
                                     borderBottom: '1px solid rgba(200,140,80,0.1)',
                                 }}>
+                                    {/* ✅ CORREGIDO: compatible con URL completa o ruta relativa */}
                                     {item.imagen
-                                        ? <img src={`/storage/${item.imagen}`} alt={item.nombre}
+                                        ? <img src={imgSrc(item.imagen)} alt={item.nombre}
                                                style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
                                         : <div style={{
                                             width: '48px', height: '48px', borderRadius: '10px',
@@ -520,7 +511,6 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                             </span>
                         </div>
 
-                        {/* Datos de envío resumen (paso 2) */}
                         {paso === 2 && form.nombre_receptor && (
                             <div style={{
                                 padding: '0.875rem 1rem', borderRadius: '14px',
