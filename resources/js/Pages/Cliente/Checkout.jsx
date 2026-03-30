@@ -6,14 +6,15 @@ import ClienteLayout from '@/Layouts/ClienteLayout';
 const formatCOP = (v) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
 
-const METODOS_PAGO = [
-    { id: 'Nequi',       label: 'Nequi',       emoji: '💜', numero: '310 000 0000',                      color: 'rgba(139,92,246,0.85)',  bg: 'rgba(139,92,246,0.08)',  border: 'rgba(139,92,246,0.3)'  },
-    { id: 'Daviplata',   label: 'Daviplata',   emoji: '🔴', numero: '310 000 0001',                      color: 'rgba(220,38,38,0.85)',   bg: 'rgba(220,38,38,0.07)',   border: 'rgba(220,38,38,0.25)'  },
-    { id: 'Bancolombia', label: 'Bancolombia', emoji: '🟡', numero: 'Cuenta de ahorros 123-456789-00',   color: 'rgba(202,138,4,0.9)',    bg: 'rgba(202,138,4,0.07)',   border: 'rgba(202,138,4,0.28)'  },
-    { id: 'Davivienda',  label: 'Davivienda',  emoji: '🏠', numero: 'Cuenta de ahorros 987-654321-00',   color: 'rgba(185,28,28,0.85)',   bg: 'rgba(185,28,28,0.07)',   border: 'rgba(185,28,28,0.25)'  },
-];
+// Estilos visuales por método (color/emoji) — los datos de número/QR vienen de props
+const METODO_ESTILOS = {
+    Nequi:       { emoji: '💜', color: 'rgba(139,92,246,0.85)',  bg: 'rgba(139,92,246,0.08)',  border: 'rgba(139,92,246,0.3)'  },
+    Daviplata:   { emoji: '🔴', color: 'rgba(220,38,38,0.85)',   bg: 'rgba(220,38,38,0.07)',   border: 'rgba(220,38,38,0.25)'  },
+    Bancolombia: { emoji: '🟡', color: 'rgba(202,138,4,0.9)',    bg: 'rgba(202,138,4,0.07)',   border: 'rgba(202,138,4,0.28)'  },
+    Davivienda:  { emoji: '🏠', color: 'rgba(185,28,28,0.85)',   bg: 'rgba(185,28,28,0.07)',   border: 'rgba(185,28,28,0.25)'  },
+};
 
-export default function Checkout() {
+export default function Checkout({ metodosPago = [], contacto = {} }) {
     const { auth } = usePage().props;
     const [carrito, setCarrito]       = useState([]);
     const [paso, setPaso]             = useState(1);
@@ -43,7 +44,13 @@ export default function Checkout() {
     }, []);
 
     const total              = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
-    const metodoSeleccionado = METODOS_PAGO.find((m) => m.id === form.metodo_pago);
+    // metodoSeleccionado ahora viene de las props dinámicas
+    const metodoSeleccionado = metodosPago.find((m) => m.id === form.metodo_pago);
+    const estiloSeleccionado = METODO_ESTILOS[form.metodo_pago] ?? {};
+
+    // Datos de contacto que no están vacíos
+    const telefonos = [contacto.telefono1, contacto.telefono2].filter(Boolean);
+    const correos   = [contacto.correo1,   contacto.correo2].filter(Boolean);
 
     const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
@@ -182,7 +189,7 @@ export default function Checkout() {
                     font-size:0.75rem; font-weight:700; transition:all 0.3s;
                 }
                 .paso-circle.done    { background:rgba(16,185,129,0.15); border:2px solid rgba(16,185,129,0.5); color:rgba(4,120,87,0.85); }
-                .paso-circle.active  { background:rgba(220,38,38,0.1); border:2px solid rgba(220,38,38,0.45); color:rgba(185,28,28,0.9); }
+                .paso-circle.active  { background:rgba(220,38,38,0.1); border:2px solid rgba(220,38,24,0.45); color:rgba(185,28,28,0.9); }
                 .paso-circle.pending { background:rgba(200,140,80,0.07); border:2px solid rgba(200,140,80,0.2); color:rgba(150,80,20,0.4); }
                 .paso-line      { width:60px; height:2px; background:rgba(200,140,80,0.15); }
                 .paso-line.done { background:rgba(16,185,129,0.35); }
@@ -281,6 +288,24 @@ export default function Checkout() {
                                               rows={3} style={{ resize: 'vertical', minHeight: '80px' }} />
                                 </div>
 
+                                {/* ── NUEVO: datos de contacto de la tienda (solo si no están vacíos) ── */}
+                                {(telefonos.length > 0 || correos.length > 0) && (
+                                    <div style={{
+                                        marginTop: '1.25rem', padding: '0.875rem 1rem', borderRadius: '14px',
+                                        background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.18)',
+                                    }}>
+                                        <p style={{ fontSize: '0.72rem', fontWeight: '700', color: 'rgba(29,78,216,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
+                                            ¿Dudas? Contáctanos:
+                                        </p>
+                                        {telefonos.map((t) => (
+                                            <p key={t} style={{ fontSize: '0.8rem', color: 'rgba(29,78,216,0.8)', margin: '0 0 0.18rem' }}>📞 {t}</p>
+                                        ))}
+                                        {correos.map((c) => (
+                                            <p key={c} style={{ fontSize: '0.8rem', color: 'rgba(29,78,216,0.8)', margin: '0 0 0.18rem' }}>✉️ {c}</p>
+                                        ))}
+                                    </div>
+                                )}
+
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.75rem' }}>
                                     <button className="btn-nav btn-next"
                                             onClick={() => { if (validarPaso1()) setPaso(2); }}>
@@ -300,40 +325,46 @@ export default function Checkout() {
                                     Selecciona cómo realizarás la transferencia y adjunta el comprobante.
                                 </p>
 
-                                {/* Métodos de pago */}
+                                {/* ── Métodos de pago dinámicos desde DB ── */}
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.75rem' }}>
-                                    {METODOS_PAGO.map((m) => {
+                                    {metodosPago.map((m) => {
+                                        const estilo = METODO_ESTILOS[m.id] ?? { emoji: '💰', color: 'rgba(120,60,10,0.8)', bg: 'rgba(200,140,80,0.07)', border: 'rgba(200,140,80,0.28)' };
                                         const sel = form.metodo_pago === m.id;
                                         return (
                                             <div
                                                 key={m.id}
                                                 className="metodo-card"
                                                 style={sel ? {
-                                                    background: m.bg,
-                                                    borderColor: m.border,
+                                                    background: estilo.bg,
+                                                    borderColor: estilo.border,
                                                 } : {}}
                                                 onClick={() => set('metodo_pago', m.id)}
                                             >
                                                 <div
                                                     className="radio-circle"
                                                     style={sel ? {
-                                                        borderColor: m.color,
-                                                        background:  m.color,
+                                                        borderColor: estilo.color,
+                                                        background:  estilo.color,
                                                     } : {}}
                                                 >
                                                     {sel && <div className="radio-dot" />}
                                                 </div>
                                                 <div>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
-                                                        <span style={{ fontSize: '1rem' }}>{m.emoji}</span>
-                                                        <span style={{ fontSize: '0.88rem', fontWeight: '700', color: sel ? m.color : '#2d1a08' }}>
+                                                        <span style={{ fontSize: '1rem' }}>{estilo.emoji}</span>
+                                                        <span style={{ fontSize: '0.88rem', fontWeight: '700', color: sel ? estilo.color : '#2d1a08' }}>
                                                             {m.label}
                                                         </span>
                                                     </div>
                                                     <p style={{ fontSize: '0.74rem', color: 'rgba(150,80,20,0.6)', margin: 0, lineHeight: '1.4' }}>
-                                                        {m.numero}
+                                                        {m.numero || 'Sin número configurado'}
                                                     </p>
                                                 </div>
+                                                {/* ── NUEVO: QR si existe ── */}
+                                                {m.qr_url && (
+                                                    <img src={m.qr_url} alt="QR"
+                                                         style={{ width: '38px', height: '38px', borderRadius: '7px', objectFit: 'cover', flexShrink: 0, marginLeft: 'auto' }} />
+                                                )}
                                             </div>
                                         );
                                     })}
@@ -344,18 +375,44 @@ export default function Checkout() {
                                 {metodoSeleccionado && (
                                     <div style={{
                                         padding: '1rem 1.25rem', borderRadius: '14px', marginBottom: '1.75rem',
-                                        background: metodoSeleccionado.bg,
-                                        border: `1px solid ${metodoSeleccionado.border}`,
+                                        background: estiloSeleccionado.bg,
+                                        border: `1px solid ${estiloSeleccionado.border}`,
                                     }}>
-                                        <p style={{ fontSize: '0.8rem', fontWeight: '600', color: metodoSeleccionado.color, marginBottom: '0.3rem' }}>
-                                            {metodoSeleccionado.emoji} Realiza la transferencia a:
+                                        <p style={{ fontSize: '0.8rem', fontWeight: '600', color: estiloSeleccionado.color, marginBottom: '0.3rem' }}>
+                                            {estiloSeleccionado.emoji} Realiza la transferencia a:
                                         </p>
                                         <p style={{ fontSize: '0.9rem', fontWeight: '700', color: '#2d1a08', margin: '0 0 0.2rem' }}>
                                             {metodoSeleccionado.numero}
                                         </p>
-                                        <p style={{ fontSize: '0.78rem', color: 'rgba(120,60,10,0.7)', margin: 0 }}>
+                                        {/* ── NUEVO: QR ampliado si existe ── */}
+                                        {metodoSeleccionado.qr_url && (
+                                            <div style={{ marginTop: '0.75rem' }}>
+                                                <p style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.55)', marginBottom: '0.4rem' }}>QR de pago:</p>
+                                                <img src={metodoSeleccionado.qr_url} alt="QR de pago"
+                                                     style={{ width: '110px', height: '110px', borderRadius: '10px', objectFit: 'contain', border: '1px solid rgba(200,140,80,0.2)' }} />
+                                            </div>
+                                        )}
+                                        <p style={{ fontSize: '0.78rem', color: 'rgba(120,60,10,0.7)', margin: metodoSeleccionado.qr_url ? '0.75rem 0 0' : '0' }}>
                                             Monto exacto: <strong>{formatCOP(total)}</strong>
                                         </p>
+                                    </div>
+                                )}
+
+                                {/* ── NUEVO: datos de contacto en paso 2 (solo si no están vacíos) ── */}
+                                {(telefonos.length > 0 || correos.length > 0) && (
+                                    <div style={{
+                                        padding: '0.875rem 1rem', borderRadius: '14px', marginBottom: '1.5rem',
+                                        background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.18)',
+                                    }}>
+                                        <p style={{ fontSize: '0.72rem', fontWeight: '700', color: 'rgba(29,78,216,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
+                                            ¿Inquietudes? Escríbenos:
+                                        </p>
+                                        {telefonos.map((t) => (
+                                            <p key={t} style={{ fontSize: '0.8rem', color: 'rgba(29,78,216,0.8)', margin: '0 0 0.18rem' }}>📞 {t}</p>
+                                        ))}
+                                        {correos.map((c) => (
+                                            <p key={c} style={{ fontSize: '0.8rem', color: 'rgba(29,78,216,0.8)', margin: '0 0 0.18rem' }}>✉️ {c}</p>
+                                        ))}
                                     </div>
                                 )}
 

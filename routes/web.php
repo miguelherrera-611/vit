@@ -21,6 +21,8 @@ use App\Http\Controllers\CatalogoController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\ClienteDashboardController;
 use App\Http\Controllers\Auth\ClienteRegisterController;
+// ── NUEVOS (funcionalidades nuevas) ─────────────────────────────────────────
+use App\Http\Controllers\ReclamoController;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Bienvenida
@@ -91,12 +93,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
         Route::get('/pedidos/{pedido}/confirmacion', [PedidoController::class, 'confirmacion'])->name('pedido.confirmacion');
         Route::patch('/pedidos/{pedido}/confirmar-entrega', [PedidoController::class, 'confirmarEntrega'])->name('pedido.confirmar_entrega');
+        // ── NUEVAS: servicio al cliente y reclamos ───────────────────────────
+        Route::get('/servicio-cliente', [ReclamoController::class, 'index'])->name('servicio_cliente');
+        Route::post('/reclamos', [ReclamoController::class, 'store'])->name('reclamos.store');
     });
 
     // ── NUEVO — Pedidos del admin ────────────────────────────────────────────
     Route::prefix('admin/pedidos')->name('admin.pedidos.')->middleware('role:admin')->group(function () {
         Route::get('/', [PedidoController::class, 'adminIndex'])->name('index');
         Route::patch('/{pedido}/estado', [PedidoController::class, 'adminCambiarEstado'])->name('estado');
+        // ── NUEVAS: editar datos de pago, contacto e historial ───────────────
+        Route::post('/pago/{pago}', [PedidoController::class, 'actualizarPago'])->name('pago');
+        Route::post('/contacto', [PedidoController::class, 'actualizarContacto'])->name('contacto');
+        Route::post('/eliminar-historial', [PedidoController::class, 'eliminarHistorial'])->name('historial');
+    });
+
+    // ── NUEVAS — Reclamos del admin ──────────────────────────────────────────
+    Route::prefix('admin/reclamos')->name('admin.reclamos.')->middleware('role:admin')->group(function () {
+        Route::get('/', [ReclamoController::class, 'adminIndex'])->name('index');
+        Route::patch('/{reclamo}', [ReclamoController::class, 'actualizar'])->name('actualizar');
     });
 
     // ─────────────────────────────────────────────────────────────────────────
