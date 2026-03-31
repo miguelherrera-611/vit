@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 const GLASS_BG = `
     radial-gradient(ellipse 75% 60% at 0% 0%, rgba(255,210,170,0.22) 0%, transparent 55%),
@@ -60,10 +60,30 @@ const FORM_STYLES = `
     .prov-name { font-size:0.875rem; font-weight:500; color:#2d1a08; }
     .prov-empresa { font-size:0.74rem; color:rgba(150,80,20,0.55); margin-top:0.05rem; }
     .prov-empty { font-size:0.82rem; color:rgba(150,80,20,0.5); text-align:center; padding:1rem 0; }
+
+    /* ── NUEVO: Fotos adicionales ── */
+    .fotos-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0.6rem; }
+    .foto-thumb-wrap { position:relative; border-radius:11px; overflow:hidden; aspect-ratio:1/1; border:1.5px solid rgba(255,255,255,0.6); box-shadow:0 3px 10px rgba(180,90,20,0.07); }
+    .foto-thumb-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
+    .foto-thumb-overlay { position:absolute; inset:0; background:rgba(30,10,0,0); display:flex; align-items:center; justify-content:center; transition:background 0.18s; }
+    .foto-thumb-wrap:hover .foto-thumb-overlay { background:rgba(30,10,0,0.38); }
+    .foto-thumb-del { opacity:0; transform:scale(0.8); transition:all 0.18s; background:rgba(220,38,38,0.92); border:none; border-radius:50%; width:26px; height:26px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .foto-thumb-wrap:hover .foto-thumb-del { opacity:1; transform:scale(1); }
+    .foto-thumb-restore { opacity:0; transform:scale(0.8); transition:all 0.18s; background:rgba(16,185,129,0.92); border:none; border-radius:50%; width:26px; height:26px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .foto-thumb-wrap:hover .foto-thumb-restore { opacity:1; transform:scale(1); }
+    .foto-badge { position:absolute; bottom:4px; left:4px; border-radius:5px; padding:2px 5px; font-size:0.58rem; font-weight:700; pointer-events:none; }
+    .foto-badge-saved { background:rgba(0,0,0,0.5); color:rgba(255,255,255,0.85); }
+    .foto-badge-new   { background:rgba(16,185,129,0.85); color:white; }
+    .foto-badge-del   { background:rgba(220,38,38,0.85); color:white; }
+    .foto-marcada-del { opacity:0.35; }
+    .foto-add-btn { aspect-ratio:1/1; border-radius:11px; cursor:pointer; border:1.5px dashed rgba(200,140,80,0.38); background:rgba(255,255,255,0.04); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.35rem; transition:all 0.18s; color:rgba(150,80,20,0.5); }
+    .foto-add-btn:hover { border-color:rgba(200,140,80,0.62); background:rgba(255,255,255,0.1); color:rgba(120,55,10,0.8); }
 `;
 
 export default function ProductosEdit({ producto, categorias = [], proveedores = [] }) {
     const proveedoresIniciales = (producto.proveedores || []).map(p => p.id);
+    // ── NUEVO ──
+    const fotosExistentes = producto.fotos || [];
 
     const { data, setData, post, processing, errors } = useForm({
         nombre: producto.nombre || '', descripcion: producto.descripcion || '',
@@ -73,9 +93,15 @@ export default function ProductosEdit({ producto, categorias = [], proveedores =
         imagen: null, activo: producto.activo ?? true,
         proveedores: proveedoresIniciales,
         _method: 'PUT',
+        // ── NUEVO ──
+        fotos_eliminar: [],
+        fotos: [],
     });
 
     const [buscarProv, setBuscarProv] = useState('');
+    // ── NUEVO ──
+    const [fotosNuevasPreviews, setFotosNuevasPreviews] = useState([]);
+    const fotosInputRef = useRef(null);
 
     const proveedoresFiltrados = proveedores.filter(p =>
         p.nombre.toLowerCase().includes(buscarProv.toLowerCase()) ||
@@ -90,6 +116,43 @@ export default function ProductosEdit({ producto, categorias = [], proveedores =
     const formatCurrency = (value) => {
         const num = parseFloat(value) || 0;
         return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(num);
+    };
+
+    // ── NUEVO: marcar/desmarcar foto existente para eliminar ──
+    const toggleEliminarFoto = (fotoId) => {
+        const actual = data.fotos_eliminar;
+        setData('fotos_eliminar', actual.includes(fotoId)
+            ? actual.filter(id => id !== fotoId)
+            : [...actual, fotoId]
+        );
+    };
+
+    // ── NUEVO: agregar fotos nuevas ──
+    const agregarFotos = (e) => {
+        const archivos = Array.from(e.target.files || []);
+        if (!archivos.length) return;
+        setData('fotos', [...data.fotos, ...archivos]);
+        setFotosNuevasPreviews(prev => [...prev, ...archivos.map(f => URL.createObjectURL(f))]);
+        e.target.value = '';
+    };
+
+    // ── NUEVO: quitar foto nueva antes de guardar ──
+    const eliminarFotoNueva = (index) => {
+        URL.revokeObjectURL(fotosNuevasPreviews[index]);
+        setData('fotos', data.fotos.filter((_, i) => i !== index));
+        setFotosNuevasPreviews(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // ── NUEVO: limpiar object URLs al desmontar ──
+    useEffect(() => {
+        return () => fotosNuevasPreviews.forEach(url => URL.revokeObjectURL(url));
+    }, []);
+
+    // ── NUEVO: URL segura para fotos existentes ──
+    const fotoUrl = (ruta) => {
+        if (!ruta) return '';
+        if (ruta.startsWith('http')) return ruta;
+        return `/storage/${ruta}`;
     };
 
     const submit = (e) => { e.preventDefault(); post(`/productos/${producto.id}`, { forceFormData: true }); };
@@ -300,6 +363,75 @@ export default function ProductosEdit({ producto, categorias = [], proveedores =
                                         )}
                                     </div>
                                     {errors.imagen && <p className="error-text">{errors.imagen}</p>}
+                                </div>
+
+                                {/* ── NUEVO: Fotos adicionales ── */}
+                                <div className="glass-panel">
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                        <p className="panel-title" style={{ margin: 0 }}>Fotos adicionales</p>
+                                        {(fotosExistentes.length + fotosNuevasPreviews.length) > 0 && (
+                                            <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.12rem 0.5rem', borderRadius: '20px', background: 'rgba(200,140,80,0.1)', border: '1px solid rgba(200,140,80,0.22)', color: 'rgba(150,80,20,0.7)' }}>
+                                                {fotosExistentes.length + fotosNuevasPreviews.length} foto{(fotosExistentes.length + fotosNuevasPreviews.length) !== 1 ? 's' : ''}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="fotos-grid">
+                                        {/* Fotos existentes en BD */}
+                                        {fotosExistentes.map((foto) => {
+                                            const marcada = data.fotos_eliminar.includes(foto.id);
+                                            return (
+                                                <div key={foto.id} className={`foto-thumb-wrap${marcada ? ' foto-marcada-del' : ''}`}>
+                                                    <img src={fotoUrl(foto.ruta)} alt="Foto guardada" />
+                                                    <span className={`foto-badge ${marcada ? 'foto-badge-del' : 'foto-badge-saved'}`}>
+                                                        {marcada ? 'Se eliminará' : 'Guardada'}
+                                                    </span>
+                                                    <div className="foto-thumb-overlay">
+                                                        {marcada ? (
+                                                            <button type="button" className="foto-thumb-restore" onClick={() => toggleEliminarFoto(foto.id)} title="Deshacer">
+                                                                <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                                            </button>
+                                                        ) : (
+                                                            <button type="button" className="foto-thumb-del" onClick={() => toggleEliminarFoto(foto.id)} title="Eliminar al guardar">
+                                                                <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+
+                                        {/* Fotos nuevas aún no guardadas */}
+                                        {fotosNuevasPreviews.map((preview, idx) => (
+                                            <div key={`nueva-${idx}`} className="foto-thumb-wrap">
+                                                <img src={preview} alt={`Nueva ${idx + 1}`} />
+                                                <span className="foto-badge foto-badge-new">Nueva</span>
+                                                <div className="foto-thumb-overlay">
+                                                    <button type="button" className="foto-thumb-del" onClick={() => eliminarFotoNueva(idx)}>
+                                                        <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {/* Botón agregar */}
+                                        <div className="foto-add-btn" onClick={() => fotosInputRef.current?.click()}>
+                                            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                            <span style={{ fontSize: '0.68rem', fontWeight: '500' }}>Agregar</span>
+                                        </div>
+                                    </div>
+
+                                    <input ref={fotosInputRef} type="file" accept="image/*" multiple onChange={agregarFotos} style={{ display: 'none' }} />
+
+                                    {data.fotos_eliminar.length > 0 && (
+                                        <p style={{ fontSize: '0.72rem', color: 'rgba(185,28,28,0.75)', fontWeight: '500', marginTop: '0.65rem', padding: '0.5rem 0.75rem', borderRadius: '9px', background: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.15)' }}>
+                                            {data.fotos_eliminar.length} foto{data.fotos_eliminar.length !== 1 ? 's' : ''} se eliminarán al guardar.
+                                        </p>
+                                    )}
+
+                                    <p style={{ fontSize: '0.7rem', color: 'rgba(150,80,20,0.42)', marginTop: '0.6rem' }}>
+                                        Haz clic en una foto guardada para marcarla como eliminar.
+                                    </p>
                                 </div>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>

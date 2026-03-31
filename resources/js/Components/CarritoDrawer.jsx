@@ -3,6 +3,13 @@ import { Link, router } from '@inertiajs/react';
 
 const formatCOP = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
 
+// ✅ Helper seguro: evita doble prefijo si la imagen ya es URL completa
+const imgSrc = (imagen) => {
+    if (!imagen) return null;
+    if (imagen.startsWith('http')) return imagen;
+    return `/storage/${imagen}`;
+};
+
 export default function CarritoDrawer({ open, onClose, carrito, setCarrito, auth }) {
 
     const total = carrito.reduce((sum, i) => sum + i.precio * i.cantidad, 0);
@@ -22,12 +29,10 @@ export default function CarritoDrawer({ open, onClose, carrito, setCarrito, auth
 
     const irAlCheckout = () => {
         if (!auth?.user) {
-            // Guardar carrito en sessionStorage y redirigir al login
             sessionStorage.setItem('vitali_carrito', JSON.stringify(carrito));
             router.visit('/login');
             return;
         }
-        // Guardar en sessionStorage para que el checkout lo lea
         sessionStorage.setItem('vitali_carrito', JSON.stringify(carrito));
         router.visit('/cliente/checkout');
         onClose();
@@ -180,8 +185,9 @@ export default function CarritoDrawer({ open, onClose, carrito, setCarrito, auth
                                 </div>
                             ) : carrito.map(item => (
                                 <div key={item.id} className="item-card">
-                                    {item.imagen
-                                        ? <img src={`/storage/${item.imagen}`} alt={item.nombre} className="item-img" />
+                                    {/* ✅ imgSrc maneja tanto rutas relativas como URLs completas */}
+                                    {imgSrc(item.imagen)
+                                        ? <img src={imgSrc(item.imagen)} alt={item.nombre} className="item-img" />
                                         : <div className="item-placeholder">👔</div>
                                     }
                                     <div style={{flex:1,minWidth:0}}>

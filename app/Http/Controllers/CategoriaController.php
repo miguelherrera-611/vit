@@ -81,7 +81,7 @@ class CategoriaController extends Controller
             'nombre'      => 'required|string|max:100',
             'tipo'        => 'required|in:dama,caballero,custom',
             'descripcion' => 'nullable|string|max:255',
-            'imagen'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'imagen'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:20480',
             'activo'      => 'boolean',
         ]);
 
@@ -119,7 +119,7 @@ class CategoriaController extends Controller
             'nombre'      => 'required|string|max:100',
             'tipo'        => 'required|in:dama,caballero,custom',
             'descripcion' => 'nullable|string|max:255',
-            'imagen'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'imagen'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:20480',
             'activo'      => 'boolean',
         ]);
 

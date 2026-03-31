@@ -26,6 +26,14 @@ use Carbon\Carbon;
 
 class PedidoController extends Controller
 {
+    // ── Helper: convierte ruta relativa a URL completa ────────────
+    private function storageUrl(?string $ruta): ?string
+    {
+        if (!$ruta) return null;
+        if (str_starts_with($ruta, 'http')) return $ruta;
+        return asset('storage/' . $ruta);
+    }
+
     // ── CHECKOUT ─────────────────────────────────────────────────
 
     public function checkout(): Response
@@ -91,7 +99,7 @@ class PedidoController extends Controller
                 'subtotal'          => $subtotal,
                 'total'             => $subtotal,
                 'estado'            => 'revision',
-                'stock_descontado'  => true, // ← stock ya se descuenta aquí
+                'stock_descontado'  => true,
                 'email_cliente'     => $validated['email_cliente'] ?? auth()->user()?->email,
             ]);
 
@@ -105,10 +113,10 @@ class PedidoController extends Controller
                     'cantidad'        => $item['cantidad'],
                     'precio_unitario' => $item['precio_unitario'],
                     'subtotal'        => $item['cantidad'] * $item['precio_unitario'],
+                    // Guardamos la ruta relativa en DB (correcto para storage)
                     'imagen_producto' => $producto?->imagen,
                 ]);
 
-                // ← Bajar stock inmediatamente al crear el pedido
                 if ($producto) {
                     $nuevoStock = max(0, $producto->stock - $item['cantidad']);
                     $producto->update(['stock' => $nuevoStock]);
@@ -117,7 +125,6 @@ class PedidoController extends Controller
 
             DB::commit();
 
-            // Notificar admin
             $adminEmails = \App\Models\User::role('admin')->pluck('email')->toArray();
             if (!empty($adminEmails)) {
                 Mail::to($adminEmails)->send(new PedidoRecibidoAdminMail($pedido));
@@ -179,7 +186,8 @@ class PedidoController extends Controller
                     'nombre'          => $i->nombre_producto,
                     'cantidad'        => $i->cantidad,
                     'precio_unitario' => $i->precio_unitario,
-                    'imagen'          => $i->imagen_producto,
+                    // ✅ URL completa siempre
+                    'imagen'          => $this->storageUrl($i->imagen_producto),
                 ]),
                 'motivo_rechazo'  => $p->motivo_rechazo,
                 'mensaje_rechazo' => $p->mensaje_rechazo,
@@ -250,7 +258,8 @@ class PedidoController extends Controller
             'direccion'       => $p->direccion,
             'indicaciones'    => $p->indicaciones,
             'metodo_pago'     => $p->metodo_pago,
-            'comprobante'     => $p->comprobante_pago ? asset('storage/' . $p->comprobante_pago) : null,
+            // ✅ URL completa para el comprobante
+            'comprobante'     => $this->storageUrl($p->comprobante_pago),
             'total'           => $p->total,
             'notas_admin'     => $p->notas_admin,
             'motivo_rechazo'  => $p->motivo_rechazo,
@@ -261,12 +270,8 @@ class PedidoController extends Controller
                 'cantidad'        => $i->cantidad,
                 'precio_unitario' => $i->precio_unitario,
                 'subtotal'        => $i->subtotal,
-                // imagen con URL compatible tanto ruta relativa como absoluta
-                'imagen'          => $i->imagen_producto
-                    ? (str_starts_with($i->imagen_producto, 'http')
-                        ? $i->imagen_producto
-                        : asset('storage/' . $i->imagen_producto))
-                    : null,
+                // ✅ URL completa siempre, sin lógica duplicada en el frontend
+                'imagen'          => $this->storageUrl($i->imagen_producto),
             ]),
         ]);
 
@@ -327,10 +332,6 @@ class PedidoController extends Controller
             $datosActualizar['mensaje_rechazo'] = $request->mensaje_rechazo;
         }
 
-        // ── Lógica de stock ──────────────────────────────────────
-        // El stock ya bajó cuando el cliente creó el pedido (stock_descontado = true).
-        // Solo hay que devolver el stock si se rechaza el pedido.
-
         if ($request->estado === 'rechazado' && $pedido->stock_descontado) {
             DB::beginTransaction();
             try {
@@ -351,7 +352,6 @@ class PedidoController extends Controller
             $pedido->update($datosActualizar);
         }
 
-        // ── Correos según estado ─────────────────────────────────
         $emailCliente = $pedido->email;
 
         if ($request->estado === 'envio_curso' && $emailCliente) {
@@ -379,7 +379,7 @@ class PedidoController extends Controller
     {
         $request->validate([
             'numero'      => 'nullable|string|max:100',
-            'qr_imagen'   => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072',
+            'qr_imagen'   => 'nullable|image|mimes:jpg,jpeg,png,webp|max:20480',
             'eliminar_qr' => 'nullable|boolean',
         ]);
 

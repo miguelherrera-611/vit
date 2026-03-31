@@ -5,6 +5,13 @@ import ClienteLayout from '@/Layouts/ClienteLayout';
 
 const formatCOP = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
 
+// ✅ Helper seguro: evita doble prefijo si la imagen ya es URL completa
+const imgSrc = (imagen) => {
+    if (!imagen) return null;
+    if (imagen.startsWith('http')) return imagen;
+    return `/storage/${imagen}`;
+};
+
 const ESTADO_STYLES = {
     revision:    { bg:'rgba(245,158,11,0.1)',  border:'rgba(245,158,11,0.3)',  color:'rgba(146,64,14,0.9)',  label:'En Revisión',   emoji:'🕐' },
     aprobado:    { bg:'rgba(59,130,246,0.09)', border:'rgba(59,130,246,0.28)', color:'rgba(29,78,216,0.9)',  label:'Aprobado',      emoji:'✅' },
@@ -184,8 +191,9 @@ export default function MisPedidos({ pedidos, contacto }) {
                                                     padding:'0.75rem',borderRadius:'12px',
                                                     background:'rgba(255,255,255,0.04)',border:'1px solid rgba(200,140,80,0.1)',
                                                 }}>
-                                                    {item.imagen
-                                                        ? <img src={`/storage/${item.imagen}`} alt={item.nombre}
+                                                    {/* ✅ imgSrc maneja tanto rutas relativas como URLs completas */}
+                                                    {imgSrc(item.imagen)
+                                                        ? <img src={imgSrc(item.imagen)} alt={item.nombre}
                                                                style={{width:'44px',height:'44px',borderRadius:'8px',objectFit:'cover',flexShrink:0}} />
                                                         : <div style={{width:'44px',height:'44px',borderRadius:'8px',
                                                             background:'rgba(255,255,255,0.08)',
@@ -230,7 +238,7 @@ export default function MisPedidos({ pedidos, contacto }) {
                                             </div>
                                         )}
 
-                                        {/* Pedido rechazado — mostrar motivo y contacto */}
+                                        {/* Pedido rechazado */}
                                         {pedido.estado === 'rechazado' && (
                                             <div style={{
                                                 padding:'1rem 1.25rem',borderRadius:'14px',
@@ -263,7 +271,6 @@ export default function MisPedidos({ pedidos, contacto }) {
                                                     </div>
                                                 )}
 
-                                                {/* Datos de contacto */}
                                                 {(telefonos.length > 0 || correos.length > 0) && (
                                                     <div style={{
                                                         marginTop:'0.75rem',paddingTop:'0.75rem',

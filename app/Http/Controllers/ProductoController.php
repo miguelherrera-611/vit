@@ -65,13 +65,13 @@ class ProductoController extends Controller
             'stock_minimo'   => 'required|integer|min:0',
             'categoria'      => 'required|string',
             'codigo_barras'  => 'nullable|string|unique:productos',
-            'imagen'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'imagen'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:20480',
             'activo'         => 'boolean',
             'proveedores'    => 'required|array|min:1',
             'proveedores.*'  => 'exists:proveedores,id',
             // Fotos adicionales — array de imágenes
             'fotos'          => 'nullable|array',
-            'fotos.*'        => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+            'fotos.*'        => 'image|mimes:jpg,jpeg,png,webp|max:20480',
         ]);
 
         if ($request->hasFile('imagen')) {
@@ -140,13 +140,13 @@ class ProductoController extends Controller
             'stock_minimo'   => 'required|integer|min:0',
             'categoria'      => 'required|string',
             'codigo_barras'  => 'nullable|string|unique:productos,codigo_barras,' . $id,
-            'imagen'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'imagen'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:20480',
             'activo'         => 'boolean',
             'proveedores'    => 'required|array|min:1',
             'proveedores.*'  => 'exists:proveedores,id',
             // Fotos adicionales nuevas
             'fotos'          => 'nullable|array',
-            'fotos.*'        => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+            'fotos.*'        => 'image|mimes:jpg,jpeg,png,webp|max:20480',
             // IDs de fotos existentes a eliminar
             'fotos_eliminar' => 'nullable|array',
             'fotos_eliminar.*' => 'integer|exists:producto_fotos,id',
@@ -157,6 +157,9 @@ class ProductoController extends Controller
                 Storage::disk('public')->delete($producto->imagen);
             }
             $validated['imagen'] = $request->file('imagen')->store('productos', 'public');
+        } else {
+            // ← AGREGAR ESTA LÍNEA
+            unset($validated['imagen']);
         }
 
         $validated['activo'] = $request->boolean('activo', true);

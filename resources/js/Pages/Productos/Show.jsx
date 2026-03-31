@@ -1,5 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link } from '@inertiajs/react';
+import { useState } from 'react';
 
 /* ═══════════════════════════════════════════════════════════
    Glassmorphism water-drop — mismo design system del proyecto
@@ -85,6 +86,60 @@ const STYLES = `
         display: block;
     }
     .product-img-container:hover img { transform: scale(1.05); }
+
+    /* ── NUEVO: navegación galería ── */
+    .gallery-nav-btn {
+        position: absolute; top: 50%; transform: translateY(-50%);
+        width: 30px; height: 30px; border-radius: 50%; border: none; cursor: pointer;
+        background: rgba(255,255,255,0.88); backdrop-filter: blur(8px);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.12); transition: all 0.18s;
+        color: rgba(120,60,10,0.8); z-index: 3;
+    }
+    .gallery-nav-btn:hover { background: white; box-shadow: 0 4px 16px rgba(0,0,0,0.16); }
+    .gallery-nav-btn.left  { left: 10px; }
+    .gallery-nav-btn.right { right: 10px; }
+    .gallery-counter {
+        position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.45); backdrop-filter: blur(6px);
+        border-radius: 20px; padding: 3px 10px;
+        font-size: 0.68rem; font-weight: 600; color: rgba(255,255,255,0.9);
+        pointer-events: none; z-index: 3;
+    }
+    .gallery-thumbs {
+        display: flex; gap: 0.45rem; overflow-x: auto; padding-bottom: 2px; margin-top: 0.6rem;
+    }
+    .gallery-thumbs::-webkit-scrollbar { height: 3px; }
+    .gallery-thumbs::-webkit-scrollbar-thumb { background: rgba(200,140,80,0.3); border-radius: 3px; }
+    .gallery-thumb {
+        width: 54px; height: 54px; border-radius: 9px; overflow: hidden; flex-shrink: 0;
+        border: 2px solid transparent; cursor: pointer; transition: all 0.18s;
+        box-shadow: 0 2px 8px rgba(180,90,20,0.08);
+    }
+    .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .gallery-thumb.active { border-color: rgba(220,38,38,0.6); box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
+    .gallery-thumb:hover:not(.active) { border-color: rgba(200,140,80,0.5); }
+    .gallery-zoom-hint {
+        position: absolute; top: 10px; right: 10px;
+        background: rgba(0,0,0,0.4); backdrop-filter: blur(6px);
+        border-radius: 8px; padding: 3px 8px;
+        font-size: 0.62rem; color: rgba(255,255,255,0.8); pointer-events: none; z-index: 3;
+    }
+
+    /* ── NUEVO: Lightbox ── */
+    .lightbox-overlay {
+        position: fixed; inset: 0; z-index: 9999;
+        background: rgba(0,0,0,0.92); backdrop-filter: blur(12px);
+        display: flex; align-items: center; justify-content: center; padding: 1rem;
+        cursor: zoom-out;
+    }
+    .lightbox-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 14px; object-fit: contain; box-shadow: 0 24px 80px rgba(0,0,0,0.5); cursor: default; }
+    .lightbox-close { position: fixed; top: 20px; right: 20px; background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; transition: background 0.15s; z-index: 10000; }
+    .lightbox-close:hover { background: rgba(255,255,255,0.25); }
+    .lightbox-nav { position: fixed; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 44px; height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; transition: background 0.15s; z-index: 10000; }
+    .lightbox-nav:hover { background: rgba(255,255,255,0.25); }
+    .lightbox-nav.left  { left: 20px; }
+    .lightbox-nav.right { right: 20px; }
 
     /* ── bloque de precio hero ── */
     .price-hero {
@@ -281,6 +336,13 @@ const STYLES = `
     }
 `;
 
+// ── NUEVO: helper URL segura ──
+const imgSrc = (ruta) => {
+    if (!ruta) return null;
+    if (ruta.startsWith('http')) return ruta;
+    return `/storage/${ruta}`;
+};
+
 export default function ProductosShow({ producto }) {
 
     /* helpers */
@@ -295,6 +357,18 @@ export default function ProductosShow({ producto }) {
             background: color, display: 'inline-block', flexShrink: 0,
         }} />
     );
+
+    /* ── NUEVO: galería — imagen principal + fotos adicionales ── */
+    const todasLasFotos = [
+        ...(producto.imagen ? [imgSrc(producto.imagen)] : []),
+        ...(producto.fotos || []).map(f => imgSrc(f.ruta)),
+    ].filter(Boolean);
+
+    const [fotoActiva, setFotoActiva] = useState(0);
+    const [lightbox, setLightbox]     = useState(false);
+
+    const fotoAnterior  = () => setFotoActiva(f => (f - 1 + todasLasFotos.length) % todasLasFotos.length);
+    const fotoSiguiente = () => setFotoActiva(f => (f + 1) % todasLasFotos.length);
 
     /* stock logic */
     const minimo  = producto.stock_minimo || 5;
@@ -366,11 +440,29 @@ export default function ProductosShow({ producto }) {
                         {/* ─────────── COLUMNA IZQUIERDA ─────────── */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
 
-                            {/* Foto */}
+                            {/* ── MODIFICADO: Foto con galería ── */}
                             <div className="a1">
-                                <div className="product-img-container">
-                                    {producto.imagen ? (
-                                        <img src={`/storage/${producto.imagen}`} alt={producto.nombre} />
+                                <div className="product-img-container"
+                                     style={{ cursor: todasLasFotos.length > 0 ? 'zoom-in' : 'default' }}
+                                     onClick={() => todasLasFotos.length > 0 && setLightbox(true)}>
+                                    {todasLasFotos.length > 0 ? (
+                                        <>
+                                            <img src={todasLasFotos[fotoActiva]} alt={producto.nombre} />
+                                            {todasLasFotos.length > 1 && (
+                                                <>
+                                                    <button className="gallery-nav-btn left" onClick={e => { e.stopPropagation(); fotoAnterior(); }}>
+                                                        <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                                                    </button>
+                                                    <button className="gallery-nav-btn right" onClick={e => { e.stopPropagation(); fotoSiguiente(); }}>
+                                                        <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                                    </button>
+                                                    <span className="gallery-counter">{fotoActiva + 1} / {todasLasFotos.length}</span>
+                                                </>
+                                            )}
+                                            {todasLasFotos.length > 0 && (
+                                                <span className="gallery-zoom-hint">🔍 ampliar</span>
+                                            )}
+                                        </>
                                     ) : (
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.7rem', padding: '3rem 2rem', opacity: 0.55 }}>
                                             <svg width="54" height="54" fill="none" stroke="rgba(180,100,30,0.4)" viewBox="0 0 24 24">
@@ -381,6 +473,17 @@ export default function ProductosShow({ producto }) {
                                         </div>
                                     )}
                                 </div>
+
+                                {/* ── NUEVO: Thumbnails si hay más de 1 foto ── */}
+                                {todasLasFotos.length > 1 && (
+                                    <div className="gallery-thumbs">
+                                        {todasLasFotos.map((foto, idx) => (
+                                            <div key={idx} className={`gallery-thumb${fotoActiva === idx ? ' active' : ''}`} onClick={() => setFotoActiva(idx)}>
+                                                <img src={foto} alt={`Foto ${idx + 1}`} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Badges de estado */}
@@ -392,6 +495,12 @@ export default function ProductosShow({ producto }) {
                                 {agotado && <span className="badge badge-red">{dot('rgba(185,28,28,0.85)')} Agotado</span>}
                                 {bajo    && <span className="badge badge-yellow">{dot('rgba(174,95,0,0.85)')} Bajo stock</span>}
                                 {!agotado && !bajo && <span className="badge badge-green">{dot('rgba(4,120,87,0.85)')} En stock</span>}
+                                {/* ── NUEVO: badge fotos ── */}
+                                {todasLasFotos.length > 1 && (
+                                    <span className="badge" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.22)', color: 'rgba(29,78,216,0.8)' }}>
+                                        🖼 {todasLasFotos.length} fotos
+                                    </span>
+                                )}
                             </div>
 
                             {/* Chips de stock */}
@@ -667,6 +776,26 @@ export default function ProductosShow({ producto }) {
                 </div>
 
             </div>
+
+            {/* ── NUEVO: Lightbox ── */}
+            {lightbox && (
+                <div className="lightbox-overlay" onClick={() => setLightbox(false)}>
+                    <button className="lightbox-close" onClick={() => setLightbox(false)}>
+                        <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                    {todasLasFotos.length > 1 && (
+                        <>
+                            <button className="lightbox-nav left" onClick={e => { e.stopPropagation(); fotoAnterior(); }}>
+                                <svg width="18" height="18" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                            </button>
+                            <button className="lightbox-nav right" onClick={e => { e.stopPropagation(); fotoSiguiente(); }}>
+                                <svg width="18" height="18" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </>
+                    )}
+                    <img src={todasLasFotos[fotoActiva]} alt={producto.nombre} onClick={e => e.stopPropagation()} />
+                </div>
+            )}
         </AppLayout>
     );
 }

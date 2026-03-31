@@ -103,8 +103,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [PedidoController::class, 'adminIndex'])->name('index');
         Route::patch('/{pedido}/estado', [PedidoController::class, 'adminCambiarEstado'])->name('estado');
         // ── NUEVAS: editar datos de pago, contacto e historial ───────────────
+        // ── NUEVAS: editar datos de pago, contacto e historial ───────────────
         Route::post('/pago/{pago}', [PedidoController::class, 'actualizarPago'])->name('pago');
-        Route::post('/contacto', [PedidoController::class, 'actualizarContacto'])->name('contacto');
+        Route::patch('/pago/{pago}', [PedidoController::class, 'actualizarPago'])->name('pago.patch');
+        Route::patch('/contacto', [PedidoController::class, 'actualizarContacto'])->name('contacto');
         Route::post('/eliminar-historial', [PedidoController::class, 'eliminarHistorial'])->name('historial');
     });
 

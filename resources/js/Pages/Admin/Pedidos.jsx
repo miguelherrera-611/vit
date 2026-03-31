@@ -129,7 +129,7 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
 
     const guardarContacto = () => {
         setContactoProcessing(true);
-        router.post('/admin/pedidos/contacto', { ...contactoForm, _method: 'PATCH' }, {
+        router.patch('/admin/pedidos/contacto', { ...contactoForm }, {
             preserveScroll: true,
             onSuccess: () => { setContactoProcessing(false); setModalContacto(false); },
             onError: () => setContactoProcessing(false),

@@ -33,6 +33,21 @@ class Producto extends Model
         'stock_minimo'  => 'integer',
     ];
 
+    // ── Helper privado: convierte ruta relativa a URL completa ────
+    private static function buildStorageUrl(?string $ruta): ?string
+    {
+        if (!$ruta) return null;
+        if (str_starts_with($ruta, 'http')) return $ruta;
+        return asset('storage/' . $ruta);
+    }
+
+    // ── Accessor: $producto->imagen_url → URL completa ────────────
+    // Úsalo en los controllers en lugar de $producto->imagen directamente
+    public function getImagenUrlAttribute(): ?string
+    {
+        return self::buildStorageUrl($this->imagen);
+    }
+
     public function getMargenAttribute(): float
     {
         if (!$this->precio_compra || $this->precio_compra == 0) return 0;

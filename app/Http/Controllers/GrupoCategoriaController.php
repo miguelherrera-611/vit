@@ -82,7 +82,7 @@ class GrupoCategoriaController extends Controller
         $validated = $request->validate([
             'nombre'      => 'required|string|max:100',
             'descripcion' => 'nullable|string|max:255',
-            'imagen'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'imagen'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:20480',
             'color'       => 'nullable|string|max:30',
             'orden'       => 'nullable|integer|min:0',
             'activo'      => 'boolean',
@@ -122,7 +122,7 @@ class GrupoCategoriaController extends Controller
         $validated = $request->validate([
             'nombre'      => 'required|string|max:100',
             'descripcion' => 'nullable|string|max:255',
-            'imagen'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'imagen'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:20480',
             'color'       => 'nullable|string|max:30',
             'orden'       => 'nullable|integer|min:0',
             'activo'      => 'boolean',
@@ -209,7 +209,7 @@ class GrupoCategoriaController extends Controller
         $validated = $request->validate([
             'nombre'      => 'required|string|max:100',
             'descripcion' => 'nullable|string|max:255',
-            'imagen'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'imagen'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:20480',
             'activo'      => 'boolean',
         ]);
 
@@ -247,7 +247,7 @@ class GrupoCategoriaController extends Controller
         $validated = $request->validate([
             'nombre'      => 'required|string|max:100',
             'descripcion' => 'nullable|string|max:255',
-            'imagen'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'imagen'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:20480',
             'activo'      => 'boolean',
         ]);
 

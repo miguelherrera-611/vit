@@ -225,6 +225,17 @@ const FORM_STYLES = `
         width:24px; height:24px; border-radius:7px; cursor:pointer;
         font-size:0.72rem; font-weight:600; border:none; font-family:'Inter',sans-serif; transition:all 0.12s;
     }
+
+    /* ── NUEVO: Fotos adicionales ── */
+    .fotos-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0.6rem; }
+    .foto-thumb-wrap { position:relative; border-radius:11px; overflow:hidden; aspect-ratio:1/1; border:1.5px solid rgba(255,255,255,0.6); box-shadow:0 3px 10px rgba(180,90,20,0.07); }
+    .foto-thumb-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
+    .foto-thumb-overlay { position:absolute; inset:0; background:rgba(30,10,0,0); display:flex; align-items:center; justify-content:center; transition:background 0.18s; }
+    .foto-thumb-wrap:hover .foto-thumb-overlay { background:rgba(30,10,0,0.38); }
+    .foto-thumb-del { opacity:0; transform:scale(0.8); transition:all 0.18s; background:rgba(220,38,38,0.92); border:none; border-radius:50%; width:26px; height:26px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .foto-thumb-wrap:hover .foto-thumb-del { opacity:1; transform:scale(1); }
+    .foto-add-btn { aspect-ratio:1/1; border-radius:11px; cursor:pointer; border:1.5px dashed rgba(200,140,80,0.38); background:rgba(255,255,255,0.04); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.35rem; transition:all 0.18s; color:rgba(150,80,20,0.5); }
+    .foto-add-btn:hover { border-color:rgba(200,140,80,0.62); background:rgba(255,255,255,0.1); color:rgba(120,55,10,0.8); }
 `;
 
 const OPCIONES_POR_PAG = 7;
@@ -465,9 +476,14 @@ export default function ProductosCreate({ categorias = [], proveedores = [] }) {
         nombre: '', descripcion: '', codigo_barras: '', categoria: '',
         precio: '', precio_compra: '', stock: '0', stock_minimo: '5',
         imagen: null, activo: true, proveedores: [],
+        // ── NUEVO ──
+        fotos: [],
     });
 
     const [buscarProv, setBuscarProv] = useState('');
+    // ── NUEVO ──
+    const [fotosPreviews, setFotosPreviews] = useState([]);
+    const fotosInputRef = useRef(null);
 
     const proveedoresFiltrados = proveedores.filter(p =>
         p.nombre.toLowerCase().includes(buscarProv.toLowerCase()) ||
@@ -483,6 +499,27 @@ export default function ProductosCreate({ categorias = [], proveedores = [] }) {
         const num = parseFloat(value) || 0;
         return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(num);
     };
+
+    // ── NUEVO: agregar fotos ──
+    const agregarFotos = (e) => {
+        const archivos = Array.from(e.target.files || []);
+        if (!archivos.length) return;
+        setData('fotos', [...data.fotos, ...archivos]);
+        setFotosPreviews(prev => [...prev, ...archivos.map(f => URL.createObjectURL(f))]);
+        e.target.value = '';
+    };
+
+    // ── NUEVO: quitar foto antes de guardar ──
+    const eliminarFotoNueva = (index) => {
+        URL.revokeObjectURL(fotosPreviews[index]);
+        setData('fotos', data.fotos.filter((_, i) => i !== index));
+        setFotosPreviews(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // ── NUEVO: limpiar object URLs al desmontar ──
+    useEffect(() => {
+        return () => fotosPreviews.forEach(url => URL.revokeObjectURL(url));
+    }, []);
 
     const submit = (e) => { e.preventDefault(); post('/productos', { forceFormData: true }); };
 
@@ -699,6 +736,44 @@ export default function ProductosCreate({ categorias = [], proveedores = [] }) {
                                         </label>
                                     )}
                                     {errors.imagen && <p className="error-text">{errors.imagen}</p>}
+                                </div>
+
+                                {/* ── NUEVO: Fotos adicionales ── */}
+                                <div className="glass-panel">
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                        <p className="panel-title" style={{ margin: 0 }}>Fotos adicionales</p>
+                                        {fotosPreviews.length > 0 && (
+                                            <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.12rem 0.5rem', borderRadius: '20px', background: 'rgba(200,140,80,0.1)', border: '1px solid rgba(200,140,80,0.22)', color: 'rgba(150,80,20,0.7)' }}>
+                                                {fotosPreviews.length} foto{fotosPreviews.length !== 1 ? 's' : ''}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="fotos-grid">
+                                        {/* Previews de fotos nuevas */}
+                                        {fotosPreviews.map((preview, idx) => (
+                                            <div key={idx} className="foto-thumb-wrap">
+                                                <img src={preview} alt={`Foto ${idx + 1}`} />
+                                                <div className="foto-thumb-overlay">
+                                                    <button type="button" className="foto-thumb-del" onClick={() => eliminarFotoNueva(idx)}>
+                                                        <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {/* Botón agregar */}
+                                        <div className="foto-add-btn" onClick={() => fotosInputRef.current?.click()}>
+                                            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                            <span style={{ fontSize: '0.68rem', fontWeight: '500' }}>Agregar</span>
+                                        </div>
+                                    </div>
+
+                                    <input ref={fotosInputRef} type="file" accept="image/*" multiple onChange={agregarFotos} style={{ display: 'none' }} />
+
+                                    <p style={{ fontSize: '0.7rem', color: 'rgba(150,80,20,0.42)', marginTop: '0.6rem' }}>
+                                        Se mostrarán en el catálogo público junto a la imagen principal.
+                                    </p>
                                 </div>
 
                                 {/* Botones */}
