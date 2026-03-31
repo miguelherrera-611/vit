@@ -1,4 +1,4 @@
-import { useForm, Link, Head } from '@inertiajs/react';
+import { useForm, Link, Head, router } from '@inertiajs/react';
 
 const BG = `
     radial-gradient(ellipse 75% 60% at 0% 0%, rgba(255,210,170,0.28) 0%, transparent 55%),
@@ -23,43 +23,38 @@ const STYLES = `
     .page-title { font-size:1.5rem; font-weight:300; color:#2d1a08; letter-spacing:-0.04em; margin-bottom:0.3rem; }
     .page-sub { font-size:0.82rem; color:rgba(150,80,20,0.55); margin-bottom:2rem; }
 
-    /* CARDS */
     .glass-card { background:rgba(255,255,255,0.06); backdrop-filter:blur(28px) saturate(160%); -webkit-backdrop-filter:blur(28px) saturate(160%); border:1px solid rgba(255,255,255,0.68); border-radius:24px; padding:2rem; margin-bottom:1.5rem; position:relative; overflow:hidden; box-shadow:0 12px 40px rgba(180,90,20,0.10),inset 0 1.5px 0 rgba(255,255,255,0.92); }
     .glass-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.96) 25%,rgba(255,255,255,0.96) 75%,transparent); pointer-events:none; }
 
-    /* Tarjeta verificación pendiente — tinte ámbar */
-    .verify-card { background:rgba(245,158,11,0.04); backdrop-filter:blur(28px) saturate(160%); -webkit-backdrop-filter:blur(28px) saturate(160%); border:1px solid rgba(245,158,11,0.28); border-radius:24px; padding:2rem; margin-bottom:1.5rem; position:relative; overflow:hidden; box-shadow:0 12px 40px rgba(180,90,20,0.08),inset 0 1.5px 0 rgba(255,255,255,0.85); }
-    .verify-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.96) 25%,rgba(255,255,255,0.96) 75%,transparent); pointer-events:none; }
-
-    /* Tarjeta correo verificado — tinte verde */
-    .verified-card { background:rgba(16,185,129,0.04); backdrop-filter:blur(28px) saturate(160%); -webkit-backdrop-filter:blur(28px) saturate(160%); border:1px solid rgba(16,185,129,0.25); border-radius:24px; padding:2rem; margin-bottom:1.5rem; position:relative; overflow:hidden; box-shadow:0 12px 40px rgba(20,150,80,0.07),inset 0 1.5px 0 rgba(255,255,255,0.85); }
-    .verified-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.96) 25%,rgba(255,255,255,0.96) 75%,transparent); pointer-events:none; }
+    .pending-card { background:rgba(245,158,11,0.04); backdrop-filter:blur(28px) saturate(160%); -webkit-backdrop-filter:blur(28px) saturate(160%); border:1px solid rgba(245,158,11,0.35); border-radius:24px; padding:2rem; margin-bottom:1.5rem; position:relative; overflow:hidden; box-shadow:0 12px 40px rgba(180,90,20,0.08),inset 0 1.5px 0 rgba(255,255,255,0.85); }
+    .pending-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.96) 25%,rgba(255,255,255,0.96) 75%,transparent); pointer-events:none; }
 
     .card-title { font-size:0.9rem; font-weight:700; color:#2d1a08; letter-spacing:-0.02em; margin-bottom:0.3rem; }
     .card-desc { font-size:0.78rem; color:rgba(120,60,10,0.6); margin-bottom:1.5rem; line-height:1.5; }
 
-    /* FIELDS */
     .field { margin-bottom:1.1rem; }
     .field-label { display:block; font-size:0.7rem; font-weight:700; color:rgba(150,80,20,0.65); text-transform:uppercase; letter-spacing:0.09em; margin-bottom:0.45rem; }
     .glass-input { width:100%; padding:0.8rem 1rem; background:rgba(255,255,255,0.07); border:1px solid rgba(200,140,80,0.38); border-radius:14px; font-size:0.9rem; color:#2d1a08; font-family:'Inter',sans-serif; outline:none; transition:all 0.2s; box-shadow:inset 0 1px 0 rgba(255,255,255,0.78); }
     .glass-input::placeholder { color:rgba(180,100,30,0.38); }
     .glass-input:focus { background:rgba(255,255,255,0.14); border-color:rgba(200,140,80,0.62); box-shadow:0 0 0 3px rgba(220,38,38,0.06),inset 0 1px 0 rgba(255,255,255,0.88); }
+    .code-input { width:100%; padding:1rem; background:rgba(255,255,255,0.07); border:2px solid rgba(245,158,11,0.38); border-radius:14px; font-size:1.6rem; font-weight:700; color:#2d1a08; font-family:'Inter',sans-serif; outline:none; transition:all 0.2s; letter-spacing:0.25em; text-align:center; }
+    .code-input:focus { background:rgba(255,255,255,0.14); border-color:rgba(245,158,11,0.65); box-shadow:0 0 0 3px rgba(245,158,11,0.08); }
     .field-error { margin-top:0.35rem; font-size:0.76rem; color:rgba(185,28,28,0.88); font-weight:500; }
 
-    /* ALERTS */
     .alert-success { padding:0.65rem 1rem; border-radius:12px; font-size:0.8rem; font-weight:500; margin-bottom:1rem; background:rgba(16,185,129,0.09); border:1px solid rgba(16,185,129,0.24); color:rgba(4,120,87,0.9); }
+    .alert-amber   { padding:0.65rem 1rem; border-radius:12px; font-size:0.8rem; font-weight:500; margin-bottom:1rem; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.28); color:rgba(146,64,14,0.9); }
+    .alert-info    { padding:0.65rem 1rem; border-radius:12px; font-size:0.8rem; font-weight:500; margin-bottom:1rem; background:rgba(59,130,246,0.07); border:1px solid rgba(59,130,246,0.22); color:rgba(29,78,216,0.9); }
 
-    /* BUTTONS */
-    .btn-primary { padding:0.75rem 1.5rem; background:rgba(220,38,38,0.12); border:1px solid rgba(220,38,38,0.42); border-radius:12px; font-size:0.85rem; font-weight:600; color:rgba(185,28,28,0.95); cursor:pointer; transition:all 0.2s; font-family:'Inter',sans-serif; box-shadow:0 4px 16px rgba(220,38,38,0.10); }
+    .btn-primary { padding:0.75rem 1.5rem; background:rgba(220,38,38,0.12); border:1px solid rgba(220,38,38,0.42); border-radius:12px; font-size:0.85rem; font-weight:600; color:rgba(185,28,28,0.95); cursor:pointer; transition:all 0.2s; font-family:'Inter',sans-serif; }
     .btn-primary:hover { background:rgba(220,38,38,0.18); transform:translateY(-1px); }
     .btn-primary:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
-    .btn-amber { padding:0.75rem 1.5rem; background:rgba(245,158,11,0.10); border:1px solid rgba(245,158,11,0.40); border-radius:12px; font-size:0.85rem; font-weight:600; color:rgba(146,64,14,0.95); cursor:pointer; transition:all 0.2s; font-family:'Inter',sans-serif; box-shadow:0 4px 16px rgba(245,158,11,0.10); }
+    .btn-amber { padding:0.75rem 1.5rem; background:rgba(245,158,11,0.10); border:1px solid rgba(245,158,11,0.40); border-radius:12px; font-size:0.85rem; font-weight:600; color:rgba(146,64,14,0.95); cursor:pointer; transition:all 0.2s; font-family:'Inter',sans-serif; }
     .btn-amber:hover { background:rgba(245,158,11,0.18); transform:translateY(-1px); }
     .btn-amber:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+    .btn-ghost { padding:0.75rem 1.5rem; background:rgba(255,255,255,0.05); border:1px solid rgba(200,140,80,0.25); border-radius:12px; font-size:0.82rem; font-weight:500; color:rgba(120,60,10,0.65); cursor:pointer; transition:all 0.2s; font-family:'Inter',sans-serif; }
+    .btn-ghost:hover { background:rgba(255,255,255,0.1); }
+    .btn-ghost:disabled { opacity:0.5; cursor:not-allowed; }
     .btn-row { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
-
-    /* BADGE verificado */
-    .badge-verified { display:inline-flex; align-items:center; gap:0.4rem; padding:0.3rem 0.75rem; background:rgba(16,185,129,0.10); border:1px solid rgba(16,185,129,0.28); border-radius:20px; font-size:0.75rem; font-weight:600; color:rgba(4,120,87,0.9); }
 
     @keyframes slideUp { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:translateY(0); } }
 `;
@@ -67,13 +62,15 @@ const STYLES = `
 export default function ProfileEdit({ user, status }) {
     const infoForm     = useForm({ name: user.name, email: user.email });
     const passwordForm = useForm({ current_password: '', password: '', password_confirmation: '' });
-    const verifyForm   = useForm({});
+    const codeForm     = useForm({ code: '' });
+    const cancelForm   = useForm({});
 
-    const submitInfo       = (e) => { e.preventDefault(); infoForm.patch('/profile'); };
-    const submitPassword   = (e) => { e.preventDefault(); passwordForm.put('/password'); };
-    const sendVerification = ()  => verifyForm.post('/email/verification-notification');
+    const submitInfo     = (e) => { e.preventDefault(); infoForm.patch('/profile'); };
+    const submitPassword = (e) => { e.preventDefault(); passwordForm.put('/password'); };
+    const submitCode = (e) => { e.preventDefault(); codeForm.post('/profile/verify-email-change', { onSuccess: () => router.visit('/profile') }); };
+    const cancelChange = () => cancelForm.post('/profile/cancel-email-change', { onSuccess: () => router.visit('/profile') });
 
-    const emailVerified = !!user.email_verified_at;
+    const hasPendingEmail = !!user.pending_email;
 
     return (
         <>
@@ -101,8 +98,17 @@ export default function ProfileEdit({ user, status }) {
                 {/* ── INFORMACIÓN ─────────────────────────────────── */}
                 <div className="glass-card" style={{animation:'slideUp 0.45s cubic-bezier(0.16,1,0.3,1) both'}}>
                     <p className="card-title">Información de la cuenta</p>
-                    <p className="card-desc">Actualiza tu nombre y dirección de correo electrónico.</p>
-                    {status === 'profile-updated' && <div className="alert-success">Guardado ✓</div>}
+                    <p className="card-desc">
+                        {hasPendingEmail
+                            ? 'Tienes un cambio de correo pendiente de verificar. Cancélalo primero si quieres usar un correo diferente.'
+                            : 'Actualiza tu nombre y dirección de correo electrónico.'}
+                    </p>
+
+                    {status === 'profile-updated'        && <div className="alert-success">✓ Nombre actualizado correctamente.</div>}
+                    {status === 'email-code-sent'        && <div className="alert-amber">📨 Código enviado a tu nuevo correo. Ingrésalo abajo para confirmar el cambio.</div>}
+                    {status === 'email-updated'          && <div className="alert-success">✓ Correo actualizado correctamente.</div>}
+                    {status === 'email-change-cancelled' && <div className="alert-info">Cambio de correo cancelado.</div>}
+
                     <form onSubmit={submitInfo}>
                         <div className="field">
                             <label className="field-label">Nombre</label>
@@ -111,84 +117,70 @@ export default function ProfileEdit({ user, status }) {
                             {infoForm.errors.name && <p className="field-error">{infoForm.errors.name}</p>}
                         </div>
                         <div className="field">
-                            <label className="field-label">Correo electrónico</label>
+                            <label className="field-label">
+                                Correo electrónico
+                                {hasPendingEmail && (
+                                    <span style={{marginLeft:'0.5rem',fontSize:'0.68rem',fontWeight:'600',color:'rgba(245,158,11,0.85)',background:'rgba(245,158,11,0.1)',padding:'0.15rem 0.5rem',borderRadius:'8px',border:'1px solid rgba(245,158,11,0.28)'}}>
+                                        Pendiente verificación
+                                    </span>
+                                )}
+                            </label>
                             <input type="email" className="glass-input" value={infoForm.data.email}
-                                   onChange={e => infoForm.setData('email', e.target.value)} autoComplete="username" />
+                                   onChange={e => infoForm.setData('email', e.target.value)}
+                                   disabled={hasPendingEmail}
+                                   style={hasPendingEmail ? {opacity:0.5,cursor:'not-allowed'} : {}}
+                                   autoComplete="username" />
                             {infoForm.errors.email && <p className="field-error">{infoForm.errors.email}</p>}
+                            {hasPendingEmail && (
+                                <p style={{fontSize:'0.74rem',color:'rgba(146,64,14,0.7)',marginTop:'0.35rem'}}>
+                                    Correo nuevo pendiente: <strong>{user.pending_email}</strong>
+                                </p>
+                            )}
                         </div>
                         <div className="btn-row">
-                            <button type="submit" className="btn-primary" disabled={infoForm.processing}>
+                            <button type="submit" className="btn-primary" disabled={infoForm.processing || hasPendingEmail}>
                                 {infoForm.processing ? 'Guardando...' : 'Guardar cambios'}
                             </button>
+                            {hasPendingEmail && (
+                                <button type="button" className="btn-ghost" disabled={cancelForm.processing} onClick={cancelChange}>
+                                    {cancelForm.processing ? 'Cancelando...' : 'Cancelar cambio de correo'}
+                                </button>
+                            )}
                         </div>
                     </form>
                 </div>
 
-                {/* ── VERIFICACIÓN DE CORREO ───────────────────────── */}
-                {emailVerified ? (
-                    /* Estado: correo verificado ✓ */
-                    <div className="verified-card" style={{animation:'slideUp 0.50s cubic-bezier(0.16,1,0.3,1) both'}}>
-                        <div style={{display:'flex', alignItems:'flex-start', gap:'1rem'}}>
-                            <div style={{
-                                flexShrink:0, width:'44px', height:'44px', borderRadius:'14px',
-                                background:'rgba(16,185,129,0.10)', border:'1px solid rgba(16,185,129,0.25)',
-                                display:'flex', alignItems:'center', justifyContent:'center',
-                            }}>
-                                <svg width="22" height="22" fill="none" stroke="rgba(4,120,87,0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                            </div>
-                            <div style={{flex:1}}>
-                                <div style={{display:'flex', alignItems:'center', gap:'0.6rem', marginBottom:'0.4rem'}}>
-                                    <p className="card-title" style={{margin:0}}>Verificación de correo</p>
-                                    <span className="badge-verified">
-                                        <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
-                                        </svg>
-                                        Verificado
-                                    </span>
-                                </div>
-                                <p style={{fontSize:'0.78rem', color:'rgba(4,120,87,0.75)', lineHeight:1.5}}>
-                                    Tu correo <strong>{user.email}</strong> está verificado correctamente.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    /* Estado: correo pendiente de verificar */
-                    <div className="verify-card" style={{animation:'slideUp 0.50s cubic-bezier(0.16,1,0.3,1) both'}}>
-                        <div style={{display:'flex', alignItems:'flex-start', gap:'1rem', marginBottom:'1.5rem'}}>
-                            <div style={{
-                                flexShrink:0, width:'44px', height:'44px', borderRadius:'14px',
-                                background:'rgba(245,158,11,0.10)', border:'1px solid rgba(245,158,11,0.30)',
-                                display:'flex', alignItems:'center', justifyContent:'center',
-                            }}>
+                {/* ── VERIFICACIÓN CÓDIGO EMAIL ────────────────────── */}
+                {hasPendingEmail && (
+                    <div className="pending-card" style={{animation:'slideUp 0.50s cubic-bezier(0.16,1,0.3,1) both'}}>
+                        <div style={{display:'flex',alignItems:'flex-start',gap:'1rem',marginBottom:'1.25rem'}}>
+                            <div style={{flexShrink:0,width:'44px',height:'44px',borderRadius:'14px',background:'rgba(245,158,11,0.10)',border:'1px solid rgba(245,158,11,0.30)',display:'flex',alignItems:'center',justifyContent:'center'}}>
                                 <svg width="22" height="22" fill="none" stroke="rgba(146,64,14,0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                                     <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                                 </svg>
                             </div>
                             <div>
-                                <p className="card-title">Verificación de correo</p>
-                                <p className="card-desc" style={{marginBottom:0}}>
-                                    Tu correo <strong>{user.email}</strong> aún no está verificado. Envíate un enlace para activarlo.
+                                <p className="card-title">Confirma tu nuevo correo</p>
+                                <p style={{fontSize:'0.78rem',color:'rgba(120,60,10,0.65)',lineHeight:1.5,margin:0}}>
+                                    Enviamos un código de 6 dígitos a <strong>{user.pending_email}</strong>. Ingrésalo aquí para confirmar el cambio. Expira en 10 minutos.
                                 </p>
                             </div>
                         </div>
 
-                        {status === 'verification-link-sent' && (
-                            <div className="alert-success">
-                                ¡Enlace enviado! Revisa tu bandeja de entrada y la carpeta de spam.
+                        <form onSubmit={submitCode}>
+                            <div className="field">
+                                <label className="field-label">Código de verificación</label>
+                                <input type="text" className="code-input" value={codeForm.data.code}
+                                       onChange={e => codeForm.setData('code', e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                       placeholder="000000" maxLength={6} inputMode="numeric" />
+                                {codeForm.errors.code && <p className="field-error">{codeForm.errors.code}</p>}
                             </div>
-                        )}
-
-                        <div className="btn-row">
-                            <button className="btn-amber" disabled={verifyForm.processing} onClick={sendVerification}>
-                                {verifyForm.processing ? 'Enviando...' : 'Enviar enlace de verificación'}
-                            </button>
-                            <span style={{fontSize:'0.75rem', color:'rgba(150,80,20,0.5)'}}>
-                                Revisa también tu carpeta de spam
-                            </span>
-                        </div>
+                            <div className="btn-row">
+                                <button type="submit" className="btn-amber" disabled={codeForm.processing || codeForm.data.code.length < 6}>
+                                    {codeForm.processing ? 'Verificando...' : 'Confirmar nuevo correo'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 )}
 
@@ -196,7 +188,7 @@ export default function ProfileEdit({ user, status }) {
                 <div className="glass-card" style={{animation:'slideUp 0.55s cubic-bezier(0.16,1,0.3,1) both'}}>
                     <p className="card-title">Cambiar contraseña</p>
                     <p className="card-desc">Usa una contraseña larga y segura para proteger tu cuenta.</p>
-                    {status === 'password-updated' && <div className="alert-success">Contraseña actualizada ✓</div>}
+                    {status === 'password-updated' && <div className="alert-success">✓ Contraseña actualizada.</div>}
                     <form onSubmit={submitPassword}>
                         <div className="field">
                             <label className="field-label">Contraseña actual</label>

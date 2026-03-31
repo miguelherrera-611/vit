@@ -15,6 +15,8 @@ use App\Mail\PedidoEnvioClienteMail;
 use App\Mail\PedidoRechazadoClienteMail;
 use App\Mail\AdminEntregaConfirmadaMail;
 use App\Mail\ConfigPagoCambioMail;
+use App\Mail\ConfigContactoCambioMail;
+use App\Mail\HistorialLimpiadoMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -113,7 +115,6 @@ class PedidoController extends Controller
                     'cantidad'        => $item['cantidad'],
                     'precio_unitario' => $item['precio_unitario'],
                     'subtotal'        => $item['cantidad'] * $item['precio_unitario'],
-                    // Guardamos la ruta relativa en DB (correcto para storage)
                     'imagen_producto' => $producto?->imagen,
                 ]);
 
@@ -186,7 +187,6 @@ class PedidoController extends Controller
                     'nombre'          => $i->nombre_producto,
                     'cantidad'        => $i->cantidad,
                     'precio_unitario' => $i->precio_unitario,
-                    // ✅ URL completa siempre
                     'imagen'          => $this->storageUrl($i->imagen_producto),
                 ]),
                 'motivo_rechazo'  => $p->motivo_rechazo,
@@ -258,7 +258,6 @@ class PedidoController extends Controller
             'direccion'       => $p->direccion,
             'indicaciones'    => $p->indicaciones,
             'metodo_pago'     => $p->metodo_pago,
-            // ✅ URL completa para el comprobante
             'comprobante'     => $this->storageUrl($p->comprobante_pago),
             'total'           => $p->total,
             'notas_admin'     => $p->notas_admin,
@@ -270,7 +269,6 @@ class PedidoController extends Controller
                 'cantidad'        => $i->cantidad,
                 'precio_unitario' => $i->precio_unitario,
                 'subtotal'        => $i->subtotal,
-                // ✅ URL completa siempre, sin lógica duplicada en el frontend
                 'imagen'          => $this->storageUrl($i->imagen_producto),
             ]),
         ]);
@@ -433,12 +431,31 @@ class PedidoController extends Controller
             'correo2'   => 'nullable|email|max:100',
         ]);
 
-        $campos = ['telefono1', 'telefono2', 'correo1', 'correo2'];
+        $campos  = ['telefono1', 'telefono2', 'correo1', 'correo2'];
+        $cambios = [];
+
         foreach ($campos as $campo) {
+            $valorAnterior = ConfigContacto::where('clave', $campo)->value('valor') ?? '';
+            $valorNuevo    = $request->input($campo, '');
+
+            if ($valorAnterior !== $valorNuevo) {
+                $cambios[] = "{$campo}: '{$valorAnterior}' → '{$valorNuevo}'";
+            }
+
             ConfigContacto::updateOrCreate(
                 ['clave' => $campo],
-                ['valor' => $request->input($campo, '')]
+                ['valor' => $valorNuevo]
             );
+        }
+
+        if (!empty($cambios)) {
+            $adminEmails = \App\Models\User::role('admin')->pluck('email')->toArray();
+            if (!empty($adminEmails)) {
+                Mail::to($adminEmails)->send(new ConfigContactoCambioMail(
+                    $cambios,
+                    auth()->user()->name
+                ));
+            }
         }
 
         return back()->with('success', 'Datos de contacto actualizados.');
@@ -467,6 +484,16 @@ class PedidoController extends Controller
         foreach ($pedidos as $pedido) {
             Papelera::archivar('pedido', $pedido, $pedido->numero_pedido, auth()->user()->name);
             $pedido->delete();
+        }
+
+        if ($total > 0) {
+            $adminEmails = \App\Models\User::role('admin')->pluck('email')->toArray();
+            if (!empty($adminEmails)) {
+                Mail::to($adminEmails)->send(new HistorialLimpiadoMail(
+                    $total,
+                    auth()->user()->name
+                ));
+            }
         }
 
         Registro::registrar('eliminar_historial', 'pedidos',

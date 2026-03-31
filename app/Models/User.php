@@ -21,6 +21,10 @@ class User extends Authenticatable
         // Campos de seguridad de login
         'intentos_fallidos',
         'bloqueado_hasta',
+        // Campos de cambio de correo con 2FA
+        'pending_email',
+        'email_change_code',
+        'email_change_expires_at',
     ];
 
     protected $hidden = [
@@ -31,13 +35,15 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'code_expires_at'   => 'datetime',
-            'activo'            => 'boolean',
+            'email_verified_at'       => 'datetime',
+            'password'                => 'hashed',
+            'code_expires_at'         => 'datetime',
+            'activo'                  => 'boolean',
             // Nuevos casts
-            'intentos_fallidos' => 'integer',
-            'bloqueado_hasta'   => 'datetime',
+            'intentos_fallidos'       => 'integer',
+            'bloqueado_hasta'         => 'datetime',
+            // Cambio de correo
+            'email_change_expires_at' => 'datetime',
         ];
     }
 
