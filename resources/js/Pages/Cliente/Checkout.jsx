@@ -6,12 +6,11 @@ import ClienteLayout from '@/Layouts/ClienteLayout';
 const formatCOP = (v) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
 
-// Estilos visuales por método (color/emoji) — los datos de número/QR vienen de props
 const METODO_ESTILOS = {
-    Nequi:       { emoji: '💜', color: 'rgba(139,92,246,0.85)',  bg: 'rgba(139,92,246,0.08)',  border: 'rgba(139,92,246,0.3)'  },
-    Daviplata:   { emoji: '🔴', color: 'rgba(220,38,38,0.85)',   bg: 'rgba(220,38,38,0.07)',   border: 'rgba(220,38,38,0.25)'  },
-    Bancolombia: { emoji: '🟡', color: 'rgba(202,138,4,0.9)',    bg: 'rgba(202,138,4,0.07)',   border: 'rgba(202,138,4,0.28)'  },
-    Davivienda:  { emoji: '🏠', color: 'rgba(185,28,28,0.85)',   bg: 'rgba(185,28,28,0.07)',   border: 'rgba(185,28,28,0.25)'  },
+    Nequi:       { color: 'rgba(139,92,246,0.85)',  bg: 'rgba(139,92,246,0.06)',  border: 'rgba(139,92,246,0.22)'  },
+    Daviplata:   { color: 'rgba(220,38,38,0.85)',   bg: 'rgba(220,38,38,0.05)',   border: 'rgba(220,38,38,0.18)'  },
+    Bancolombia: { color: 'rgba(180,120,0,0.9)',    bg: 'rgba(202,138,4,0.05)',   border: 'rgba(202,138,4,0.2)'   },
+    Davivienda:  { color: 'rgba(185,28,28,0.85)',   bg: 'rgba(185,28,28,0.05)',   border: 'rgba(185,28,28,0.18)'  },
 };
 
 export default function Checkout({ metodosPago = [], contacto = {} }) {
@@ -21,6 +20,7 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors]         = useState({});
     const [preview, setPreview]       = useState(null);
+    const [isMobile, setIsMobile]     = useState(false);
 
     const [form, setForm] = useState({
         nombre_receptor:   auth.user?.name ?? '',
@@ -43,12 +43,18 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
         }
     }, []);
 
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth < 768);
+        check();
+        window.addEventListener('resize', check);
+        return () => window.removeEventListener('resize', check);
+    }, []);
+
     const total              = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
     const metodoSeleccionado = metodosPago.find((m) => m.id === form.metodo_pago);
     const estiloSeleccionado = METODO_ESTILOS[form.metodo_pago] ?? {};
-
-    const telefonos = [contacto.telefono1, contacto.telefono2].filter(Boolean);
-    const correos   = [contacto.correo1,   contacto.correo2].filter(Boolean);
+    const telefonos          = [contacto.telefono1, contacto.telefono2].filter(Boolean);
+    const correos            = [contacto.correo1,   contacto.correo2].filter(Boolean);
 
     const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
@@ -82,7 +88,6 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
     const handleSubmit = () => {
         if (!validarPaso2()) return;
         setProcessing(true);
-
         const data = new FormData();
         data.append('nombre_receptor',   form.nombre_receptor);
         data.append('telefono_receptor', form.telefono_receptor);
@@ -92,27 +97,18 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
         data.append('metodo_pago',       form.metodo_pago);
         data.append('comprobante_pago',  form.comprobante);
         data.append('email_cliente',     auth.user?.email ?? '');
-
         carrito.forEach((item, idx) => {
             data.append(`items[${idx}][producto_id]`,     item.id);
             data.append(`items[${idx}][cantidad]`,        item.cantidad);
             data.append(`items[${idx}][precio_unitario]`, item.precio);
         });
-
         router.post('/cliente/pedidos', data, {
             forceFormData: true,
-            onSuccess: () => {
-                sessionStorage.removeItem('vitali_carrito');
-                setProcessing(false);
-            },
-            onError: (errs) => {
-                setErrors(errs);
-                setProcessing(false);
-            },
+            onSuccess: () => { sessionStorage.removeItem('vitali_carrito'); setProcessing(false); },
+            onError:   (errs) => { setErrors(errs); setProcessing(false); },
         });
     };
 
-    // Helper para imagen — compatible con URL completa o ruta relativa
     const imgSrc = (imagen) => {
         if (!imagen) return null;
         return imagen.startsWith('http') ? imagen : `/storage/${imagen}`;
@@ -122,111 +118,167 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
 
     return (
         <ClienteLayout>
-            <Head title="Checkout — VitaliStore" />
+            <Head title="Checkout — VitaliStore"/>
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-                @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+                @keyframes slideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 
-                .ck-glass {
-                    background: rgba(255,255,255,0.04);
-                    backdrop-filter: blur(22px) saturate(150%);
-                    -webkit-backdrop-filter: blur(22px) saturate(150%);
-                    border-radius: 24px; border: 1px solid rgba(255,255,255,0.65);
-                    box-shadow: 0 16px 48px rgba(180,90,20,0.08), 0 4px 14px rgba(180,90,20,0.04),
-                        inset 0 1.5px 0 rgba(255,255,255,0.88);
-                    position: relative; overflow: hidden;
-                }
-                .ck-glass::before {
-                    content:''; position:absolute; top:0; left:0; right:0; height:1px;
-                    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.95) 25%,rgba(255,255,255,0.95) 75%,transparent);
-                    pointer-events:none; z-index:1;
-                }
                 .ck-label {
-                    display:block; font-size:0.7rem; font-weight:700;
-                    color:rgba(150,80,20,0.65); text-transform:uppercase;
-                    letter-spacing:0.09em; margin-bottom:0.45rem;
+                    display:block; font-size:0.68rem; font-weight:500;
+                    color:rgba(150,80,20,0.5); text-transform:uppercase;
+                    letter-spacing:0.07em; margin-bottom:0.4rem;
                 }
                 .ck-input {
-                    width:100%; padding:0.8rem 1rem;
-                    background:rgba(255,255,255,0.06); border:1px solid rgba(200,140,80,0.38);
-                    border-radius:14px; font-size:0.9rem; color:#2d1a08;
-                    font-family:'Inter',sans-serif; outline:none; transition:all 0.2s;
-                    box-shadow:inset 0 1px 0 rgba(255,255,255,0.78); box-sizing:border-box;
+                    width:100%; padding:0.75rem 0.875rem;
+                    background:rgba(255,255,255,0.55); border:1px solid rgba(200,140,80,0.2);
+                    border-radius:10px; font-size:0.85rem; color:#2d1a08;
+                    font-family:'Inter',sans-serif; outline:none; transition:all 0.15s;
+                    box-sizing:border-box; letter-spacing:-0.01em;
                 }
-                .ck-input::placeholder { color:rgba(180,100,30,0.38); }
+                .ck-input::placeholder { color:rgba(180,100,30,0.3); }
                 .ck-input:focus {
-                    background:rgba(255,255,255,0.12); border-color:rgba(200,140,80,0.65);
-                    box-shadow:0 0 0 3px rgba(220,38,38,0.05),inset 0 1px 0 rgba(255,255,255,0.88);
+                    background:rgba(255,255,255,0.8); border-color:rgba(200,140,80,0.38);
+                    box-shadow:0 0 0 3px rgba(200,140,80,0.06);
                 }
-                .ck-error { margin-top:0.3rem; font-size:0.74rem; color:rgba(185,28,28,0.88); font-weight:500; }
+                .ck-error { margin-top:0.3rem; font-size:0.74rem; color:rgba(185,28,28,0.8); }
 
                 .metodo-card {
-                    padding:1rem 1.25rem; border-radius:16px; cursor:pointer;
-                    transition:all 0.2s ease;
-                    display:flex; align-items:flex-start; gap:0.75rem;
-                    background:rgba(255,255,255,0.04); border:2px solid rgba(200,140,80,0.15);
+                    padding:0.875rem 1rem; border-radius:10px; cursor:pointer;
+                    transition:all 0.15s; display:flex; align-items:flex-start; gap:0.75rem;
+                    background:rgba(255,255,255,0.4); border:1.5px solid rgba(200,140,80,0.12);
+                    margin-bottom:0.5rem;
                 }
-                .metodo-card:hover { background:rgba(255,255,255,0.08); border-color:rgba(200,140,80,0.3); }
+                .metodo-card:hover { background:rgba(255,255,255,0.6); border-color:rgba(200,140,80,0.22); }
 
                 .radio-circle {
-                    width:20px; height:20px; border-radius:50%; flex-shrink:0; margin-top:0.15rem;
-                    border:2px solid rgba(200,140,80,0.4); transition:all 0.2s;
+                    width:18px; height:18px; border-radius:50%; flex-shrink:0; margin-top:0.14rem;
+                    border:1.5px solid rgba(200,140,80,0.3); transition:all 0.15s;
                     display:flex; align-items:center; justify-content:center;
                 }
-                .radio-dot { width:8px; height:8px; border-radius:50%; background:white; }
+                .radio-dot { width:7px; height:7px; border-radius:50%; background:white; }
 
                 .upload-zone {
-                    border:2px dashed rgba(200,140,80,0.35); border-radius:18px;
-                    padding:2rem; text-align:center; cursor:pointer;
-                    transition:all 0.2s; background:rgba(255,255,255,0.03);
+                    border:1.5px dashed rgba(200,140,80,0.28); border-radius:12px;
+                    padding:1.75rem; text-align:center; cursor:pointer;
+                    transition:all 0.15s; background:rgba(255,255,255,0.3);
                 }
-                .upload-zone:hover { border-color:rgba(220,38,38,0.4); background:rgba(220,38,38,0.03); }
-                .upload-zone.has-file { border-color:rgba(16,185,129,0.4); background:rgba(16,185,129,0.04); }
+                .upload-zone:hover { border-color:rgba(185,28,28,0.3); background:rgba(185,28,28,0.02); }
+                .upload-zone.has-file { border-color:rgba(16,185,129,0.3); background:rgba(16,185,129,0.03); }
 
                 .paso-indicator {
                     display:flex; align-items:center; justify-content:center; gap:0; margin-bottom:2.5rem;
                 }
                 .paso-step { display:flex; align-items:center; }
                 .paso-circle {
-                    width:32px; height:32px; border-radius:50%;
+                    width:28px; height:28px; border-radius:50%;
                     display:flex; align-items:center; justify-content:center;
-                    font-size:0.75rem; font-weight:700; transition:all 0.3s;
+                    font-size:0.72rem; font-weight:500; transition:all 0.25s;
                 }
-                .paso-circle.done    { background:rgba(16,185,129,0.15); border:2px solid rgba(16,185,129,0.5); color:rgba(4,120,87,0.85); }
-                .paso-circle.active  { background:rgba(220,38,38,0.1); border:2px solid rgba(220,38,24,0.45); color:rgba(185,28,28,0.9); }
-                .paso-circle.pending { background:rgba(200,140,80,0.07); border:2px solid rgba(200,140,80,0.2); color:rgba(150,80,20,0.4); }
-                .paso-line      { width:60px; height:2px; background:rgba(200,140,80,0.15); }
-                .paso-line.done { background:rgba(16,185,129,0.35); }
+                .paso-circle.done    { background:rgba(16,185,129,0.1);  border:1.5px solid rgba(16,185,129,0.35); color:rgba(4,120,87,0.85); }
+                .paso-circle.active  { background:rgba(185,28,28,0.08);  border:1.5px solid rgba(185,28,28,0.3);  color:rgba(185,28,28,0.9); }
+                .paso-circle.pending { background:rgba(200,140,80,0.05); border:1.5px solid rgba(200,140,80,0.18); color:rgba(150,80,20,0.4); }
+                .paso-line      { width:56px; height:1px; background:rgba(200,140,80,0.15); }
+                .paso-line.done { background:rgba(16,185,129,0.3); }
 
-                .btn-nav { padding:0.8rem 1.75rem; border-radius:14px; font-family:'Inter',sans-serif; font-size:0.9rem; font-weight:600; cursor:pointer; transition:all 0.22s ease; border:none; }
-                .btn-next { background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.38); color:rgba(185,28,28,0.95); box-shadow:0 6px 20px rgba(220,38,38,0.12),inset 0 1px 0 rgba(255,120,120,0.2); }
-                .btn-next:hover:not(:disabled) { background:rgba(220,38,38,0.16); transform:translateY(-1px); box-shadow:0 10px 28px rgba(220,38,38,0.16); }
+                .btn-nav { padding:0.75rem 1.5rem; border-radius:10px; font-family:'Inter',sans-serif; font-size:0.86rem; font-weight:500; cursor:pointer; transition:all 0.18s; border:none; letter-spacing:-0.01em; }
+                .btn-next { background:rgba(185,28,28,0.08); border:1px solid rgba(185,28,28,0.22); color:rgba(185,28,28,0.9); }
+                .btn-next:hover:not(:disabled) { background:rgba(185,28,28,0.13); border-color:rgba(185,28,28,0.35); }
                 .btn-next:disabled { opacity:0.4; cursor:not-allowed; }
-                .btn-back { background:rgba(255,255,255,0.06); border:1px solid rgba(200,140,80,0.28); color:rgba(120,60,10,0.7); }
-                .btn-back:hover { background:rgba(255,255,255,0.14); color:rgba(90,40,5,0.9); }
+                .btn-back { background:rgba(255,255,255,0.4); border:1px solid rgba(200,140,80,0.18); color:rgba(120,60,10,0.65); }
+                .btn-back:hover { background:rgba(255,255,255,0.65); }
+
+                .section-card {
+                    background:rgba(255,255,255,0.45); border:1px solid rgba(200,140,80,0.12);
+                    border-radius:18px; padding:1.75rem;
+                    animation:slideUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+                }
+                .contact-box {
+                    margin-top:1.25rem; padding:0.875rem 1rem; border-radius:10px;
+                    background:rgba(255,255,255,0.35); border:1px solid rgba(200,140,80,0.12);
+                }
+
+                /* ── RESPONSIVE MOBILE ── */
+                .ck-layout {
+                    display: grid;
+                    grid-template-columns: 1fr 320px;
+                    gap: 1.25rem;
+                    align-items: start;
+                }
+                .ck-resumen {
+                    background:rgba(255,255,255,0.45);
+                    border:1px solid rgba(200,140,80,0.12);
+                    border-radius:16px;
+                    padding:1.35rem;
+                    position:sticky;
+                    top:76px;
+                    animation:slideUp 0.4s cubic-bezier(0.16,1,0.3,1) 0.05s both;
+                }
+                .ck-form-grid-2 {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 0.875rem;
+                    margin-bottom: 0.875rem;
+                }
+
+                @media (max-width: 767px) {
+                    .ck-layout {
+                        grid-template-columns: 1fr;
+                        gap: 1rem;
+                    }
+                    .ck-resumen {
+                        position: static;
+                        order: -1;
+                        padding: 1rem;
+                        border-radius: 14px;
+                    }
+                    .ck-form-grid-2 {
+                        grid-template-columns: 1fr;
+                    }
+                    .section-card {
+                        padding: 1.25rem;
+                        border-radius: 14px;
+                    }
+                    .paso-line {
+                        width: 40px;
+                    }
+                    .btn-nav {
+                        padding: 0.75rem 1.1rem;
+                        font-size: 0.82rem;
+                        flex: 1;
+                        text-align: center;
+                    }
+                    .ck-btn-row {
+                        flex-direction: row;
+                    }
+                }
+
+                @media (max-width: 400px) {
+                    .paso-line { width: 28px; }
+                }
             `}</style>
 
-            <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '2.5rem 1.5rem 4rem' }}>
-                <h1 style={{ fontSize: '1.8rem', fontWeight: '300', color: '#2d1a08', letterSpacing: '-0.04em', marginBottom: '0.4rem' }}>
-                    Finalizar compra
-                </h1>
-                <p style={{ fontSize: '0.85rem', color: 'rgba(150,80,20,0.6)', marginBottom: '2.5rem' }}>
-                    Completa tu pedido en pocos pasos
-                </p>
+            <div style={{maxWidth:'1060px',margin:'0 auto',padding:'2rem 1rem 4rem'}}>
+                <div style={{marginBottom:'1.75rem',animation:'slideUp 0.4s cubic-bezier(0.16,1,0.3,1) both'}}>
+                    <h1 style={{fontSize:'1.5rem',fontWeight:'300',color:'#2d1a08',letterSpacing:'-0.04em',marginBottom:'0.25rem'}}>
+                        Finalizar compra
+                    </h1>
+                    <p style={{fontSize:'0.82rem',color:'rgba(150,80,20,0.55)'}}>Completa tu pedido en dos pasos</p>
+                </div>
 
                 {/* Indicador de pasos */}
                 <div className="paso-indicator">
-                    {['Envío', 'Pago'].map((label, i) => (
+                    {['Datos de envío', 'Pago'].map((label, i) => (
                         <div key={i} className="paso-step">
-                            {i > 0 && <div className={`paso-line${paso > i ? ' done' : ''}`} />}
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
-                                <div className={`paso-circle${paso > i + 1 ? ' done' : paso === i + 1 ? ' active' : ' pending'}`}>
-                                    {paso > i + 1
-                                        ? <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                                        : i + 1
+                            {i > 0 && <div className={`paso-line${paso > i ? ' done' : ''}`}/>}
+                            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'0.3rem'}}>
+                                <div className={`paso-circle${paso > i+1 ? ' done' : paso === i+1 ? ' active' : ' pending'}`}>
+                                    {paso > i+1
+                                        ? <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                        : i+1
                                     }
                                 </div>
-                                <span style={{ fontSize: '0.7rem', fontWeight: '600', color: paso === i + 1 ? 'rgba(185,28,28,0.8)' : 'rgba(150,80,20,0.45)', letterSpacing: '0.04em' }}>
+                                <span style={{fontSize:'0.68rem',fontWeight:'500',letterSpacing:'0.02em',
+                                    color:paso===i+1?'rgba(185,28,28,0.8)':'rgba(150,80,20,0.4)'}}>
                                     {label}
                                 </span>
                             </div>
@@ -234,85 +286,82 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                     ))}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '1.5rem', alignItems: 'start' }}>
+                <div className="ck-layout">
 
                     {/* Panel principal */}
-                    <div style={{ animation: 'slideUp 0.4s cubic-bezier(0.16,1,0.3,1) both' }}>
+                    <div>
 
-                        {/* ── PASO 1: DATOS DE ENVÍO ── */}
+                        {/* ── PASO 1: ENVÍO ── */}
                         {paso === 1 && (
-                            <div className="ck-glass" style={{ padding: '2rem' }}>
-                                <h2 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#2d1a08', marginBottom: '1.75rem', letterSpacing: '-0.02em' }}>
-                                    📦 Datos de envío
+                            <div className="section-card">
+                                <h2 style={{fontSize:'0.88rem',fontWeight:'500',color:'#2d1a08',marginBottom:'1.5rem',letterSpacing:'-0.01em'}}>
+                                    Datos de envío
                                 </h2>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div className="ck-form-grid-2">
                                     <div>
                                         <label className="ck-label">Nombre completo</label>
                                         <input className="ck-input" value={form.nombre_receptor}
                                                onChange={(e) => set('nombre_receptor', e.target.value)}
-                                               placeholder="¿A nombre de quién?" />
+                                               placeholder="¿A nombre de quién?"/>
                                         {errors.nombre_receptor && <p className="ck-error">{errors.nombre_receptor}</p>}
                                     </div>
                                     <div>
                                         <label className="ck-label">Teléfono de contacto</label>
                                         <input className="ck-input" type="tel" value={form.telefono_receptor}
                                                onChange={(e) => set('telefono_receptor', e.target.value)}
-                                               placeholder="3001234567" />
+                                               placeholder="3001234567"/>
                                         {errors.telefono_receptor && <p className="ck-error">{errors.telefono_receptor}</p>}
                                     </div>
                                 </div>
 
-                                <div style={{ marginBottom: '1rem' }}>
+                                <div style={{marginBottom:'0.875rem'}}>
                                     <label className="ck-label">Ciudad</label>
                                     <input className="ck-input" value={form.ciudad}
                                            onChange={(e) => set('ciudad', e.target.value)}
-                                           placeholder="Ej: Bogotá, Medellín, Cali..." />
+                                           placeholder="Bogotá, Medellín, Cali..."/>
                                     {errors.ciudad && <p className="ck-error">{errors.ciudad}</p>}
                                 </div>
 
-                                <div style={{ marginBottom: '1rem' }}>
+                                <div style={{marginBottom:'0.875rem'}}>
                                     <label className="ck-label">Dirección de entrega</label>
                                     <input className="ck-input" value={form.direccion}
                                            onChange={(e) => set('direccion', e.target.value)}
-                                           placeholder="Calle, número, barrio..." />
+                                           placeholder="Calle, número, barrio..."/>
                                     {errors.direccion && <p className="ck-error">{errors.direccion}</p>}
                                 </div>
 
-                                <div>
+                                <div style={{marginBottom:'1.5rem'}}>
                                     <label className="ck-label">
-                                        Indicaciones adicionales{' '}
-                                        <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 'normal', color: 'rgba(150,80,20,0.45)' }}>
+                                        Indicaciones adicionales
+                                        <span style={{fontWeight:400,textTransform:'none',letterSpacing:'normal',color:'rgba(150,80,20,0.35)',marginLeft:'0.35rem'}}>
                                             — opcional
                                         </span>
                                     </label>
                                     <textarea className="ck-input" value={form.indicaciones}
                                               onChange={(e) => set('indicaciones', e.target.value)}
                                               placeholder="Apartamento, torre, referencias del lugar..."
-                                              rows={3} style={{ resize: 'vertical', minHeight: '80px' }} />
+                                              rows={3} style={{resize:'vertical',minHeight:'80px'}}/>
                                 </div>
 
                                 {(telefonos.length > 0 || correos.length > 0) && (
-                                    <div style={{
-                                        marginTop: '1.25rem', padding: '0.875rem 1rem', borderRadius: '14px',
-                                        background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.18)',
-                                    }}>
-                                        <p style={{ fontSize: '0.72rem', fontWeight: '700', color: 'rgba(29,78,216,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
-                                            ¿Dudas? Contáctanos:
+                                    <div className="contact-box">
+                                        <p style={{fontSize:'0.68rem',fontWeight:'500',color:'rgba(150,80,20,0.45)',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'0.4rem'}}>
+                                            Dudas o consultas
                                         </p>
                                         {telefonos.map((t) => (
-                                            <p key={t} style={{ fontSize: '0.8rem', color: 'rgba(29,78,216,0.8)', margin: '0 0 0.18rem' }}>📞 {t}</p>
+                                            <p key={t} style={{fontSize:'0.78rem',color:'rgba(120,60,10,0.65)',margin:'0 0 0.15rem'}}>{t}</p>
                                         ))}
                                         {correos.map((c) => (
-                                            <p key={c} style={{ fontSize: '0.8rem', color: 'rgba(29,78,216,0.8)', margin: '0 0 0.18rem' }}>✉️ {c}</p>
+                                            <p key={c} style={{fontSize:'0.78rem',color:'rgba(120,60,10,0.65)',margin:'0 0 0.15rem'}}>{c}</p>
                                         ))}
                                     </div>
                                 )}
 
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.75rem' }}>
+                                <div style={{display:'flex',justifyContent:'flex-end',marginTop:'1.5rem'}}>
                                     <button className="btn-nav btn-next"
                                             onClick={() => { if (validarPaso1()) setPaso(2); }}>
-                                        Continuar al pago →
+                                        Continuar al pago
                                     </button>
                                 </div>
                             </div>
@@ -320,179 +369,168 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
 
                         {/* ── PASO 2: PAGO ── */}
                         {paso === 2 && (
-                            <div className="ck-glass" style={{ padding: '2rem' }}>
-                                <h2 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#2d1a08', marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>
-                                    💳 Método de pago
+                            <div className="section-card">
+                                <h2 style={{fontSize:'0.88rem',fontWeight:'500',color:'#2d1a08',marginBottom:'0.3rem',letterSpacing:'-0.01em'}}>
+                                    Método de pago
                                 </h2>
-                                <p style={{ fontSize: '0.82rem', color: 'rgba(150,80,20,0.6)', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+                                <p style={{fontSize:'0.78rem',color:'rgba(150,80,20,0.55)',marginBottom:'1.25rem',lineHeight:'1.6'}}>
                                     Selecciona cómo realizarás la transferencia y adjunta el comprobante.
                                 </p>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.75rem' }}>
+                                <div style={{marginBottom:'1.5rem'}}>
                                     {metodosPago.map((m) => {
-                                        const estilo = METODO_ESTILOS[m.id] ?? { emoji: '💰', color: 'rgba(120,60,10,0.8)', bg: 'rgba(200,140,80,0.07)', border: 'rgba(200,140,80,0.28)' };
-                                        const sel = form.metodo_pago === m.id;
+                                        const estilo = METODO_ESTILOS[m.id] ?? { color:'rgba(120,60,10,0.8)', bg:'rgba(200,140,80,0.05)', border:'rgba(200,140,80,0.2)' };
+                                        const sel    = form.metodo_pago === m.id;
                                         return (
-                                            <div
-                                                key={m.id}
-                                                className="metodo-card"
-                                                style={sel ? { background: estilo.bg, borderColor: estilo.border } : {}}
-                                                onClick={() => set('metodo_pago', m.id)}
-                                            >
-                                                <div
-                                                    className="radio-circle"
-                                                    style={sel ? { borderColor: estilo.color, background: estilo.color } : {}}
-                                                >
-                                                    {sel && <div className="radio-dot" />}
+                                            <div key={m.id} className="metodo-card"
+                                                 style={sel ? { background:estilo.bg, borderColor:estilo.border } : {}}
+                                                 onClick={() => set('metodo_pago', m.id)}>
+                                                <div className="radio-circle"
+                                                     style={sel ? { borderColor:estilo.color, background:estilo.color } : {}}>
+                                                    {sel && <div className="radio-dot"/>}
                                                 </div>
-                                                <div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
-                                                        <span style={{ fontSize: '1rem' }}>{estilo.emoji}</span>
-                                                        <span style={{ fontSize: '0.88rem', fontWeight: '700', color: sel ? estilo.color : '#2d1a08' }}>
-                                                            {m.label}
-                                                        </span>
-                                                    </div>
-                                                    <p style={{ fontSize: '0.74rem', color: 'rgba(150,80,20,0.6)', margin: 0, lineHeight: '1.4' }}>
+                                                <div style={{flex:1}}>
+                                                    <p style={{fontSize:'0.84rem',fontWeight:'500',color:sel?estilo.color:'#2d1a08',margin:'0 0 0.15rem',letterSpacing:'-0.01em'}}>
+                                                        {m.label}
+                                                    </p>
+                                                    <p style={{fontSize:'0.74rem',color:'rgba(150,80,20,0.55)',margin:0}}>
                                                         {m.numero || 'Sin número configurado'}
                                                     </p>
                                                 </div>
                                                 {m.qr_url && (
                                                     <img src={m.qr_url} alt="QR"
-                                                         style={{ width: '38px', height: '38px', borderRadius: '7px', objectFit: 'cover', flexShrink: 0, marginLeft: 'auto' }} />
+                                                         style={{width:'36px',height:'36px',borderRadius:'7px',objectFit:'cover',flexShrink:0}}/>
                                                 )}
                                             </div>
                                         );
                                     })}
+                                    {errors.metodo_pago && <p className="ck-error">{errors.metodo_pago}</p>}
                                 </div>
-                                {errors.metodo_pago && <p className="ck-error" style={{ marginBottom: '1rem' }}>{errors.metodo_pago}</p>}
 
                                 {metodoSeleccionado && (
                                     <div style={{
-                                        padding: '1rem 1.25rem', borderRadius: '14px', marginBottom: '1.75rem',
-                                        background: estiloSeleccionado.bg,
-                                        border: `1px solid ${estiloSeleccionado.border}`,
+                                        padding:'1rem',borderRadius:'12px',marginBottom:'1.5rem',
+                                        background:estiloSeleccionado.bg,border:`1px solid ${estiloSeleccionado.border}`,
                                     }}>
-                                        <p style={{ fontSize: '0.8rem', fontWeight: '600', color: estiloSeleccionado.color, marginBottom: '0.3rem' }}>
-                                            {estiloSeleccionado.emoji} Realiza la transferencia a:
+                                        <p style={{fontSize:'0.72rem',fontWeight:'500',color:estiloSeleccionado.color,marginBottom:'0.3rem',textTransform:'uppercase',letterSpacing:'0.06em'}}>
+                                            Realiza la transferencia a
                                         </p>
-                                        <p style={{ fontSize: '0.9rem', fontWeight: '700', color: '#2d1a08', margin: '0 0 0.2rem' }}>
+                                        <p style={{fontSize:'0.95rem',fontWeight:'600',color:'#2d1a08',margin:'0 0 0.2rem',letterSpacing:'-0.02em'}}>
                                             {metodoSeleccionado.numero}
                                         </p>
                                         {metodoSeleccionado.qr_url && (
-                                            <div style={{ marginTop: '0.75rem' }}>
-                                                <p style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.55)', marginBottom: '0.4rem' }}>QR de pago:</p>
-                                                <img src={metodoSeleccionado.qr_url} alt="QR de pago"
-                                                     style={{ width: '110px', height: '110px', borderRadius: '10px', objectFit: 'contain', border: '1px solid rgba(200,140,80,0.2)' }} />
+                                            <div style={{marginTop:'0.75rem'}}>
+                                                <p style={{fontSize:'0.7rem',color:'rgba(150,80,20,0.5)',marginBottom:'0.35rem'}}>Código QR de pago</p>
+                                                <img src={metodoSeleccionado.qr_url} alt="QR"
+                                                     style={{width:'100px',height:'100px',borderRadius:'9px',objectFit:'contain',border:'1px solid rgba(200,140,80,0.15)'}}/>
                                             </div>
                                         )}
-                                        <p style={{ fontSize: '0.78rem', color: 'rgba(120,60,10,0.7)', margin: metodoSeleccionado.qr_url ? '0.75rem 0 0' : '0' }}>
-                                            Monto exacto: <strong>{formatCOP(total)}</strong>
+                                        <p style={{fontSize:'0.78rem',color:'rgba(120,60,10,0.65)',margin:metodoSeleccionado.qr_url?'0.75rem 0 0':'0'}}>
+                                            Monto exacto: <strong style={{fontWeight:'600'}}>{formatCOP(total)}</strong>
                                         </p>
                                     </div>
                                 )}
 
                                 {(telefonos.length > 0 || correos.length > 0) && (
-                                    <div style={{
-                                        padding: '0.875rem 1rem', borderRadius: '14px', marginBottom: '1.5rem',
-                                        background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.18)',
-                                    }}>
-                                        <p style={{ fontSize: '0.72rem', fontWeight: '700', color: 'rgba(29,78,216,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
-                                            ¿Inquietudes? Escríbenos:
+                                    <div className="contact-box" style={{marginBottom:'1.5rem'}}>
+                                        <p style={{fontSize:'0.68rem',fontWeight:'500',color:'rgba(150,80,20,0.45)',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'0.4rem'}}>
+                                            Dudas o consultas
                                         </p>
                                         {telefonos.map((t) => (
-                                            <p key={t} style={{ fontSize: '0.8rem', color: 'rgba(29,78,216,0.8)', margin: '0 0 0.18rem' }}>📞 {t}</p>
+                                            <p key={t} style={{fontSize:'0.78rem',color:'rgba(120,60,10,0.65)',margin:'0 0 0.15rem'}}>{t}</p>
                                         ))}
                                         {correos.map((c) => (
-                                            <p key={c} style={{ fontSize: '0.8rem', color: 'rgba(29,78,216,0.8)', margin: '0 0 0.18rem' }}>✉️ {c}</p>
+                                            <p key={c} style={{fontSize:'0.78rem',color:'rgba(120,60,10,0.65)',margin:'0 0 0.15rem'}}>{c}</p>
                                         ))}
                                     </div>
                                 )}
 
-                                <label className="ck-label">Comprobante de pago</label>
-                                <div
-                                    className={`upload-zone${form.comprobante ? ' has-file' : ''}`}
-                                    onClick={() => document.getElementById('comprobante-input').click()}
-                                >
-                                    <input
-                                        id="comprobante-input" type="file"
-                                        accept="image/*,application/pdf"
-                                        style={{ display: 'none' }}
-                                        onChange={handleComprobante}
-                                    />
-                                    {preview ? (
-                                        <div>
-                                            <img src={preview} alt="Comprobante"
-                                                 style={{ maxHeight: '160px', borderRadius: '10px', objectFit: 'contain', marginBottom: '0.75rem' }} />
-                                            <p style={{ fontSize: '0.8rem', color: 'rgba(4,120,87,0.8)', fontWeight: '600' }}>
-                                                ✓ {form.comprobante.name}
-                                            </p>
-                                            <p style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.5)', marginTop: '0.25rem' }}>
-                                                Clic para cambiar
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div>
-                                            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📸</div>
-                                            <p style={{ fontSize: '0.88rem', fontWeight: '600', color: 'rgba(120,60,10,0.75)', marginBottom: '0.3rem' }}>
-                                                Adjuntar captura del comprobante
-                                            </p>
-                                            <p style={{ fontSize: '0.76rem', color: 'rgba(150,80,20,0.5)' }}>
-                                                JPG, PNG, WEBP o PDF · máx. 5 MB
-                                            </p>
-                                        </div>
-                                    )}
+                                <div style={{marginBottom:'0.4rem'}}>
+                                    <label className="ck-label">Comprobante de pago</label>
+                                    <div className={`upload-zone${form.comprobante ? ' has-file' : ''}`}
+                                         onClick={() => document.getElementById('comprobante-input').click()}>
+                                        <input id="comprobante-input" type="file"
+                                               accept="image/*,application/pdf"
+                                               style={{display:'none'}}
+                                               onChange={handleComprobante}/>
+                                        {preview ? (
+                                            <div>
+                                                <img src={preview} alt="Comprobante"
+                                                     style={{maxHeight:'140px',borderRadius:'8px',objectFit:'contain',marginBottom:'0.65rem'}}/>
+                                                <p style={{fontSize:'0.78rem',color:'rgba(4,120,87,0.8)',fontWeight:'500'}}>
+                                                    {form.comprobante.name}
+                                                </p>
+                                                <p style={{fontSize:'0.7rem',color:'rgba(150,80,20,0.45)',marginTop:'0.2rem'}}>
+                                                    Clic para cambiar
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <div style={{width:'40px',height:'40px',borderRadius:'10px',margin:'0 auto 0.875rem',
+                                                    background:'rgba(200,140,80,0.07)',border:'1px solid rgba(200,140,80,0.15)',
+                                                    display:'flex',alignItems:'center',justifyContent:'center'}}>
+                                                    <svg width="18" height="18" fill="none" stroke="rgba(150,80,20,0.45)" strokeWidth="1.5" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                                    </svg>
+                                                </div>
+                                                <p style={{fontSize:'0.84rem',fontWeight:'500',color:'rgba(120,60,10,0.65)',marginBottom:'0.25rem',letterSpacing:'-0.01em'}}>
+                                                    Adjuntar comprobante de pago
+                                                </p>
+                                                <p style={{fontSize:'0.73rem',color:'rgba(150,80,20,0.45)'}}>
+                                                    JPG, PNG, WEBP o PDF · máx. 5 MB
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {errors.comprobante && <p className="ck-error" style={{marginTop:'0.35rem'}}>{errors.comprobante}</p>}
                                 </div>
-                                {errors.comprobante && <p className="ck-error" style={{ marginTop: '0.4rem' }}>{errors.comprobante}</p>}
 
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.75rem', gap: '0.75rem' }}>
+                                <div className="ck-btn-row" style={{display:'flex',justifyContent:'space-between',marginTop:'1.5rem',gap:'0.75rem'}}>
                                     <button className="btn-nav btn-back" onClick={() => { setPaso(1); setErrors({}); }}>
-                                        ← Volver
+                                        Volver
                                     </button>
                                     <button className="btn-nav btn-next"
-                                            onClick={handleSubmit}
-                                            disabled={processing}>
-                                        {processing ? 'Enviando pedido...' : 'Confirmar pedido →'}
+                                            onClick={handleSubmit} disabled={processing}>
+                                        {processing ? 'Enviando pedido...' : 'Confirmar pedido'}
                                     </button>
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    {/* Resumen del pedido */}
-                    <div className="ck-glass" style={{ padding: '1.5rem', position: 'sticky', top: '80px' }}>
-                        <h3 style={{ fontSize: '0.9rem', fontWeight: '700', color: '#2d1a08', letterSpacing: '-0.01em', marginBottom: '1.25rem' }}>
-                            Resumen del pedido
-                        </h3>
+                    {/* Resumen lateral */}
+                    <div className="ck-resumen">
+                        <p style={{fontSize:'0.8rem',fontWeight:'500',color:'#2d1a08',marginBottom:'1.1rem',letterSpacing:'-0.01em'}}>
+                            Resumen
+                        </p>
 
-                        <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '1rem' }}>
+                        <div style={{maxHeight:'280px',overflowY:'auto',marginBottom:'1rem'}}>
                             {carrito.map((item) => (
                                 <div key={item.id} style={{
-                                    display: 'flex', gap: '0.75rem', padding: '0.75rem 0',
-                                    borderBottom: '1px solid rgba(200,140,80,0.1)',
+                                    display:'flex',gap:'0.65rem',padding:'0.65rem 0',
+                                    borderBottom:'1px solid rgba(200,140,80,0.08)',
                                 }}>
-                                    {/* ✅ CORREGIDO: compatible con URL completa o ruta relativa */}
                                     {item.imagen
                                         ? <img src={imgSrc(item.imagen)} alt={item.nombre}
-                                               style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
-                                        : <div style={{
-                                            width: '48px', height: '48px', borderRadius: '10px',
-                                            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(200,140,80,0.15)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: '1.2rem', flexShrink: 0,
-                                        }}>👔</div>
+                                               style={{width:'44px',height:'44px',borderRadius:'8px',objectFit:'cover',flexShrink:0}}/>
+                                        : <div style={{width:'44px',height:'44px',borderRadius:'8px',
+                                            background:'rgba(200,140,80,0.06)',border:'1px solid rgba(200,140,80,0.1)',
+                                            display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                            <svg width="16" height="16" fill="none" stroke="rgba(150,80,20,0.3)" strokeWidth="1.5" viewBox="0 0 24 24">
+                                                <rect x="3" y="3" width="18" height="18" rx="3"/><path strokeLinecap="round" d="M3 9h18"/>
+                                            </svg>
+                                        </div>
                                     }
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <p style={{
-                                            fontSize: '0.82rem', fontWeight: '600', color: '#2d1a08', margin: '0 0 0.2rem',
-                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                        }}>
+                                    <div style={{flex:1,minWidth:0}}>
+                                        <p style={{fontSize:'0.78rem',fontWeight:'500',color:'#2d1a08',margin:'0 0 0.15rem',
+                                            overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',letterSpacing:'-0.01em'}}>
                                             {item.nombre}
                                         </p>
-                                        <p style={{ fontSize: '0.75rem', color: 'rgba(150,80,20,0.6)', margin: 0 }}>
+                                        <p style={{fontSize:'0.72rem',color:'rgba(150,80,20,0.5)',margin:0}}>
                                             {item.cantidad} × {formatCOP(item.precio)}
                                         </p>
                                     </div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: '700', color: '#2d1a08', flexShrink: 0 }}>
+                                    <p style={{fontSize:'0.82rem',fontWeight:'600',color:'#2d1a08',flexShrink:0,letterSpacing:'-0.02em'}}>
                                         {formatCOP(item.precio * item.cantidad)}
                                     </p>
                                 </div>
@@ -500,35 +538,37 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                         </div>
 
                         <div style={{
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            padding: '1rem', borderRadius: '14px',
-                            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(200,140,80,0.12)',
-                            marginBottom: '1rem',
+                            display:'flex',justifyContent:'space-between',alignItems:'center',
+                            padding:'0.75rem 0',
+                            borderTop:'1px solid rgba(200,140,80,0.1)',borderBottom:'1px solid rgba(200,140,80,0.1)',
+                            marginBottom:'1rem',
                         }}>
-                            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'rgba(120,60,10,0.8)' }}>Total</span>
-                            <span style={{ fontSize: '1.3rem', fontWeight: '700', color: '#2d1a08', letterSpacing: '-0.03em' }}>
+                            <span style={{fontSize:'0.82rem',color:'rgba(120,60,10,0.65)'}}>Total</span>
+                            <span style={{fontSize:'1.2rem',fontWeight:'600',color:'#2d1a08',letterSpacing:'-0.03em'}}>
                                 {formatCOP(total)}
                             </span>
                         </div>
 
                         {paso === 2 && form.nombre_receptor && (
-                            <div style={{
-                                padding: '0.875rem 1rem', borderRadius: '14px',
-                                background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)',
-                            }}>
-                                <p style={{ fontSize: '0.72rem', fontWeight: '700', color: 'rgba(4,120,87,0.7)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                            <div style={{padding:'0.75rem',borderRadius:'10px',
+                                background:'rgba(16,185,129,0.05)',border:'1px solid rgba(16,185,129,0.15)',
+                                marginBottom:'0.875rem'}}>
+                                <p style={{fontSize:'0.68rem',fontWeight:'500',color:'rgba(4,120,87,0.6)',textTransform:'uppercase',letterSpacing:'0.07em',margin:'0 0 0.3rem'}}>
                                     Envío a
                                 </p>
-                                <p style={{ fontSize: '0.82rem', fontWeight: '600', color: 'rgba(4,120,87,0.85)', margin: '0 0 0.15rem' }}>{form.nombre_receptor}</p>
-                                <p style={{ fontSize: '0.78rem', color: 'rgba(4,120,87,0.7)', margin: 0, lineHeight: '1.4' }}>
+                                <p style={{fontSize:'0.8rem',fontWeight:'500',color:'rgba(4,120,87,0.8)',margin:'0 0 0.12rem',letterSpacing:'-0.01em'}}>
+                                    {form.nombre_receptor}
+                                </p>
+                                <p style={{fontSize:'0.75rem',color:'rgba(4,120,87,0.65)',margin:0,lineHeight:'1.4'}}>
                                     {form.direccion}, {form.ciudad}
                                 </p>
                             </div>
                         )}
 
-                        <div style={{ marginTop: '1rem', padding: '0.75rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)' }}>
-                            {['🚚 Envío a todo Colombia', '📸 Adjunta tu comprobante', '✅ Revisamos en máx. 24h'].map((t, i) => (
-                                <p key={i} style={{ fontSize: '0.74rem', color: 'rgba(150,80,20,0.55)', margin: i < 2 ? '0 0 0.3rem' : 0, lineHeight: '1.5' }}>
+                        <div style={{display:'flex',flexDirection:'column',gap:'0.3rem'}}>
+                            {['Envío a todo Colombia', 'Pago por transferencia', 'Revisión en máx. 24h'].map((t, i) => (
+                                <p key={i} style={{fontSize:'0.72rem',color:'rgba(150,80,20,0.45)',margin:0,lineHeight:'1.5',display:'flex',alignItems:'center',gap:'0.4rem'}}>
+                                    <span style={{width:'4px',height:'4px',borderRadius:'50%',background:'rgba(150,80,20,0.25)',flexShrink:0,display:'inline-block'}}/>
                                     {t}
                                 </p>
                             ))}

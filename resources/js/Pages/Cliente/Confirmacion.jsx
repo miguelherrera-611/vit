@@ -7,115 +7,94 @@ const formatCOP = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', cur
 export default function Confirmacion({ pedido }) {
     return (
         <ClienteLayout>
-            <Head title="Pedido recibido — VitaliStore" />
+            <Head title="Pedido recibido — VitaliStore"/>
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-                @keyframes scaleIn { from{opacity:0;transform:scale(0.85)} to{opacity:1;transform:scale(1)} }
-                @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-                @keyframes pulse  { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+                * { box-sizing: border-box; }
+                @keyframes slideUp  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+                @keyframes scaleIn  { from{opacity:0;transform:scale(0.88)} to{opacity:1;transform:scale(1)} }
 
+                .conf-wrap { max-width:540px; margin:0 auto; padding:2.5rem 1.25rem 4rem; text-align:center; }
                 .conf-card {
-                    background: rgba(255,255,255,0.04);
-                    backdrop-filter: blur(22px) saturate(150%);
-                    -webkit-backdrop-filter: blur(22px) saturate(150%);
-                    border-radius: 28px; border: 1px solid rgba(255,255,255,0.65);
-                    box-shadow: 0 20px 60px rgba(180,90,20,0.1), 0 4px 14px rgba(180,90,20,0.05),
-                        inset 0 1.5px 0 rgba(255,255,255,0.9);
-                    overflow: hidden; position: relative;
-                    animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.1s both;
+                    background:rgba(255,255,255,0.5); border:1px solid rgba(200,140,80,0.12);
+                    border-radius:14px; padding:1.25rem; margin-bottom:0.75rem;
+                    animation:slideUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.1s both;
+                    text-align:left;
                 }
-                .conf-card::before {
-                    content:''; position:absolute; top:0; left:0; right:0; height:1px;
-                    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.95) 25%,rgba(255,255,255,0.95) 75%,transparent);
-                    pointer-events:none;
+                .summary-grid {
+                    display:grid; grid-template-columns:1fr 1fr; gap:0.65rem;
                 }
-
-                .timeline-item {
-                    display:flex; gap:1rem; padding:1rem 0;
-                    border-bottom:1px solid rgba(200,140,80,0.08);
+                .summary-item {
+                    padding:0.6rem 0.8rem; border-radius:9px;
+                    background:rgba(255,255,255,0.45); border:1px solid rgba(200,140,80,0.08);
                 }
-                .timeline-item:last-child { border-bottom:none; }
-                .timeline-icon {
-                    width:40px; height:40px; border-radius:12px; flex-shrink:0;
-                    display:flex; align-items:center; justify-content:center; font-size:1.2rem;
+                .step-row { display:flex; gap:0.875rem; padding:0.8rem 0; align-items:flex-start; }
+                .step-row + .step-row { border-top:1px solid rgba(200,140,80,0.08); }
+                .step-icon {
+                    width:32px; height:32px; border-radius:8px; flex-shrink:0;
+                    display:flex; align-items:center; justify-content:center;
                 }
 
-                .btn-primary {
-                    display:inline-block; padding:0.85rem 2rem; border-radius:14px;
-                    font-family:'Inter',sans-serif; font-size:0.9rem; font-weight:600;
-                    text-decoration:none; transition:all 0.22s ease;
-                    background:rgba(220,38,38,0.09); border:1px solid rgba(220,38,38,0.35);
-                    color:rgba(185,28,28,0.95);
-                    box-shadow:0 6px 20px rgba(220,38,38,0.12),inset 0 1px 0 rgba(255,120,120,0.2);
+                @media (max-width:640px) {
+                    .conf-wrap { padding:1.75rem 1rem 3rem; }
+                    .summary-grid { grid-template-columns:1fr 1fr; }
                 }
-                .btn-primary:hover { background:rgba(220,38,38,0.15); transform:translateY(-1px); }
-
-                .btn-ghost {
-                    display:inline-block; padding:0.85rem 1.75rem; border-radius:14px;
-                    font-family:'Inter',sans-serif; font-size:0.9rem; font-weight:500;
-                    text-decoration:none; transition:all 0.2s ease;
-                    background:rgba(255,255,255,0.06); border:1px solid rgba(200,140,80,0.28);
-                    color:rgba(120,60,10,0.75);
+                @media (max-width:360px) {
+                    .summary-grid { grid-template-columns:1fr; }
                 }
-                .btn-ghost:hover { background:rgba(255,255,255,0.14); color:rgba(90,40,5,0.9); }
             `}</style>
 
-            <div style={{maxWidth:'620px',margin:'0 auto',padding:'3rem 1.5rem 5rem',textAlign:'center'}}>
+            <div className="conf-wrap">
 
-                {/* Icono de éxito */}
+                {/* Check */}
                 <div style={{
-                    width:'90px',height:'90px',borderRadius:'50%',margin:'0 auto 1.75rem',
-                    background:'rgba(16,185,129,0.1)',border:'2px solid rgba(16,185,129,0.3)',
+                    width:'50px',height:'50px',borderRadius:'13px',margin:'0 auto 1.5rem',
+                    background:'rgba(16,185,129,0.08)',border:'1px solid rgba(16,185,129,0.2)',
                     display:'flex',alignItems:'center',justifyContent:'center',
-                    animation:'scaleIn 0.5s cubic-bezier(0.16,1,0.3,1) both, pulse 2.5s ease-in-out 0.6s infinite',
-                    boxShadow:'0 12px 36px rgba(16,185,129,0.15)',
+                    animation:'scaleIn 0.4s cubic-bezier(0.16,1,0.3,1) both',
                 }}>
-                    <svg width="40" height="40" fill="none" stroke="rgba(4,120,87,0.9)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                    <svg width="20" height="20" fill="none" stroke="rgba(4,120,87,0.85)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                         <path d="M5 13l4 4L19 7"/>
                     </svg>
                 </div>
 
-                <p style={{fontSize:'0.72rem',fontWeight:'700',color:'rgba(4,120,87,0.7)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'0.6rem'}}>
-                    ¡Pedido recibido!
+                <p style={{fontSize:'0.68rem',fontWeight:'500',color:'rgba(4,120,87,0.7)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.45rem'}}>
+                    Pedido recibido
                 </p>
-                <h1 style={{fontSize:'2rem',fontWeight:'300',color:'#2d1a08',letterSpacing:'-0.04em',marginBottom:'0.6rem',lineHeight:'1.1'}}>
-                    Tu pedido está en revisión
+                <h1 style={{fontSize:'clamp(1.4rem,4vw,1.75rem)',fontWeight:'300',color:'#2d1a08',
+                    letterSpacing:'-0.04em',marginBottom:'0.45rem',lineHeight:'1.2'}}>
+                    En revisión
                 </h1>
-                <p style={{fontSize:'0.9rem',color:'rgba(150,80,20,0.65)',marginBottom:'0.5rem',lineHeight:'1.6'}}>
+                <p style={{fontSize:'0.82rem',color:'rgba(150,80,20,0.6)',marginBottom:'0.35rem',lineHeight:'1.6'}}>
                     Hemos recibido tu comprobante y lo estamos verificando.
                 </p>
-                <p style={{fontSize:'0.85rem',color:'rgba(150,80,20,0.5)',marginBottom:'2.5rem'}}>
-                    Número de pedido: <strong style={{color:'rgba(185,28,28,0.8)'}}>{pedido.numero_pedido}</strong>
+                <p style={{fontSize:'0.78rem',color:'rgba(150,80,20,0.5)',marginBottom:'2rem'}}>
+                    Pedido: <strong style={{color:'rgba(185,28,28,0.8)',fontWeight:'500'}}>{pedido.numero_pedido}</strong>
                 </p>
 
-                {/* Card de detalles */}
-                <div className="conf-card" style={{padding:'1.75rem',marginBottom:'2rem',textAlign:'left'}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.5rem'}}>
-                        <h3 style={{fontSize:'0.9rem',fontWeight:'700',color:'#2d1a08',margin:0}}>Resumen</h3>
-                        <div style={{
-                            padding:'0.3rem 0.8rem',borderRadius:'20px',
-                            background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.3)',
-                            fontSize:'0.75rem',fontWeight:'700',color:'rgba(146,64,14,0.85)',
-                        }}>
-                            🕐 En revisión
-                        </div>
+                {/* Resumen */}
+                <div className="conf-card">
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.9rem'}}>
+                        <p style={{fontSize:'0.8rem',fontWeight:'500',color:'#2d1a08',margin:0,letterSpacing:'-0.01em'}}>Resumen</p>
+                        <span style={{padding:'0.16rem 0.55rem',borderRadius:'5px',fontSize:'0.7rem',fontWeight:'500',
+                            background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.22)',
+                            color:'rgba(146,64,14,0.85)'}}>
+                            En revisión
+                        </span>
                     </div>
-
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.875rem'}}>
+                    <div className="summary-grid">
                         {[
-                            { label:'Total pagado',    value: formatCOP(pedido.total)     },
-                            { label:'Método de pago',  value: pedido.metodo_pago          },
-                            { label:'Fecha del pedido',value: pedido.created_at           },
-                            { label:'Estado actual',   value: pedido.estado_label         },
+                            { label:'Total',  value:formatCOP(pedido.total)  },
+                            { label:'Método', value:pedido.metodo_pago       },
+                            { label:'Fecha',  value:pedido.created_at        },
+                            { label:'Estado', value:pedido.estado_label      },
                         ].map((item, i) => (
-                            <div key={i} style={{
-                                padding:'0.75rem',borderRadius:'12px',
-                                background:'rgba(255,255,255,0.04)',border:'1px solid rgba(200,140,80,0.1)',
-                            }}>
-                                <p style={{fontSize:'0.68rem',fontWeight:'700',color:'rgba(150,80,20,0.5)',textTransform:'uppercase',letterSpacing:'0.08em',margin:'0 0 0.2rem'}}>
+                            <div key={i} className="summary-item">
+                                <p style={{fontSize:'0.64rem',fontWeight:'500',color:'rgba(150,80,20,0.42)',
+                                    textTransform:'uppercase',letterSpacing:'0.06em',margin:'0 0 0.12rem'}}>
                                     {item.label}
                                 </p>
-                                <p style={{fontSize:'0.88rem',fontWeight:'600',color:'#2d1a08',margin:0}}>
+                                <p style={{fontSize:'0.82rem',fontWeight:'500',color:'#2d1a08',margin:0,letterSpacing:'-0.01em'}}>
                                     {item.value}
                                 </p>
                             </div>
@@ -123,33 +102,44 @@ export default function Confirmacion({ pedido }) {
                     </div>
                 </div>
 
-                {/* Timeline de qué sigue */}
-                <div className="conf-card" style={{padding:'1.5rem',marginBottom:'2.5rem',textAlign:'left'}}>
-                    <h3 style={{fontSize:'0.88rem',fontWeight:'700',color:'#2d1a08',marginBottom:'0.25rem'}}>¿Qué sigue?</h3>
-                    <p style={{fontSize:'0.78rem',color:'rgba(150,80,20,0.55)',marginBottom:'1.25rem'}}>
-                        Este proceso puede tardar máximo 24 horas.
+                {/* Proceso */}
+                <div className="conf-card">
+                    <p style={{fontSize:'0.8rem',fontWeight:'500',color:'#2d1a08',margin:'0 0 0.2rem',letterSpacing:'-0.01em'}}>
+                        Qué sigue
+                    </p>
+                    <p style={{fontSize:'0.72rem',color:'rgba(150,80,20,0.48)',marginBottom:'0.875rem'}}>
+                        Proceso de máximo 24 horas.
                     </p>
 
                     {[
-                        { icon:'📋', color:'rgba(245,158,11,0.1)', border:'rgba(245,158,11,0.25)',
-                            title:'Revisión del comprobante', desc:'Nuestro equipo verifica que el pago fue recibido correctamente.', done:true },
-                        { icon:'✅', color:'rgba(59,130,246,0.08)', border:'rgba(59,130,246,0.2)',
-                            title:'Aprobación del pedido', desc:'Una vez confirmado, preparamos tu pedido para el envío.', done:false },
-                        { icon:'🚚', color:'rgba(139,92,246,0.08)', border:'rgba(139,92,246,0.2)',
-                            title:'Envío en curso', desc:'Te notificaremos por correo cuando tu pedido esté en camino.', done:false },
-                        { icon:'📦', color:'rgba(16,185,129,0.08)', border:'rgba(16,185,129,0.2)',
-                            title:'Entrega y confirmación', desc:'Cuando recibas tu pedido, confírmalo desde "Mis pedidos".', done:false },
+                        { label:'Revisión del comprobante', desc:'Verificamos que el pago fue recibido.', active:true },
+                        { label:'Aprobación del pedido',    desc:'Una vez confirmado, preparamos tu pedido.' },
+                        { label:'Envío',                    desc:'Te notificaremos por correo cuando esté en camino.' },
+                        { label:'Entrega y confirmación',   desc:'Confirma la recepción desde "Mis pedidos".' },
                     ].map((step, i) => (
-                        <div key={i} className="timeline-item">
-                            <div className="timeline-icon" style={{background:step.color,border:`1px solid ${step.border}`}}>
-                                {step.icon}
+                        <div key={i} className="step-row">
+                            <div className="step-icon" style={{
+                                background:step.active?'rgba(245,158,11,0.08)':'rgba(200,140,80,0.04)',
+                                border:step.active?'1px solid rgba(245,158,11,0.2)':'1px solid rgba(200,140,80,0.1)',
+                            }}>
+                                {step.active ? (
+                                    <svg width="14" height="14" fill="none" stroke="rgba(146,64,14,0.7)" strokeWidth="1.8" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 8v4l2 2"/>
+                                    </svg>
+                                ) : (
+                                    <svg width="14" height="14" fill="none" stroke="rgba(150,80,20,0.25)" strokeWidth="1.8" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10"/>
+                                    </svg>
+                                )}
                             </div>
                             <div style={{flex:1}}>
-                                <p style={{fontSize:'0.85rem',fontWeight:'600',color: step.done ? '#2d1a08' : 'rgba(120,60,10,0.55)',margin:'0 0 0.2rem'}}>
-                                    {step.title}
-                                    {step.done && <span style={{marginLeft:'0.4rem',fontSize:'0.7rem',color:'rgba(245,158,11,0.85)',fontWeight:'700'}}>← Aquí estás</span>}
+                                <p style={{fontSize:'0.8rem',fontWeight:'500',
+                                    color:step.active?'#2d1a08':'rgba(120,60,10,0.45)',
+                                    margin:'0 0 0.15rem',letterSpacing:'-0.01em'}}>
+                                    {step.label}
+                                    {step.active && <span style={{marginLeft:'0.35rem',fontSize:'0.66rem',color:'rgba(245,158,11,0.8)',fontWeight:'500'}}>— aquí estás</span>}
                                 </p>
-                                <p style={{fontSize:'0.78rem',color:'rgba(150,80,20,0.55)',margin:0,lineHeight:'1.5'}}>
+                                <p style={{fontSize:'0.73rem',color:'rgba(150,80,20,0.48)',margin:0,lineHeight:'1.5'}}>
                                     {step.desc}
                                 </p>
                             </div>
@@ -158,11 +148,18 @@ export default function Confirmacion({ pedido }) {
                 </div>
 
                 {/* CTAs */}
-                <div style={{display:'flex',flexDirection:'column',gap:'0.75rem',alignItems:'center'}}>
-                    <Link href="/cliente/mis-pedidos" className="btn-primary">
-                        Ver mis pedidos →
+                <div style={{display:'flex',flexDirection:'column',gap:'0.6rem',alignItems:'center',marginTop:'0.5rem'}}>
+                    <Link href="/cliente/mis-pedidos" style={{
+                        display:'inline-block',padding:'0.78rem 1.75rem',borderRadius:'9px',
+                        background:'rgba(185,28,28,0.07)',border:'1px solid rgba(185,28,28,0.2)',
+                        color:'rgba(185,28,28,0.85)',textDecoration:'none',fontSize:'0.84rem',
+                        fontWeight:'500',letterSpacing:'-0.01em',
+                    }}>
+                        Ver mis pedidos
                     </Link>
-                    <Link href="/catalogo" className="btn-ghost">
+                    <Link href="/catalogo" style={{
+                        fontSize:'0.8rem',color:'rgba(150,80,20,0.5)',textDecoration:'none',letterSpacing:'-0.01em',
+                    }}>
                         Seguir comprando
                     </Link>
                 </div>

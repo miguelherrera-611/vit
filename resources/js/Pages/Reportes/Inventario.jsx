@@ -1,26 +1,26 @@
+// resources/js/Pages/Reportes/Inventario.jsx
 import AppLayout from '@/Layouts/AppLayout';
 import { Link } from '@inertiajs/react';
 import { useState, useMemo, useRef, useEffect } from 'react';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (v) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v ?? 0);
 
 const normalize = (s) =>
     (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-const CAT_POR_PAG        = 8;
-const PROD_POR_PAG       = 12;
-const OPCIONES_POR_PAG   = 7; // máx opciones visibles en el dropdown de categorías
+const CAT_POR_PAG      = 8;
+const PROD_POR_PAG     = 12;
+const OPCIONES_POR_PAG = 7;
 
 // ── Badge de estado ───────────────────────────────────────────────────────────
 function EstadoBadge({ stock, minimo }) {
-    if (stock === 0)     return <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full">● Agotado</span>;
-    if (stock <= minimo) return <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">● Bajo stock</span>;
-    return                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">● En stock</span>;
+    if (stock === 0)     return <span style={{ fontSize: '0.72rem', fontWeight: '600', padding: '0.22rem 0.65rem', borderRadius: '20px', background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: 'rgba(185,28,28,0.85)' }}>Agotado</span>;
+    if (stock <= minimo) return <span style={{ fontSize: '0.72rem', fontWeight: '600', padding: '0.22rem 0.65rem', borderRadius: '20px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', color: 'rgba(146,64,14,0.9)' }}>Bajo stock</span>;
+    return                      <span style={{ fontSize: '0.72rem', fontWeight: '600', padding: '0.22rem 0.65rem', borderRadius: '20px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: 'rgba(4,120,87,0.85)' }}>En stock</span>;
 }
 
-// ── Paginador de tabla ────────────────────────────────────────────────────────
+// ── Paginador ─────────────────────────────────────────────────────────────────
 function Paginador({ pagina, total, porPagina, onChange }) {
     const totalPags = Math.ceil(total / porPagina);
     if (totalPags <= 1) return null;
@@ -34,44 +34,64 @@ function Paginador({ pagina, total, porPagina, onChange }) {
         return [1, '...', pagina - 1, pagina, pagina + 1, '...', totalPags];
     };
 
+    const btnBase = {
+        width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        borderRadius: '10px', fontSize: '0.78rem', fontWeight: '600', border: 'none',
+        cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'Inter, sans-serif',
+    };
+
     return (
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50">
-            <p className="text-xs text-gray-500">
-                Mostrando <span className="font-semibold text-gray-700">{desde}–{hasta}</span> de{' '}
-                <span className="font-semibold text-gray-700">{total}</span> registros
+        <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '1rem 1.5rem',
+            borderTop: '1px solid rgba(255,255,255,0.4)',
+            background: 'rgba(255,255,255,0.03)',
+            flexWrap: 'wrap', gap: '0.5rem',
+        }}>
+            <p style={{ fontSize: '0.78rem', color: 'rgba(150,80,20,0.55)' }}>
+                Mostrando <strong style={{ color: '#2d1a08' }}>{desde}–{hasta}</strong> de{' '}
+                <strong style={{ color: '#2d1a08' }}>{total}</strong> registros
             </p>
-            <div className="flex items-center gap-1">
+            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                 <button onClick={() => onChange(pagina - 1)} disabled={pagina === 1}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-white transition disabled:opacity-30 disabled:cursor-not-allowed border border-transparent hover:border-gray-200">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                        style={{ ...btnBase, background: 'rgba(255,255,255,0.1)', color: 'rgba(150,80,20,0.6)', opacity: pagina === 1 ? 0.3 : 1 }}>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                    </svg>
                 </button>
                 {rango().map((n, i) => n === '...'
-                    ? <span key={`e${i}`} className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">…</span>
+                    ? <span key={`e${i}`} style={{ width: '32px', textAlign: 'center', fontSize: '0.78rem', color: 'rgba(150,80,20,0.4)' }}>…</span>
                     : <button key={n} onClick={() => onChange(n)}
-                              className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition
-                            ${n === pagina ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-600 hover:bg-white border border-transparent hover:border-gray-200'}`}>
+                              style={{
+                                  ...btnBase,
+                                  background: n === pagina ? 'rgba(220,38,38,0.12)' : 'rgba(255,255,255,0.08)',
+                                  color: n === pagina ? 'rgba(185,28,28,0.9)' : 'rgba(150,80,20,0.65)',
+                                  border: n === pagina ? '1px solid rgba(220,38,38,0.3)' : '1px solid rgba(255,255,255,0.4)',
+                              }}>
                         {n}
                     </button>
                 )}
                 <button onClick={() => onChange(pagina + 1)} disabled={pagina === totalPags}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-white transition disabled:opacity-30 disabled:cursor-not-allowed border border-transparent hover:border-gray-200">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                        style={{ ...btnBase, background: 'rgba(255,255,255,0.1)', color: 'rgba(150,80,20,0.6)', opacity: pagina === totalPags ? 0.3 : 1 }}>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
                 </button>
             </div>
         </div>
     );
 }
 
-// ── Dropdown de estado (simple, pocas opciones) ───────────────────────────────
+// ── Dropdown de estado ────────────────────────────────────────────────────────
 function EstadoDropdown({ value, onChange }) {
     const [open, setOpen] = useState(false);
     const ref             = useRef(null);
 
     const options = [
         { value: '',        label: 'Todos los estados' },
-        { value: 'ok',      label: 'En stock',    dot: 'bg-emerald-500' },
-        { value: 'bajo',    label: 'Bajo stock',  dot: 'bg-amber-500'   },
-        { value: 'agotado', label: 'Agotados',    dot: 'bg-red-500'     },
+        { value: 'ok',      label: 'En stock',   dot: 'rgba(16,185,129,0.8)'  },
+        { value: 'bajo',    label: 'Bajo stock', dot: 'rgba(245,158,11,0.8)'  },
+        { value: 'agotado', label: 'Agotados',   dot: 'rgba(220,38,38,0.8)'   },
     ];
 
     useEffect(() => {
@@ -80,44 +100,70 @@ function EstadoDropdown({ value, onChange }) {
         return () => document.removeEventListener('mousedown', h);
     }, []);
 
-    const selected  = options.find(o => o.value === value);
-    const isActive  = value !== '';
+    const selected = options.find(o => o.value === value);
+    const isActive = value !== '';
 
     return (
-        <div ref={ref} className="relative">
-            <button type="button" onClick={() => setOpen(o => !o)}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm font-medium transition
-                    ${isActive
-                        ? 'bg-orange-50 border-orange-300 text-orange-700'
-                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
-                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0" />}
-                <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div ref={ref} style={{ position: 'relative' }}>
+            <button type="button" onClick={() => setOpen(o => !o)} style={{
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.5rem 0.9rem',
+                background: isActive ? 'rgba(220,38,38,0.06)' : 'rgba(255,255,255,0.08)',
+                border: isActive ? '1px solid rgba(220,38,38,0.3)' : '1px solid rgba(255,255,255,0.55)',
+                borderRadius: '12px',
+                fontSize: '0.82rem', fontWeight: '500',
+                color: isActive ? 'rgba(185,28,28,0.85)' : 'rgba(120,60,10,0.75)',
+                cursor: 'pointer', whiteSpace: 'nowrap',
+                fontFamily: 'Inter, sans-serif',
+                backdropFilter: 'blur(12px)',
+                transition: 'all 0.18s',
+            }}>
+                {isActive && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'rgba(220,38,38,0.7)', flexShrink: 0 }} />}
+                <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.55, flexShrink: 0 }}>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
-                <span>{isActive ? selected?.label : 'Estado de stock'}</span>
-                <svg className={`w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                <span>{isActive ? selected?.label : 'Estado'}</span>
+                <svg style={{ width: '12px', height: '12px', opacity: 0.45, transition: 'transform 0.18s', transform: open ? 'rotate(180deg)' : 'none', flexShrink: 0 }}
                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
 
             {open && (
-                <div className="absolute z-50 mt-1.5 min-w-[180px] bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
-                     style={{ animation: 'dropdownIn 0.16s cubic-bezier(0.16,1,0.3,1)' }}>
+                <div style={{
+                    position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+                    minWidth: '190px',
+                    background: 'rgba(255,250,245,0.97)',
+                    backdropFilter: 'blur(32px) saturate(180%)',
+                    border: '1px solid rgba(255,255,255,0.72)',
+                    borderRadius: '16px',
+                    boxShadow: '0 16px 48px rgba(180,90,20,0.12), inset 0 1px 0 rgba(255,255,255,0.9)',
+                    overflow: 'hidden', zIndex: 50,
+                    animation: 'invDropIn 0.18s cubic-bezier(0.16,1,0.3,1)',
+                }}>
                     {options.map((opt, i) => {
                         const sel = opt.value === value;
                         return (
                             <button key={opt.value} type="button"
                                     onClick={() => { onChange(opt.value); setOpen(false); }}
-                                    className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition
-                                    ${sel ? 'bg-orange-50 text-orange-700 font-semibold' : 'text-gray-700 hover:bg-gray-50'}
-                                    ${i < options.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                                <span className="flex items-center gap-2">
-                                    {opt.dot && <span className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.dot}`} />}
+                                    style={{
+                                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        gap: '0.75rem', padding: '0.65rem 1rem',
+                                        fontSize: '0.83rem', fontWeight: sel ? '600' : '500',
+                                        color: sel ? 'rgba(185,28,28,0.9)' : 'rgba(120,55,10,0.78)',
+                                        background: sel ? 'rgba(220,38,38,0.05)' : 'none',
+                                        border: 'none',
+                                        borderBottom: i < options.length - 1 ? '1px solid rgba(255,255,255,0.5)' : 'none',
+                                        cursor: 'pointer', textAlign: 'left',
+                                        fontFamily: 'Inter, sans-serif', transition: 'background 0.12s',
+                                    }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    {opt.dot && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: opt.dot, flexShrink: 0 }} />}
                                     {opt.label}
                                 </span>
                                 {sel && (
-                                    <svg className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg style={{ width: '13px', height: '13px', color: 'rgba(185,28,28,0.8)', flexShrink: 0 }}
+                                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                                     </svg>
                                 )}
@@ -130,7 +176,7 @@ function EstadoDropdown({ value, onChange }) {
     );
 }
 
-// ── Dropdown de categorías con buscador + paginación interna ──────────────────
+// ── Dropdown de categorías ────────────────────────────────────────────────────
 function CategoriaDropdown({ value, onChange, categorias }) {
     const [open,     setOpen]     = useState(false);
     const [busqueda, setBusqueda] = useState('');
@@ -145,150 +191,164 @@ function CategoriaDropdown({ value, onChange, categorias }) {
     }, []);
 
     useEffect(() => {
-        if (open) {
-            setPagina(1);
-            setTimeout(() => inputRef.current?.focus(), 60);
-        } else {
-            setBusqueda('');
-        }
+        if (open) { setPagina(1); setTimeout(() => inputRef.current?.focus(), 60); }
+        else setBusqueda('');
     }, [open]);
 
     useEffect(() => { setPagina(1); }, [busqueda]);
 
-    const filtradas = useMemo(() => {
+    const filtradas  = useMemo(() => {
         const q = normalize(busqueda);
         return q ? categorias.filter(c => normalize(c).includes(q)) : categorias;
     }, [categorias, busqueda]);
 
-    const totalPags  = Math.ceil(filtradas.length / OPCIONES_POR_PAG);
-    const paginadas  = filtradas.slice((pagina - 1) * OPCIONES_POR_PAG, pagina * OPCIONES_POR_PAG);
-    const isActive   = value !== '';
+    const totalPags = Math.ceil(filtradas.length / OPCIONES_POR_PAG);
+    const paginadas = filtradas.slice((pagina - 1) * OPCIONES_POR_PAG, pagina * OPCIONES_POR_PAG);
+    const isActive  = value !== '';
 
     return (
-        <div ref={ref} className="relative">
-            {/* Trigger */}
-            <button type="button" onClick={() => setOpen(o => !o)}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm font-medium transition
-                    ${isActive
-                        ? 'bg-orange-50 border-orange-300 text-orange-700'
-                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
-                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0" />}
-                <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-                <span className="max-w-[160px] truncate">{isActive ? value : 'Categoría'}</span>
-                <svg className={`w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+        <div ref={ref} style={{ position: 'relative' }}>
+            <button type="button" onClick={() => setOpen(o => !o)} style={{
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.5rem 0.9rem',
+                background: isActive ? 'rgba(220,38,38,0.06)' : 'rgba(255,255,255,0.08)',
+                border: isActive ? '1px solid rgba(220,38,38,0.3)' : '1px solid rgba(255,255,255,0.55)',
+                borderRadius: '12px',
+                fontSize: '0.82rem', fontWeight: '500',
+                color: isActive ? 'rgba(185,28,28,0.85)' : 'rgba(120,60,10,0.75)',
+                cursor: 'pointer', whiteSpace: 'nowrap',
+                fontFamily: 'Inter, sans-serif',
+                backdropFilter: 'blur(12px)',
+                transition: 'all 0.18s',
+                maxWidth: '200px',
+            }}>
+                {isActive && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'rgba(220,38,38,0.7)', flexShrink: 0 }} />}
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{isActive ? value : 'Categoría'}</span>
+                <svg style={{ width: '12px', height: '12px', opacity: 0.45, transition: 'transform 0.18s', transform: open ? 'rotate(180deg)' : 'none', flexShrink: 0 }}
                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
 
-            {/* Panel */}
             {open && (
-                <div className="absolute z-50 mt-1.5 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
-                     style={{ animation: 'dropdownIn 0.16s cubic-bezier(0.16,1,0.3,1)' }}>
-
+                <div style={{
+                    position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+                    width: '240px',
+                    background: 'rgba(255,250,245,0.97)',
+                    backdropFilter: 'blur(32px) saturate(180%)',
+                    border: '1px solid rgba(255,255,255,0.72)',
+                    borderRadius: '16px',
+                    boxShadow: '0 16px 48px rgba(180,90,20,0.12), inset 0 1px 0 rgba(255,255,255,0.9)',
+                    overflow: 'hidden', zIndex: 50,
+                    animation: 'invDropIn 0.18s cubic-bezier(0.16,1,0.3,1)',
+                }}>
                     {/* Buscador */}
-                    <div className="px-3 pt-3 pb-2 border-b border-gray-100">
-                        <div className="relative">
-                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
-                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div style={{ padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.5)' }}>
+                        <div style={{ position: 'relative' }}>
+                            <svg style={{ position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(180,100,30,0.4)', pointerEvents: 'none' }}
+                                 width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                             <input ref={inputRef} type="text" value={busqueda}
-                                   onChange={(e) => setBusqueda(e.target.value)}
+                                   onChange={e => setBusqueda(e.target.value)}
                                    placeholder="Buscar categoría..."
-                                   className="w-full pl-8 pr-7 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-100 bg-gray-50" />
+                                   style={{
+                                       width: '100%', paddingLeft: '1.8rem', paddingRight: busqueda ? '1.8rem' : '0.5rem',
+                                       paddingTop: '0.4rem', paddingBottom: '0.4rem',
+                                       fontSize: '0.78rem', outline: 'none',
+                                       background: 'rgba(255,255,255,0.7)',
+                                       border: '1px solid rgba(200,140,80,0.18)', borderRadius: '9px',
+                                       fontFamily: 'Inter, sans-serif', color: '#2d1a08',
+                                       boxSizing: 'border-box',
+                                   }} />
                             {busqueda && (
                                 <button type="button" onClick={() => setBusqueda('')}
-                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(150,80,20,0.5)', padding: 0 }}>
+                                    <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
                             )}
                         </div>
-                        <p className="text-xs text-gray-400 mt-1 px-0.5">
+                        <p style={{ fontSize: '0.7rem', color: 'rgba(150,80,20,0.45)', marginTop: '0.3rem' }}>
                             {filtradas.length} categoría{filtradas.length !== 1 ? 's' : ''}
-                            {busqueda && ` para "${busqueda}"`}
                         </p>
                     </div>
 
                     {/* Opción "Todas" */}
                     {!busqueda && (
-                        <button type="button"
-                                onClick={() => { onChange(''); setOpen(false); }}
-                                className={`w-full flex items-center justify-between px-4 py-2.5 text-left text-sm border-b border-gray-50 transition
-                                ${!value ? 'bg-orange-50 text-orange-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}>
-                            <span>Todas las categorías</span>
-                            {!value && (
-                                <svg className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                                </svg>
-                            )}
+                        <button type="button" onClick={() => { onChange(''); setOpen(false); }}
+                                style={{
+                                    width: '100%', padding: '0.6rem 1rem', textAlign: 'left',
+                                    fontSize: '0.83rem', fontWeight: !value ? '600' : '500',
+                                    color: !value ? 'rgba(185,28,28,0.9)' : 'rgba(120,55,10,0.78)',
+                                    background: !value ? 'rgba(220,38,38,0.05)' : 'none',
+                                    border: 'none', borderBottom: '1px solid rgba(255,255,255,0.5)',
+                                    cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                                }}>
+                            Todas las categorías
                         </button>
                     )}
 
-                    {/* Lista paginada */}
+                    {/* Lista */}
                     {paginadas.length === 0 ? (
-                        <div className="px-4 py-6 text-center">
-                            <p className="text-xs text-gray-400">Sin resultados para <strong>"{busqueda}"</strong></p>
-                            <button type="button" onClick={() => setBusqueda('')}
-                                    className="mt-1.5 text-xs text-orange-600 hover:underline">
-                                Limpiar búsqueda
-                            </button>
+                        <div style={{ padding: '1.25rem', textAlign: 'center', fontSize: '0.78rem', color: 'rgba(150,80,20,0.5)' }}>
+                            Sin resultados para "{busqueda}"
                         </div>
-                    ) : (
-                        paginadas.map((cat, i) => {
-                            const sel = cat === value;
-                            return (
-                                <button key={cat} type="button"
-                                        onClick={() => { onChange(cat); setOpen(false); }}
-                                        className={`w-full flex items-center justify-between px-4 py-2.5 text-left text-sm transition
-                                        ${sel ? 'bg-orange-50 text-orange-700 font-semibold' : 'text-gray-700 hover:bg-gray-50'}
-                                        ${i < paginadas.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                                    <span className="truncate">{cat}</span>
-                                    {sel && (
-                                        <svg className="w-3.5 h-3.5 text-orange-600 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    )}
-                                </button>
-                            );
-                        })
-                    )}
+                    ) : paginadas.map((cat, i) => {
+                        const sel = cat === value;
+                        return (
+                            <button key={cat} type="button" onClick={() => { onChange(cat); setOpen(false); }}
+                                    style={{
+                                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        padding: '0.6rem 1rem', textAlign: 'left',
+                                        fontSize: '0.83rem', fontWeight: sel ? '600' : '500',
+                                        color: sel ? 'rgba(185,28,28,0.9)' : 'rgba(120,55,10,0.78)',
+                                        background: sel ? 'rgba(220,38,38,0.05)' : 'none',
+                                        border: 'none',
+                                        borderBottom: i < paginadas.length - 1 ? '1px solid rgba(255,255,255,0.5)' : 'none',
+                                        cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                                    }}>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat}</span>
+                                {sel && (
+                                    <svg style={{ width: '13px', height: '13px', color: 'rgba(185,28,28,0.8)', flexShrink: 0, marginLeft: '0.5rem' }}
+                                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                )}
+                            </button>
+                        );
+                    })}
 
-                    {/* Paginación interna del dropdown */}
+                    {/* Paginación interna */}
                     {totalPags > 1 && (
-                        <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 bg-gray-50">
-                            <button type="button"
-                                    onClick={() => setPagina(p => Math.max(1, p - 1))}
-                                    disabled={pagina === 1}
-                                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-600 rounded-lg hover:bg-white transition disabled:opacity-40 disabled:cursor-not-allowed">
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                                </svg>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '0.5rem 0.75rem',
+                            borderTop: '1px solid rgba(255,255,255,0.5)',
+                            background: 'rgba(255,255,255,0.4)',
+                        }}>
+                            <button type="button" onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1}
+                                    style={{ fontSize: '0.72rem', fontWeight: '600', color: 'rgba(120,60,10,0.7)', background: 'none', border: 'none', cursor: 'pointer', opacity: pagina === 1 ? 0.35 : 1, fontFamily: 'Inter, sans-serif' }}>
                                 Ant.
                             </button>
-
-                            <div className="flex items-center gap-0.5">
+                            <div style={{ display: 'flex', gap: '3px' }}>
                                 {Array.from({ length: totalPags }, (_, i) => i + 1).map(n => (
                                     <button key={n} type="button" onClick={() => setPagina(n)}
-                                            className={`w-6 h-6 rounded-md text-xs font-semibold transition
-                                            ${n === pagina ? 'bg-orange-500 text-white' : 'text-gray-500 hover:bg-white'}`}>
+                                            style={{
+                                                width: '22px', height: '22px', borderRadius: '6px',
+                                                fontSize: '0.72rem', fontWeight: '600',
+                                                background: n === pagina ? 'rgba(220,38,38,0.12)' : 'none',
+                                                color: n === pagina ? 'rgba(185,28,28,0.9)' : 'rgba(150,80,20,0.6)',
+                                                border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                                            }}>
                                         {n}
                                     </button>
                                 ))}
                             </div>
-
-                            <button type="button"
-                                    onClick={() => setPagina(p => Math.min(totalPags, p + 1))}
-                                    disabled={pagina === totalPags}
-                                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-600 rounded-lg hover:bg-white transition disabled:opacity-40 disabled:cursor-not-allowed">
+                            <button type="button" onClick={() => setPagina(p => Math.min(totalPags, p + 1))} disabled={pagina === totalPags}
+                                    style={{ fontSize: '0.72rem', fontWeight: '600', color: 'rgba(120,60,10,0.7)', background: 'none', border: 'none', cursor: 'pointer', opacity: pagina === totalPags ? 0.35 : 1, fontFamily: 'Inter, sans-serif' }}>
                                 Sig.
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                                </svg>
                             </button>
                         </div>
                     )}
@@ -310,10 +370,7 @@ export default function ReporteInventario({ productos = [], porCategoria = [], c
     const cambiarBusqueda = (v) => { setBusqueda(v);     setPaginaProd(1); };
     const cambiarCat      = (v) => { setFiltroCat(v);    setPaginaProd(1); };
     const cambiarEstado   = (v) => { setFiltroEstado(v); setPaginaProd(1); };
-    const cambiarVista    = (v) => {
-        setVistaProductos(v); setPaginaProd(1);
-        setBusqueda(''); setFiltroCat(''); setFiltroEstado('');
-    };
+    const cambiarVista    = (v) => { setVistaProductos(v); setPaginaProd(1); setBusqueda(''); setFiltroCat(''); setFiltroEstado(''); };
 
     const catPaginadas = useMemo(
         () => porCategoria.slice((paginaCat - 1) * CAT_POR_PAG, paginaCat * CAT_POR_PAG),
@@ -344,30 +401,109 @@ export default function ReporteInventario({ productos = [], porCategoria = [], c
 
     const hayFiltros = busqueda || filtroCat || filtroEstado;
 
+    const GLASS_BG = `
+        radial-gradient(ellipse 75% 60% at 0% 0%, rgba(255,210,170,0.22) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 55% at 100% 100%, rgba(255,195,145,0.18) 0%, transparent 55%),
+        radial-gradient(ellipse 55% 50% at 75% 10%, rgba(255,215,175,0.16) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 45% at 15% 85%, rgba(255,205,155,0.17) 0%, transparent 55%),
+        linear-gradient(145deg, #fdf6f0 0%, #fdf3ec 35%, #fef5ef 70%, #fef8f4 100%)
+    `;
+
     return (
         <AppLayout>
             <style>{`
-                @keyframes dropdownIn {
-                    from { opacity:0; transform:translateY(-6px) scale(0.97); }
-                    to   { opacity:1; transform:translateY(0)     scale(1);   }
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+                .inv-bg {
+                    min-height: 100vh;
+                    font-family: 'Inter', -apple-system, sans-serif;
+                    background: ${GLASS_BG};
                 }
+                @keyframes staggerUp {
+                    from { opacity:0; transform:translateY(16px); }
+                    to   { opacity:1; transform:translateY(0); }
+                }
+                @keyframes invDropIn {
+                    from { opacity:0; transform:translateY(-6px) scale(0.97); }
+                    to   { opacity:1; transform:translateY(0) scale(1); }
+                }
+                .inv-a1 { animation: staggerUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
+                .inv-a2 { animation: staggerUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.12s both; }
+                .inv-a3 { animation: staggerUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.19s both; }
+
+                .inv-glass {
+                    background: rgba(255,255,255,0.04);
+                    backdrop-filter: blur(22px) saturate(150%);
+                    -webkit-backdrop-filter: blur(22px) saturate(150%);
+                    border-radius: 24px;
+                    border: 1px solid rgba(255,255,255,0.65);
+                    box-shadow: 0 16px 48px rgba(180,90,20,0.1), 0 4px 14px rgba(180,90,20,0.06),
+                        inset 0 1.5px 0 rgba(255,255,255,0.88);
+                    position: relative; overflow: hidden;
+                }
+                .inv-glass::before {
+                    content: '';
+                    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95) 30%, rgba(255,255,255,0.95) 70%, transparent);
+                    pointer-events: none; z-index: 1;
+                }
+                .inv-header {
+                    background: rgba(255,255,255,0.08);
+                    backdrop-filter: blur(40px) saturate(180%);
+                    -webkit-backdrop-filter: blur(40px) saturate(180%);
+                    border-bottom: 1px solid rgba(255,255,255,0.68);
+                    box-shadow: 0 4px 24px rgba(200,100,30,0.07), inset 0 1px 0 rgba(255,255,255,0.85);
+                    position: relative; z-index: 2;
+                }
+                .inv-table-row { transition: background 0.15s; border-bottom: 1px solid rgba(255,255,255,0.3); }
+                .inv-table-row:hover { background: rgba(255,255,255,0.12); }
+                .inv-table-row:last-child { border-bottom: none; }
+                .inv-tab-btn { border: none; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.18s; }
+
+                .inv-search {
+                    padding: 0.5rem 0.9rem 0.5rem 2.4rem;
+                    background: rgba(255,255,255,0.06);
+                    border: 1px solid rgba(255,255,255,0.55);
+                    border-radius: 12px;
+                    font-size: 0.82rem; color: #2d1a08;
+                    font-family: 'Inter', sans-serif; outline: none;
+                    flex: 1; min-width: 0;
+                    transition: all 0.18s;
+                    box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+                }
+                .inv-search::placeholder { color: rgba(180,100,30,0.38); }
+                .inv-search:focus {
+                    border-color: rgba(220,38,38,0.4);
+                    box-shadow: 0 0 0 3px rgba(220,38,38,0.06), inset 0 1px 0 rgba(255,255,255,0.8);
+                    background: rgba(255,255,255,0.1);
+                }
+
+                /* Responsive */
+                .inv-kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; }
+                @media (max-width: 1100px) { .inv-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+                @media (max-width: 700px)  { .inv-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; } }
             `}</style>
 
-            <div className="min-h-screen bg-gray-50">
+            <div className="inv-bg">
 
                 {/* ── Header ── */}
-                <div className="bg-white border-b border-gray-200">
-                    <div className="max-w-7xl mx-auto px-6 py-8">
-                        <div className="flex items-center gap-4">
-                            <Link href="/reportes"
-                                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="inv-header">
+                    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <Link href="/reportes" style={{
+                                width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.65)',
+                                borderRadius: '10px', color: 'rgba(150,80,20,0.6)',
+                                textDecoration: 'none', transition: 'all 0.18s',
+                            }}>
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                                 </svg>
                             </Link>
                             <div>
-                                <h1 className="text-3xl font-light text-gray-900">Reporte de Inventario</h1>
-                                <p className="mt-1 text-sm text-gray-500">
+                                <h1 style={{ fontSize: '1.65rem', fontWeight: '300', color: '#2d1a08', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                                    Reporte de Inventario
+                                </h1>
+                                <p style={{ marginTop: '0.3rem', fontSize: '0.85rem', color: 'rgba(150,80,20,0.6)' }}>
                                     Estado actual del stock — {productos.length} productos · {porCategoria.length} categorías
                                 </p>
                             </div>
@@ -375,103 +511,93 @@ export default function ReporteInventario({ productos = [], porCategoria = [], c
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+                <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
                     {/* ── KPIs ── */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+                    <div className="inv-kpi-grid inv-a1">
                         {[
-                            { label: 'Productos activos',     value: kpis.total_productos,              color: 'text-gray-900',    icon: '📦', tip: null },
-                            { label: 'Valor total en venta',  value: fmt(kpis.valor_inventario_venta),  color: 'text-emerald-600', icon: '💰', tip: 'Suma de precio de venta × stock de cada producto' },
-                            { label: 'Valor total en compra', value: fmt(kpis.valor_inventario_compra), color: 'text-blue-600',    icon: '🧾', tip: 'Suma de costo de compra × stock de cada producto' },
-                            { label: 'Ganancia potencial',    value: fmt(kpis.ganancia_potencial),      color: 'text-violet-600',  icon: '📈', tip: 'Valor en venta − Valor en compra' },
-                            { label: 'Bajo stock',            value: kpis.bajo_stock,                   color: 'text-amber-600',   icon: '⚠️', tip: 'Stock actual ≤ stock mínimo configurado' },
-                            { label: 'Agotados',              value: kpis.agotados,                     color: 'text-red-600',     icon: '🚨', tip: 'Stock = 0' },
-                        ].map(({ label, value, color, icon, tip }) => (
-                            <div key={label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 group relative">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-xl">{icon}</span>
-                                    {tip && (
-                                        <div className="relative">
-                                            <svg className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400 cursor-help"
-                                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            <div className="absolute right-0 top-5 w-52 bg-gray-800 text-white text-xs rounded-xl p-2.5 opacity-0 group-hover:opacity-100 transition pointer-events-none z-10 shadow-lg">
-                                                {tip}
-                                            </div>
-                                        </div>
-                                    )}
+                            { label: 'Productos activos',      value: kpis.total_productos,              accent: 'rgba(120,60,10,0.8)',   accentBg: 'rgba(120,60,10,0.07)',   accentBorder: 'rgba(120,60,10,0.18)',  tip: null },
+                            { label: 'Valor total en venta',   value: fmt(kpis.valor_inventario_venta),  accent: 'rgba(16,185,129,0.9)',  accentBg: 'rgba(16,185,129,0.07)',  accentBorder: 'rgba(16,185,129,0.2)',  tip: 'Suma precio venta × stock' },
+                            { label: 'Valor total en compra',  value: fmt(kpis.valor_inventario_compra), accent: 'rgba(59,130,246,0.9)',  accentBg: 'rgba(59,130,246,0.07)',  accentBorder: 'rgba(59,130,246,0.2)',  tip: 'Suma costo compra × stock' },
+                            { label: 'Ganancia potencial',     value: fmt(kpis.ganancia_potencial),      accent: 'rgba(139,92,246,0.9)', accentBg: 'rgba(139,92,246,0.07)',  accentBorder: 'rgba(139,92,246,0.2)', tip: 'Valor venta − valor compra' },
+                            { label: 'Bajo stock',             value: kpis.bajo_stock,                   accent: 'rgba(245,158,11,0.9)', accentBg: 'rgba(245,158,11,0.07)',  accentBorder: 'rgba(245,158,11,0.2)', tip: 'Stock ≤ mínimo configurado' },
+                            { label: 'Agotados',               value: kpis.agotados,                     accent: 'rgba(220,38,38,0.9)',  accentBg: 'rgba(220,38,38,0.07)',   accentBorder: 'rgba(220,38,38,0.2)',  tip: 'Stock = 0' },
+                        ].map(({ label, value, accent, accentBg, accentBorder, tip }) => (
+                            <div key={label} className="inv-glass" style={{ padding: '1.25rem', position: 'relative' }}>
+                                <div style={{
+                                    width: '34px', height: '34px', borderRadius: '10px',
+                                    background: accentBg, border: `1px solid ${accentBorder}`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    marginBottom: '0.75rem',
+                                }}>
+                                    <svg width="16" height="16" fill="none" stroke={accent} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8"
+                                              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                    </svg>
                                 </div>
-                                <p className={`text-2xl font-bold ${color}`}>{value}</p>
-                                <p className="text-xs text-gray-400 mt-1 leading-tight">{label}</p>
+                                <p style={{ fontSize: '1.45rem', fontWeight: '600', color: accent, letterSpacing: '-0.02em', lineHeight: 1 }}>{value}</p>
+                                <p style={{ fontSize: '0.78rem', fontWeight: '500', color: '#2d1a08', marginTop: '0.25rem' }}>{label}</p>
+                                {tip && <p style={{ fontSize: '0.68rem', color: 'rgba(150,80,20,0.45)', marginTop: '0.1rem' }}>{tip}</p>}
                             </div>
                         ))}
                     </div>
 
                     {/* ── Resumen por categoría ── */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div className="px-6 py-5 border-b border-gray-100">
-                            <h2 className="text-base font-semibold text-gray-900">Resumen por categoría</h2>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                                Distribución de unidades, costos y ganancias agrupadas por categoría
+                    <div className="inv-glass inv-a2" style={{ overflow: 'hidden' }}>
+                        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.38)' }}>
+                            <h2 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2d1a08', margin: 0 }}>Resumen por categoría</h2>
+                            <p style={{ fontSize: '0.76rem', color: 'rgba(150,80,20,0.55)', marginTop: '0.2rem' }}>
+                                Distribución de unidades, costos y ganancias agrupadas
                             </p>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-gray-50 border-b border-gray-100">
-                                <tr>
-                                    {[
-                                        { h: 'Categoría',          align: 'left'   },
-                                        { h: 'Productos',          align: 'right'  },
-                                        { h: 'Unidades en stock',  align: 'right'  },
-                                        { h: 'Valor en venta',     align: 'right'  },
-                                        { h: 'Costo de compra',    align: 'right'  },
-                                        { h: 'Ganancia potencial', align: 'right'  },
-                                        { h: 'Bajo stock',         align: 'center' },
-                                        { h: 'Agotados',           align: 'center' },
-                                    ].map(({ h, align }) => (
-                                        <th key={h} className={`px-6 py-3 text-${align} text-xs font-semibold text-gray-500 uppercase tracking-wider`}>{h}</th>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
+                                <thead>
+                                <tr style={{ borderBottom: '1px solid rgba(180,90,20,0.12)' }}>
+                                    {['Categoría', 'Productos', 'Unidades', 'Valor en venta', 'Costo compra', 'Ganancia potencial', 'Bajo stock', 'Agotados'].map(h => (
+                                        <th key={h} style={{
+                                            padding: '0.7rem 1.1rem', textAlign: 'left',
+                                            fontSize: '0.67rem', fontWeight: '600',
+                                            color: 'rgba(150,80,20,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase',
+                                        }}>{h}</th>
                                     ))}
                                 </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50">
+                                <tbody>
                                 {catPaginadas.map(cat => (
-                                    <tr key={cat.categoria} className="hover:bg-gray-50 transition">
-                                        <td className="px-6 py-4">
-                                            <p className="text-sm font-semibold text-gray-900">{cat.categoria}</p>
-                                            <div className="mt-1.5 w-28 bg-gray-100 rounded-full h-1.5">
-                                                <div className="h-1.5 bg-orange-400 rounded-full transition-all"
-                                                     style={{ width: `${Math.min(100, (cat.total_stock / maxStock) * 100)}%` }} />
+                                    <tr key={cat.categoria} className="inv-table-row">
+                                        <td style={{ padding: '0.85rem 1.1rem' }}>
+                                            <p style={{ fontSize: '0.87rem', fontWeight: '600', color: '#2d1a08', margin: 0 }}>{cat.categoria}</p>
+                                            <div style={{ marginTop: '0.3rem', width: '80px', background: 'rgba(180,90,20,0.1)', borderRadius: '99px', height: '4px' }}>
+                                                <div style={{ width: `${Math.min(100, (cat.total_stock / maxStock) * 100)}%`, height: '4px', borderRadius: '99px', background: 'rgba(245,158,11,0.7)' }} />
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-right text-sm text-gray-600">{cat.total_productos}</td>
-                                        <td className="px-6 py-4 text-right">
-                                            <span className="text-sm font-bold text-gray-900">{cat.total_stock}</span>
-                                            <span className="text-xs text-gray-400 ml-1">uds</span>
+                                        <td style={{ padding: '0.85rem 1.1rem', fontSize: '0.85rem', color: 'rgba(120,60,10,0.7)' }}>{cat.total_productos}</td>
+                                        <td style={{ padding: '0.85rem 1.1rem' }}>
+                                            <span style={{ fontSize: '0.87rem', fontWeight: '700', color: '#2d1a08' }}>{cat.total_stock}</span>
+                                            <span style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.45)', marginLeft: '4px' }}>uds</span>
                                         </td>
-                                        <td className="px-6 py-4 text-right text-sm font-semibold text-emerald-600">{fmt(cat.valor_venta)}</td>
-                                        <td className="px-6 py-4 text-right text-sm text-blue-600">
-                                            {cat.valor_compra > 0 ? fmt(cat.valor_compra) : <span className="text-gray-300">—</span>}
+                                        <td style={{ padding: '0.85rem 1.1rem', fontSize: '0.87rem', fontWeight: '700', color: 'rgba(16,185,129,0.85)' }}>{fmt(cat.valor_venta)}</td>
+                                        <td style={{ padding: '0.85rem 1.1rem', fontSize: '0.85rem', color: 'rgba(59,130,246,0.8)' }}>
+                                            {cat.valor_compra > 0 ? fmt(cat.valor_compra) : <span style={{ color: 'rgba(180,90,20,0.25)' }}>—</span>}
                                         </td>
-                                        <td className="px-6 py-4 text-right text-sm font-semibold text-violet-600">
-                                            {cat.ganancia_potencial > 0 ? fmt(cat.ganancia_potencial) : <span className="text-gray-300">—</span>}
+                                        <td style={{ padding: '0.85rem 1.1rem', fontSize: '0.87rem', fontWeight: '700', color: 'rgba(139,92,246,0.85)' }}>
+                                            {cat.ganancia_potencial > 0 ? fmt(cat.ganancia_potencial) : <span style={{ color: 'rgba(180,90,20,0.25)' }}>—</span>}
                                         </td>
-                                        <td className="px-6 py-4 text-center">
+                                        <td style={{ padding: '0.85rem 1.1rem', textAlign: 'center' }}>
                                             {cat.bajo_stock > 0
-                                                ? <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">{cat.bajo_stock}</span>
-                                                : <span className="text-xs text-gray-300">—</span>}
+                                                ? <span style={{ fontSize: '0.72rem', fontWeight: '600', padding: '0.2rem 0.55rem', borderRadius: '20px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', color: 'rgba(146,64,14,0.9)' }}>{cat.bajo_stock}</span>
+                                                : <span style={{ color: 'rgba(180,90,20,0.25)', fontSize: '0.78rem' }}>—</span>}
                                         </td>
-                                        <td className="px-6 py-4 text-center">
+                                        <td style={{ padding: '0.85rem 1.1rem', textAlign: 'center' }}>
                                             {cat.agotados > 0
-                                                ? <span className="text-xs font-semibold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">{cat.agotados}</span>
-                                                : <span className="text-xs text-gray-300">—</span>}
+                                                ? <span style={{ fontSize: '0.72rem', fontWeight: '600', padding: '0.2rem 0.55rem', borderRadius: '20px', background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: 'rgba(185,28,28,0.85)' }}>{cat.agotados}</span>
+                                                : <span style={{ color: 'rgba(180,90,20,0.25)', fontSize: '0.78rem' }}>—</span>}
                                         </td>
                                     </tr>
                                 ))}
                                 {porCategoria.length === 0 && (
-                                    <tr>
-                                        <td colSpan="8" className="px-6 py-10 text-center text-gray-400 text-sm">No hay categorías registradas</td>
-                                    </tr>
+                                    <tr><td colSpan="8" style={{ padding: '2.5rem', textAlign: 'center', color: 'rgba(150,80,20,0.4)', fontSize: '0.87rem' }}>No hay categorías registradas</td></tr>
                                 )}
                                 </tbody>
                             </table>
@@ -480,165 +606,160 @@ export default function ReporteInventario({ productos = [], porCategoria = [], c
                     </div>
 
                     {/* ── Tabla de productos ── */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="inv-glass inv-a3" style={{ overflow: 'hidden' }}>
 
                         {/* Tabs */}
-                        <div className="border-b border-gray-100">
-                            <div className="flex items-center gap-1 px-6 pt-4">
-                                <button onClick={() => cambiarVista('criticos')}
-                                        className={`px-4 py-2 rounded-t-xl text-sm font-medium transition border-b-2 -mb-px
-                                        ${vistaProductos === 'criticos'
-                                            ? 'border-orange-500 text-orange-600 bg-orange-50'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                                    ⚠️ Productos críticos
-                                    {criticos.length > 0 && (
-                                        <span className="ml-2 bg-orange-100 text-orange-700 text-xs font-bold px-1.5 py-0.5 rounded-full">
-                                            {criticos.length}
-                                        </span>
-                                    )}
-                                </button>
-                                <button onClick={() => cambiarVista('todos')}
-                                        className={`px-4 py-2 rounded-t-xl text-sm font-medium transition border-b-2 -mb-px
-                                        ${vistaProductos === 'todos'
-                                            ? 'border-orange-500 text-orange-600 bg-orange-50'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                                    📦 Todos los productos
-                                    <span className="ml-2 bg-gray-100 text-gray-600 text-xs font-bold px-1.5 py-0.5 rounded-full">
-                                        {productos.length}
-                                    </span>
-                                </button>
+                        <div style={{ borderBottom: '1px solid rgba(255,255,255,0.38)' }}>
+                            <div style={{ display: 'flex', gap: '4px', padding: '1rem 1.5rem 0' }}>
+                                {[
+                                    { key: 'criticos', label: 'Productos críticos', count: criticos.length, warn: criticos.length > 0 },
+                                    { key: 'todos',    label: 'Todos los productos', count: productos.length },
+                                ].map(({ key, label, count, warn }) => (
+                                    <button key={key} className="inv-tab-btn"
+                                            onClick={() => cambiarVista(key)}
+                                            style={{
+                                                padding: '0.5rem 1rem',
+                                                borderRadius: '10px 10px 0 0',
+                                                fontSize: '0.83rem', fontWeight: '500',
+                                                background: vistaProductos === key ? 'rgba(220,38,38,0.1)' : 'rgba(255,255,255,0.04)',
+                                                color: vistaProductos === key ? 'rgba(185,28,28,0.9)' : 'rgba(120,60,10,0.65)',
+                                                borderBottom: vistaProductos === key ? '2px solid rgba(220,38,38,0.5)' : '2px solid transparent',
+                                            }}>
+                                        {label}
+                                        {count > 0 && (
+                                            <span style={{
+                                                marginLeft: '0.5rem', fontSize: '0.68rem', fontWeight: '700',
+                                                padding: '0.1rem 0.45rem', borderRadius: '20px',
+                                                background: warn ? 'rgba(245,158,11,0.15)' : 'rgba(180,90,20,0.1)',
+                                                color: warn ? 'rgba(146,64,14,0.9)' : 'rgba(150,80,20,0.55)',
+                                                border: warn ? '1px solid rgba(245,158,11,0.3)' : '1px solid rgba(180,90,20,0.15)',
+                                            }}>
+                                                {count}
+                                            </span>
+                                        )}
+                                    </button>
+                                ))}
                             </div>
-                            <div className="px-6 pb-3 pt-1">
-                                <p className="text-xs text-gray-400">
-                                    {vistaProductos === 'criticos'
-                                        ? 'Productos con stock agotado o por debajo del mínimo configurado. Requieren atención inmediata.'
-                                        : 'Listado completo del inventario. Usa los filtros para encontrar productos específicos.'}
-                                </p>
-                            </div>
+                            <p style={{ padding: '0.4rem 1.5rem 0.85rem', fontSize: '0.76rem', color: 'rgba(150,80,20,0.5)' }}>
+                                {vistaProductos === 'criticos'
+                                    ? 'Productos con stock agotado o por debajo del mínimo. Requieren atención inmediata.'
+                                    : 'Listado completo del inventario. Usa los filtros para encontrar productos específicos.'}
+                            </p>
                         </div>
 
                         {/* Filtros — solo en "todos" */}
                         {vistaProductos === 'todos' && (
-                            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60">
-                                <div className="flex flex-wrap gap-2.5 items-center">
-
+                            <div style={{ padding: '0.85rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.38)', background: 'rgba(255,255,255,0.03)' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', alignItems: 'center' }}>
                                     {/* Buscador */}
-                                    <div className="relative flex-1 min-w-48">
-                                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <div style={{ position: 'relative', flex: 1, minWidth: '180px' }}>
+                                        <svg style={{ position: 'absolute', left: '0.7rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(180,100,30,0.4)', pointerEvents: 'none' }}
+                                             width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                         </svg>
                                         <input type="text" placeholder="Buscar por nombre o categoría..."
-                                               value={busqueda} onChange={(e) => cambiarBusqueda(e.target.value)}
-                                               className="w-full pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 bg-white" />
+                                               value={busqueda} onChange={e => cambiarBusqueda(e.target.value)}
+                                               className="inv-search" />
                                         {busqueda && (
-                                            <button onClick={() => cambiarBusqueda('')}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <button onClick={() => cambiarBusqueda('')} style={{ position: 'absolute', right: '0.6rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(150,80,20,0.5)', padding: 0 }}>
+                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                                                 </svg>
                                             </button>
                                         )}
                                     </div>
-
-                                    {/* Dropdown categoría — con paginador interno */}
-                                    <CategoriaDropdown
-                                        value={filtroCat}
-                                        onChange={cambiarCat}
-                                        categorias={categorias}
-                                    />
-
-                                    {/* Dropdown estado */}
+                                    <CategoriaDropdown value={filtroCat} onChange={cambiarCat} categorias={categorias} />
                                     <EstadoDropdown value={filtroEstado} onChange={cambiarEstado} />
-
-                                    {/* Limpiar */}
                                     {hayFiltros && (
                                         <button onClick={() => { cambiarBusqueda(''); cambiarCat(''); cambiarEstado(''); }}
-                                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition">
-                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: '0.4rem',
+                                                    padding: '0.5rem 0.85rem',
+                                                    fontSize: '0.78rem', fontWeight: '500',
+                                                    background: 'none', border: '1px solid rgba(220,38,38,0.2)',
+                                                    borderRadius: '10px', cursor: 'pointer',
+                                                    color: 'rgba(185,28,28,0.7)', fontFamily: 'Inter, sans-serif',
+                                                    transition: 'all 0.15s',
+                                                }}>
+                                            <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                                             </svg>
-                                            Limpiar filtros
+                                            Limpiar
                                         </button>
                                     )}
                                 </div>
                                 {hayFiltros && (
-                                    <p className="text-xs text-gray-500 mt-2.5">
-                                        <span className="font-semibold text-gray-700">{productosFiltrados.length}</span> de {productos.length} productos
+                                    <p style={{ fontSize: '0.75rem', color: 'rgba(150,80,20,0.55)', marginTop: '0.5rem' }}>
+                                        <strong style={{ color: '#2d1a08' }}>{productosFiltrados.length}</strong> de {productos.length} productos
                                     </p>
                                 )}
                             </div>
                         )}
 
-                        {/* Tabla productos */}
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-gray-50 border-b border-gray-100">
-                                <tr>
-                                    <th className="px-6 py-3 text-left   text-xs font-semibold text-gray-500 uppercase tracking-wider">Producto</th>
-                                    <th className="px-6 py-3 text-left   text-xs font-semibold text-gray-500 uppercase tracking-wider">Categoría</th>
-                                    <th className="px-6 py-3 text-right  text-xs font-semibold text-gray-500 uppercase tracking-wider">Stock actual</th>
-                                    <th className="px-6 py-3 text-right  text-xs font-semibold text-gray-500 uppercase tracking-wider">Stock mínimo</th>
-                                    <th className="px-6 py-3 text-right  text-xs font-semibold text-gray-500 uppercase tracking-wider">Precio de compra</th>
-                                    <th className="px-6 py-3 text-right  text-xs font-semibold text-gray-500 uppercase tracking-wider">Precio de venta</th>
-                                    <th className="px-6 py-3 text-right  text-xs font-semibold text-gray-500 uppercase tracking-wider">Margen por unidad</th>
-                                    <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                        {/* Tabla */}
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
+                                <thead>
+                                <tr style={{ borderBottom: '1px solid rgba(180,90,20,0.12)' }}>
+                                    {['Producto', 'Categoría', 'Stock actual', 'Stock mínimo', 'P. compra', 'P. venta', 'Margen', 'Estado'].map(h => (
+                                        <th key={h} style={{
+                                            padding: '0.7rem 1.1rem', textAlign: 'left',
+                                            fontSize: '0.67rem', fontWeight: '600',
+                                            color: 'rgba(150,80,20,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase',
+                                        }}>{h}</th>
+                                    ))}
                                 </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50">
+                                <tbody>
                                 {prodPaginados.length === 0 ? (
                                     <tr>
-                                        <td colSpan="8" className="px-6 py-14 text-center">
-                                            <div className="text-3xl mb-2">{vistaProductos === 'criticos' ? '✅' : '🔍'}</div>
-                                            <p className="text-sm font-medium text-gray-600">
-                                                {vistaProductos === 'criticos' ? 'No hay productos críticos' : 'Sin resultados para los filtros aplicados'}
+                                        <td colSpan="8" style={{ padding: '3.5rem', textAlign: 'center' }}>
+                                            <p style={{ fontSize: '0.9rem', fontWeight: '600', color: 'rgba(150,80,20,0.55)', margin: 0 }}>
+                                                {vistaProductos === 'criticos' ? 'No hay productos críticos' : 'Sin resultados'}
                                             </p>
-                                            <p className="text-xs text-gray-400 mt-1">
-                                                {vistaProductos === 'criticos' ? 'Todos los productos tienen stock suficiente' : 'Prueba ajustando o limpiando los filtros'}
+                                            <p style={{ fontSize: '0.78rem', color: 'rgba(150,80,20,0.38)', marginTop: '0.3rem' }}>
+                                                {vistaProductos === 'criticos' ? 'Todos los productos tienen stock suficiente' : 'Prueba ajustando los filtros'}
                                             </p>
                                         </td>
                                     </tr>
-                                ) : (
-                                    prodPaginados.map(p => {
-                                        const margen = p.precio_compra > 0 ? p.precio - p.precio_compra : null;
-                                        return (
-                                            <tr key={p.id} className={`hover:bg-gray-50 transition
-                                                ${p.stock === 0             ? 'bg-red-50/30'   :
-                                                p.stock <= p.stock_minimo ? 'bg-amber-50/30' : ''}`}>
-                                                <td className="px-6 py-3.5">
-                                                    <p className="text-sm font-semibold text-gray-900">{p.nombre}</p>
-                                                    {p.codigo_barras && <p className="text-xs text-gray-400 mt-0.5">{p.codigo_barras}</p>}
-                                                </td>
-                                                <td className="px-6 py-3.5 text-sm text-gray-500">{p.categoria}</td>
-                                                <td className="px-6 py-3.5 text-right">
-                                                    <span className="text-sm font-bold text-gray-900">{p.stock}</span>
-                                                    <span className="text-xs text-gray-400 ml-1">uds</span>
-                                                </td>
-                                                <td className="px-6 py-3.5 text-right text-sm text-gray-400">{p.stock_minimo} uds</td>
-                                                <td className="px-6 py-3.5 text-right text-sm text-blue-600">
-                                                    {p.precio_compra > 0 ? fmt(p.precio_compra) : <span className="text-gray-300 text-xs">No registrado</span>}
-                                                </td>
-                                                <td className="px-6 py-3.5 text-right text-sm font-semibold text-gray-800">{fmt(p.precio)}</td>
-                                                <td className="px-6 py-3.5 text-right text-sm">
-                                                    {margen !== null
-                                                        ? <span className={`font-semibold ${margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                            {margen >= 0 ? '+' : ''}{fmt(margen)}
-                                                          </span>
-                                                        : <span className="text-gray-300">—</span>}
-                                                </td>
-                                                <td className="px-6 py-3.5 text-center">
-                                                    <EstadoBadge stock={p.stock} minimo={p.stock_minimo} />
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
+                                ) : prodPaginados.map(p => {
+                                    const margen = p.precio_compra > 0 ? p.precio - p.precio_compra : null;
+                                    return (
+                                        <tr key={p.id} className="inv-table-row"
+                                            style={{ background: p.stock === 0 ? 'rgba(220,38,38,0.03)' : p.stock <= p.stock_minimo ? 'rgba(245,158,11,0.03)' : undefined }}>
+                                            <td style={{ padding: '0.85rem 1.1rem' }}>
+                                                <p style={{ fontSize: '0.87rem', fontWeight: '600', color: '#2d1a08', margin: 0 }}>{p.nombre}</p>
+                                                {p.codigo_barras && <p style={{ fontSize: '0.68rem', color: 'rgba(150,80,20,0.45)', marginTop: '0.1rem' }}>{p.codigo_barras}</p>}
+                                            </td>
+                                            <td style={{ padding: '0.85rem 1.1rem', fontSize: '0.82rem', color: 'rgba(120,60,10,0.65)' }}>{p.categoria}</td>
+                                            <td style={{ padding: '0.85rem 1.1rem' }}>
+                                                <span style={{ fontSize: '0.87rem', fontWeight: '700', color: '#2d1a08' }}>{p.stock}</span>
+                                                <span style={{ fontSize: '0.68rem', color: 'rgba(150,80,20,0.4)', marginLeft: '3px' }}>uds</span>
+                                            </td>
+                                            <td style={{ padding: '0.85rem 1.1rem', fontSize: '0.82rem', color: 'rgba(150,80,20,0.5)' }}>{p.stock_minimo} uds</td>
+                                            <td style={{ padding: '0.85rem 1.1rem', fontSize: '0.82rem', color: 'rgba(59,130,246,0.8)' }}>
+                                                {p.precio_compra > 0 ? fmt(p.precio_compra) : <span style={{ color: 'rgba(180,90,20,0.25)', fontSize: '0.72rem' }}>—</span>}
+                                            </td>
+                                            <td style={{ padding: '0.85rem 1.1rem', fontSize: '0.87rem', fontWeight: '600', color: '#2d1a08' }}>{fmt(p.precio)}</td>
+                                            <td style={{ padding: '0.85rem 1.1rem', fontSize: '0.85rem' }}>
+                                                {margen !== null
+                                                    ? <span style={{ fontWeight: '700', color: margen >= 0 ? 'rgba(16,185,129,0.85)' : 'rgba(220,38,38,0.85)' }}>
+                                                        {margen >= 0 ? '+' : ''}{fmt(margen)}
+                                                      </span>
+                                                    : <span style={{ color: 'rgba(180,90,20,0.25)' }}>—</span>}
+                                            </td>
+                                            <td style={{ padding: '0.85rem 1.1rem' }}>
+                                                <EstadoBadge stock={p.stock} minimo={p.stock_minimo} />
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                                 </tbody>
                             </table>
                         </div>
-
                         <Paginador pagina={paginaProd} total={productosFiltrados.length} porPagina={PROD_POR_PAG} onChange={setPaginaProd} />
                     </div>
+
                 </div>
             </div>
         </AppLayout>

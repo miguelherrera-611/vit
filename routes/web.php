@@ -32,7 +32,7 @@ Route::get('/', function () {
         $user = auth()->user();
         if ($user->hasRole('admin'))    return redirect()->route('dashboard.admin');
         if ($user->hasRole('empleado')) return redirect()->route('dashboard.empleado');
-        if ($user->hasRole('cliente'))  return redirect()->route('cliente.dashboard');
+        if ($user->hasRole('cliente'))  return redirect()->intended('/catalogo');
         return redirect()->route('dashboard');
     }
     return Inertia::render('Welcome', [

@@ -6,7 +6,6 @@ export default function AppLayout({ children }) {
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
     const dropdownRef = useRef(null);
 
-    // Apuntar al dashboard correcto según rol, sin pasar por el redirect de /dashboard
     const roles = auth.user?.roles ?? [];
     const dashboardHref = roles.includes('admin')
         ? '/dashboard/admin'
@@ -78,6 +77,7 @@ export default function AppLayout({ children }) {
                     padding: 0.35rem 0.75rem;
                     border-radius: 10px;
                     transition: all 0.18s ease;
+                    white-space: nowrap;
                 }
                 .nav-link:hover {
                     color: rgba(120,50,10,0.9);
@@ -94,6 +94,7 @@ export default function AppLayout({ children }) {
                     transition: all 0.2s ease;
                     box-shadow: 0 2px 8px rgba(180,90,20,0.06), inset 0 1px 0 rgba(255,255,255,0.75);
                     position: relative;
+                    max-width: 100%;
                 }
                 .user-pill:hover {
                     background: rgba(255,255,255,0.3);
@@ -113,6 +114,11 @@ export default function AppLayout({ children }) {
                     font-size: 0.85rem; font-weight: 500;
                     color: rgba(120,55,10,0.85);
                     letter-spacing: -0.01em;
+                    /* Truncar nombre largo en móvil */
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    max-width: 120px;
                 }
 
                 .nav-dropdown {
@@ -154,30 +160,87 @@ export default function AppLayout({ children }) {
                     background: rgba(200,140,80,0.12);
                     margin: 0.2rem 0.8rem;
                 }
+
+                /* ── RESPONSIVE ── */
+                @media (max-width: 640px) {
+                    .nav-inner {
+                        padding: 0 0.875rem !important;
+                        height: auto !important;
+                        min-height: 56px;
+                        flex-wrap: nowrap;
+                        gap: 0.5rem;
+                    }
+
+                    /* Logo icon un poco más pequeño */
+                    .nav-logo-icon {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 9px;
+                    }
+
+                    /* Ocultar el texto "VitaliStore" en pantallas muy pequeñas,
+                       solo mostrar el ícono */
+                    .nav-brand-text {
+                        display: none;
+                    }
+
+                    /* Ocultar el enlace Dashboard en móvil (ya están en el dropdown) */
+                    .nav-dashboard-link {
+                        display: none;
+                    }
+
+                    /* Pill más compacto */
+                    .user-pill {
+                        padding: 0.28rem 0.5rem 0.28rem 0.32rem;
+                        gap: 0.4rem;
+                    }
+                    .user-name {
+                        font-size: 0.78rem;
+                        max-width: 90px;
+                    }
+
+                    /* Dropdown pegado al borde derecho */
+                    .nav-dropdown {
+                        right: 0;
+                        min-width: 160px;
+                    }
+                }
+
+                @media (max-width: 380px) {
+                    .user-name { max-width: 70px; }
+                }
             `}</style>
 
             <nav className="app-nav">
-                <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
-
+                <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+                    <div
+                        className="nav-inner"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            height: '64px',
+                            padding: '0 1.5rem',
+                        }}
+                    >
                         {/* Left: logo + links */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.75rem' }}>
-                            <Link href={dashboardHref} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', textDecoration: 'none' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', minWidth: 0 }}>
+                            <Link href={dashboardHref} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', textDecoration: 'none', flexShrink: 0 }}>
                                 <div className="nav-logo-icon">
                                     <svg width="20" height="20" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                                         <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                                     </svg>
                                 </div>
-                                <span className="nav-brand">VitaliStore</span>
+                                <span className="nav-brand nav-brand-text">VitaliStore</span>
                             </Link>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <div className="nav-dashboard-link" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                 <Link href={dashboardHref} className="nav-link">Dashboard</Link>
                             </div>
                         </div>
 
                         {/* Right: user pill */}
-                        <div ref={dropdownRef} style={{ position: 'relative' }}>
+                        <div ref={dropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
                             <div
                                 className="user-pill"
                                 onClick={() => setShowingNavigationDropdown(!showingNavigationDropdown)}
@@ -188,7 +251,7 @@ export default function AppLayout({ children }) {
                                 <span className="user-name">{auth.user.name}</span>
                                 <svg
                                     width="14" height="14" fill="none" stroke="rgba(150,80,20,0.55)" strokeWidth="2" viewBox="0 0 24 24"
-                                    style={{ transition: 'transform 0.2s', transform: showingNavigationDropdown ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                                    style={{ transition: 'transform 0.2s', transform: showingNavigationDropdown ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}
                                 >
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                                 </svg>
@@ -196,6 +259,7 @@ export default function AppLayout({ children }) {
 
                             {showingNavigationDropdown && (
                                 <div className="nav-dropdown">
+                                    <Link href={dashboardHref}>Dashboard</Link>
                                     <Link href="/profile">Perfil</Link>
                                     <div className="nav-dropdown-divider" />
                                     <Link href="/logout" method="post" as="button">

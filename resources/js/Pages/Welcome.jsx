@@ -1,5 +1,4 @@
 // resources/js/Pages/Welcome.jsx
-// ARCHIVO COMPLETO — igual al original + botón "Crear cuenta" en el header
 import { Link } from '@inertiajs/react';
 
 export default function Welcome({ canLogin }) {
@@ -9,367 +8,338 @@ export default function Welcome({ canLogin }) {
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
                 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-                @keyframes floatA { 0%,100%{transform:translateY(0) translateX(0) rotate(0deg)} 33%{transform:translateY(-22px) translateX(14px) rotate(4deg)} 66%{transform:translateY(14px) translateX(-10px) rotate(-3deg)} }
-                @keyframes floatB { 0%,100%{transform:translateY(0) translateX(0) rotate(0deg)} 33%{transform:translateY(18px) translateX(-14px) rotate(-4deg)} 66%{transform:translateY(-14px) translateX(10px) rotate(5deg)} }
-                @keyframes floatC { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-16px) scale(1.03)} }
-                @keyframes fadeUp { from{opacity:0;transform:translateY(24px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-                @keyframes pulseGlow {
-                    0%,100% { box-shadow: 0 12px 40px rgba(220,38,38,0.28), 0 4px 12px rgba(220,38,38,0.15), inset 0 1px 0 rgba(255,255,255,0.25); }
-                    50%     { box-shadow: 0 16px 52px rgba(220,38,38,0.38), 0 6px 18px rgba(220,38,38,0.22), inset 0 1px 0 rgba(255,255,255,0.25); }
-                }
-                @keyframes staggerUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+                @keyframes fadeUp   { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+                @keyframes floatA   { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-18px) rotate(3deg)} }
+                @keyframes floatB   { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(14px) rotate(-4deg)} }
+                @keyframes stagger1 { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
 
-                .welcome-bg {
+                .w-root {
                     min-height: 100vh;
                     font-family: 'Inter', -apple-system, sans-serif;
-                    position: relative;
-                    overflow-x: hidden;
-                    display: flex;
-                    flex-direction: column;
+                    display: flex; flex-direction: column;
+                    position: relative; overflow-x: hidden;
                     background:
-                        radial-gradient(ellipse 75% 60% at 0%   0%,   rgba(255,210,170,0.22) 0%, transparent 55%),
-                        radial-gradient(ellipse 60% 55% at 100% 100%, rgba(255,195,145,0.18) 0%, transparent 55%),
-                        radial-gradient(ellipse 55% 50% at 75%  10%,  rgba(255,215,175,0.16) 0%, transparent 55%),
-                        radial-gradient(ellipse 50% 45% at 15%  85%,  rgba(255,205,155,0.17) 0%, transparent 55%),
-                        radial-gradient(ellipse 40% 40% at 50%  50%,  rgba(255,225,190,0.12) 0%, transparent 65%),
+                        radial-gradient(ellipse 75% 60% at 0% 0%, rgba(255,210,170,0.2) 0%, transparent 55%),
+                        radial-gradient(ellipse 60% 55% at 100% 100%, rgba(255,195,145,0.15) 0%, transparent 55%),
+                        radial-gradient(ellipse 50% 45% at 70% 5%, rgba(255,215,175,0.12) 0%, transparent 55%),
                         linear-gradient(145deg, #fdf6f0 0%, #fdf3ec 35%, #fef5ef 70%, #fef8f4 100%);
                 }
 
-                .bg-deco {
-                    position: absolute;
-                    pointer-events: none;
-                    background: rgba(255,255,255,0.14);
-                    border: 1px solid rgba(255,255,255,0.65);
-                    backdrop-filter: blur(16px);
-                    -webkit-backdrop-filter: blur(16px);
-                    box-shadow: 0 8px 32px rgba(200,100,30,0.06), inset 0 1px 0 rgba(255,255,255,0.82);
-                    z-index: 0;
+                /* Decoraciones flotantes */
+                .w-deco {
+                    position: absolute; pointer-events: none; z-index: 0;
+                    background: rgba(255,255,255,0.12);
+                    border: 1px solid rgba(255,255,255,0.55);
+                    backdrop-filter: blur(14px);
                 }
-                .bd1 { width:140px; height:140px; border-radius:32px;  top:5%;    right:5%;   animation:floatA 16s ease-in-out infinite 1s;   transform:rotate(14deg); }
-                .bd2 { width: 88px; height: 88px; border-radius:50%;   top:58%;   left:1.5%;  animation:floatC 11s ease-in-out infinite 3s; }
-                .bd3 { width:210px; height: 60px; border-radius:44px;  bottom:9%; right:4%;   animation:floatB 13s ease-in-out infinite 0.5s; }
-                .bd4 { width: 60px; height:155px; border-radius:44px;  top:28%;   left:0.8%;  animation:floatA 15s ease-in-out infinite 4s;   transform:rotate(-7deg); }
-                .bd5 { width: 52px; height: 52px; border-radius:18px;  bottom:24%;left:16%;   animation:floatC 9s  ease-in-out infinite 1.5s; transform:rotate(22deg); }
-                .bd6 { width:165px; height: 48px; border-radius:40px;  top:2.5%;  left:30%;   animation:floatB 10s ease-in-out infinite 2s; }
+                .wd1 { width:130px;height:130px;border-radius:28px;top:5%;right:4%;animation:floatA 15s ease-in-out infinite;transform:rotate(12deg); }
+                .wd2 { width:75px;height:75px;border-radius:50%;top:55%;left:1%;animation:floatB 11s ease-in-out infinite 2s; }
+                .wd3 { width:190px;height:52px;border-radius:40px;bottom:10%;right:3%;animation:floatA 13s ease-in-out infinite 1s; }
+                .wd4 { width:52px;height:140px;border-radius:40px;top:28%;left:0.5%;animation:floatB 14s ease-in-out infinite 3s;transform:rotate(-6deg); }
 
-                /* HEADER */
-                .glass-header {
+                /* Header */
+                .w-header {
+                    position: sticky; top: 0; z-index: 50;
+                    background: rgba(253,246,240,0.75);
+                    backdrop-filter: blur(32px) saturate(160%);
+                    border-bottom: 1px solid rgba(200,140,80,0.12);
+                    box-shadow: 0 1px 0 rgba(255,255,255,0.85);
+                }
+                .w-header-inner {
+                    max-width: 1180px; margin: 0 auto;
+                    padding: 0 1.5rem; height: 60px;
+                    display: flex; align-items: center; justify-content: space-between;
+                    gap: 1rem;
+                }
+                .w-logo {
+                    display: flex; align-items: center; gap: 0.55rem;
+                    text-decoration: none; flex-shrink: 0;
+                }
+                .w-logo-mark {
+                    width: 30px; height: 30px; border-radius: 8px;
+                    border: 1.5px solid rgba(185,28,28,0.45);
+                    display: flex; align-items: center; justify-content: center;
+                }
+                .w-logo-text {
+                    font-size: 0.92rem; font-weight: 500;
+                    color: #2d1a08; letter-spacing: -0.02em;
+                }
+                .w-nav { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+                .w-nav-link {
+                    font-size: 0.8rem; font-weight: 400;
+                    color: rgba(120,60,10,0.62); text-decoration: none;
+                    padding: 0.32rem 0.65rem; border-radius: 7px;
+                    transition: all 0.12s; white-space: nowrap;
+                }
+                .w-nav-link:hover { color: rgba(90,40,5,0.9); background: rgba(200,140,80,0.08); }
+                .w-nav-ghost {
+                    font-size: 0.8rem; font-weight: 400;
+                    color: rgba(120,60,10,0.65); text-decoration: none;
+                    padding: 0.32rem 0.72rem; border-radius: 7px;
+                    border: 1px solid rgba(200,140,80,0.2);
+                    background: rgba(255,255,255,0.5);
+                    transition: all 0.12s; white-space: nowrap;
+                }
+                .w-nav-ghost:hover { background: rgba(255,255,255,0.82); border-color: rgba(200,140,80,0.32); }
+                .w-nav-primary {
+                    font-size: 0.8rem; font-weight: 500;
+                    color: rgba(185,28,28,0.88); text-decoration: none;
+                    padding: 0.32rem 0.72rem; border-radius: 7px;
+                    border: 1px solid rgba(185,28,28,0.22);
+                    background: rgba(185,28,28,0.05);
+                    transition: all 0.12s; white-space: nowrap;
+                }
+                .w-nav-primary:hover { background: rgba(185,28,28,0.1); border-color: rgba(185,28,28,0.35); }
+
+                /* Hero */
+                .w-hero {
+                    flex: 1; display: flex; align-items: center; justify-content: center;
+                    padding: 5rem 1.5rem 4rem;
                     position: relative; z-index: 2;
-                    background: rgba(255,255,255,0.08);
-                    backdrop-filter: blur(40px) saturate(180%);
-                    -webkit-backdrop-filter: blur(40px) saturate(180%);
-                    border-bottom: 1px solid rgba(255,255,255,0.68);
-                    box-shadow: 0 4px 24px rgba(200,100,30,0.07), inset 0 1px 0 rgba(255,255,255,0.85);
-                    padding: 1.25rem 2rem;
                 }
-                .header-inner { max-width:1280px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; }
-                .logo-wrap { display:flex; align-items:center; gap:0.75rem; text-decoration:none; }
-                .logo-icon {
-                    width:42px; height:42px;
-                    background: linear-gradient(145deg, #ef4444 0%, #b91c1c 100%);
-                    border-radius:14px;
-                    display:flex; align-items:center; justify-content:center;
-                    animation: pulseGlow 3s ease-in-out infinite;
-                    position:relative;
-                }
-                .logo-icon::after { content:''; position:absolute; inset:0; border-radius:14px; background:linear-gradient(145deg,rgba(255,255,255,0.22) 0%,transparent 60%); }
-                .logo-text { font-size:1.4rem; font-weight:300; color:#2d1a08; letter-spacing:-0.03em; }
-
-                /* Botones del header */
-                .glass-login-btn {
-                    padding: 0.6rem 1.4rem;
-                    border-radius: 14px;
-                    font-family: 'Inter', sans-serif;
-                    font-size: 0.875rem; font-weight: 500;
-                    cursor: pointer;
-                    transition: all 0.28s cubic-bezier(0.16,1,0.3,1);
-                    position: relative; overflow: hidden;
-                    background: rgba(220,38,38,0.08);
-                    color: rgba(185,28,28,0.95);
-                    border: 1px solid rgba(220,38,38,0.45);
-                    box-shadow: 0 4px 16px rgba(220,38,38,0.1), inset 0 1.5px 0 rgba(255,120,120,0.3);
-                    backdrop-filter: blur(12px);
-                    text-decoration: none;
-                    display: inline-block;
-                    letter-spacing: -0.01em;
-                }
-                .glass-login-btn::before {
-                    content:''; position:absolute; top:0; left:0; right:0; height:1px;
-                    background:linear-gradient(90deg,transparent,rgba(255,150,150,0.8) 40%,rgba(255,150,150,0.8) 60%,transparent);
-                    pointer-events:none;
-                }
-                .glass-login-btn::after {
-                    content:''; position:absolute; top:0; left:-120%; width:80%; height:100%;
-                    background:linear-gradient(105deg,transparent 20%,rgba(255,255,255,0.18) 50%,transparent 80%);
-                    transition:left 0.55s ease; pointer-events:none;
-                }
-                .glass-login-btn:hover::after { left:130%; }
-                .glass-login-btn:hover {
-                    transform:translateY(-2px);
-                    background:rgba(220,38,38,0.13);
-                    border-color:rgba(220,38,38,0.6);
-                    box-shadow:0 8px 28px rgba(220,38,38,0.15),inset 0 1.5px 0 rgba(255,120,120,0.4);
-                    color:rgba(160,20,20,1);
+                .w-hero-inner {
+                    max-width: 680px; width: 100%; text-align: center;
+                    animation: fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both;
                 }
 
-                /* Botón ghost para "Iniciar sesión" */
-                .glass-ghost-btn {
-                    padding: 0.6rem 1.2rem;
-                    border-radius: 14px;
-                    font-family: 'Inter', sans-serif;
-                    font-size: 0.875rem; font-weight: 500;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    background: rgba(255,255,255,0.08);
-                    color: rgba(120,60,10,0.75);
-                    border: 1px solid rgba(200,140,80,0.3);
-                    backdrop-filter: blur(12px);
-                    text-decoration: none;
-                    display: inline-block;
-                    letter-spacing: -0.01em;
+                /* Eyebrow */
+                .w-eyebrow {
+                    display: inline-flex; align-items: center; gap: 0.5rem;
+                    padding: 0.28rem 0.85rem; border-radius: 40px; margin-bottom: 2rem;
+                    background: rgba(185,28,28,0.06);
+                    border: 1px solid rgba(185,28,28,0.16);
                 }
-                .glass-ghost-btn:hover {
-                    background: rgba(255,255,255,0.16);
-                    color: rgba(90,40,5,0.9);
-                    border-color: rgba(200,140,80,0.5);
+                .w-eyebrow-dot { width:5px; height:5px; border-radius:50%; background:rgba(185,28,28,0.7); flex-shrink:0; }
+                .w-eyebrow-text { font-size:0.68rem; font-weight:500; color:rgba(185,28,28,0.78); letter-spacing:0.06em; text-transform:uppercase; }
+
+                .w-title {
+                    font-size: clamp(2.4rem, 7vw, 3.8rem);
+                    font-weight: 300; color: #2d1a08;
+                    letter-spacing: -0.04em; line-height: 1.08;
+                    margin-bottom: 1.25rem;
+                }
+                .w-title strong { font-weight: 500; }
+
+                .w-subtitle {
+                    font-size: clamp(0.9rem, 2.5vw, 1.05rem);
+                    color: rgba(150,80,20,0.62); font-weight: 400;
+                    line-height: 1.75; margin-bottom: 2.75rem;
+                    max-width: 520px; margin-left: auto; margin-right: auto;
                 }
 
-                /* Enlace al catálogo */
-                .catalogo-link {
-                    padding: 0.6rem 1.2rem; border-radius:14px;
-                    font-family:'Inter',sans-serif; font-size:0.875rem; font-weight:500;
-                    color:rgba(150,80,20,0.7); text-decoration:none;
-                    border:1px solid transparent; transition:all 0.18s;
+                /* CTA */
+                .w-cta { display:flex; align-items:center; justify-content:center; gap:0.75rem; flex-wrap:wrap; margin-bottom:4rem; }
+                .w-btn-primary {
+                    padding:0.82rem 1.75rem; border-radius:10px;
+                    font-family:inherit; font-size:0.86rem; font-weight:500;
+                    text-decoration:none; display:inline-block;
+                    background:rgba(185,28,28,0.08); color:rgba(185,28,28,0.92);
+                    border:1px solid rgba(185,28,28,0.25);
+                    transition:all 0.2s; letter-spacing:-0.01em;
                 }
-                .catalogo-link:hover {
-                    background:rgba(255,255,255,0.12);
-                    border-color:rgba(200,140,80,0.2);
-                    color:rgba(120,55,10,0.9);
+                .w-btn-primary:hover { background:rgba(185,28,28,0.14); transform:translateY(-1px); border-color:rgba(185,28,28,0.38); }
+                .w-btn-ghost {
+                    padding:0.82rem 1.5rem; border-radius:10px;
+                    font-family:inherit; font-size:0.86rem; font-weight:400;
+                    text-decoration:none; display:inline-block;
+                    background:rgba(255,255,255,0.5); color:rgba(120,60,10,0.72);
+                    border:1px solid rgba(200,140,80,0.2);
+                    transition:all 0.2s; letter-spacing:-0.01em;
                 }
+                .w-btn-ghost:hover { background:rgba(255,255,255,0.82); color:rgba(90,40,5,0.9); }
 
-                /* MAIN */
-                .welcome-main { flex:1; display:flex; align-items:center; justify-content:center; padding:4rem 2rem; position:relative; z-index:2; }
-                .hero-inner { max-width:900px; width:100%; text-align:center; animation:fadeUp 0.85s cubic-bezier(0.16,1,0.3,1) both; }
+                /* Feature cards */
+                .w-features { display:grid; grid-template-columns:repeat(3,1fr); gap:0.875rem; }
+                .w-feat {
+                    background:rgba(255,255,255,0.45); border:1px solid rgba(200,140,80,0.12);
+                    border-radius:14px; padding:1.5rem 1.25rem; text-align:left;
+                    box-shadow:0 2px 16px rgba(180,90,20,0.05),inset 0 1px 0 rgba(255,255,255,0.9);
+                    transition:all 0.22s cubic-bezier(0.16,1,0.3,1);
+                }
+                .w-feat:hover { transform:translateY(-2px); background:rgba(255,255,255,0.6); border-color:rgba(200,140,80,0.2); }
+                .w-feat.s1 { animation:stagger1 0.5s cubic-bezier(0.16,1,0.3,1) 0.1s both; }
+                .w-feat.s2 { animation:stagger1 0.5s cubic-bezier(0.16,1,0.3,1) 0.18s both; }
+                .w-feat.s3 { animation:stagger1 0.5s cubic-bezier(0.16,1,0.3,1) 0.26s both; }
 
-                .hero-icon {
-                    width:96px; height:96px;
-                    background:linear-gradient(145deg,#ef4444 0%,#b91c1c 100%);
-                    border-radius:28px;
-                    display:inline-flex; align-items:center; justify-content:center;
-                    margin-bottom:1.75rem;
-                    animation:pulseGlow 3s ease-in-out infinite;
-                    position:relative;
-                    box-shadow:0 12px 40px rgba(220,38,38,0.28),inset 0 1px 0 rgba(255,255,255,0.25);
-                }
-                .hero-icon::after { content:''; position:absolute; inset:0; border-radius:28px; background:linear-gradient(145deg,rgba(255,255,255,0.22) 0%,transparent 60%); }
+                .w-divider { width:40px; height:1px; margin:0 auto 2.5rem; background:rgba(200,140,80,0.22); }
 
-                .hero-title { font-size:4rem; font-weight:300; color:#2d1a08; letter-spacing:-0.04em; line-height:1; margin-bottom:1.25rem; }
-                .hero-sub { font-size:1.1rem; color:rgba(150,80,20,0.65); font-weight:400; line-height:1.7; margin-bottom:3.5rem; }
-
-                .hero-cta-row { display:flex; align-items:center; justify-content:center; gap:1rem; flex-wrap:wrap; margin-bottom:3rem; }
-
-                .btn-hero-primary {
-                    padding:0.9rem 2rem; border-radius:16px;
-                    font-family:'Inter',sans-serif; font-size:0.95rem; font-weight:600;
-                    text-decoration:none; transition:all 0.28s cubic-bezier(0.16,1,0.3,1);
-                    position:relative; overflow:hidden;
-                    background:rgba(220,38,38,0.1); color:rgba(185,28,28,0.95);
-                    border:1px solid rgba(220,38,38,0.45);
-                    box-shadow:0 8px 28px rgba(220,38,38,0.14),inset 0 1.5px 0 rgba(255,120,120,0.3);
-                    display:inline-block;
-                }
-                .btn-hero-primary::after {
-                    content:''; position:absolute; top:0; left:-120%; width:80%; height:100%;
-                    background:linear-gradient(105deg,transparent 20%,rgba(255,255,255,0.18) 50%,transparent 80%);
-                    transition:left 0.55s ease; pointer-events:none;
-                }
-                .btn-hero-primary:hover::after { left:130%; }
-                .btn-hero-primary:hover {
-                    transform:translateY(-3px); background:rgba(220,38,38,0.16);
-                    box-shadow:0 16px 40px rgba(220,38,38,0.18),inset 0 1.5px 0 rgba(255,120,120,0.4);
-                }
-
-                .btn-hero-ghost {
-                    padding:0.9rem 1.75rem; border-radius:16px;
-                    font-family:'Inter',sans-serif; font-size:0.95rem; font-weight:500;
-                    text-decoration:none; transition:all 0.2s ease;
-                    background:rgba(255,255,255,0.06); color:rgba(120,60,10,0.8);
-                    border:1px solid rgba(200,140,80,0.3);
-                    box-shadow:inset 0 1px 0 rgba(255,255,255,0.7);
-                    display:inline-block;
-                }
-                .btn-hero-ghost:hover {
-                    background:rgba(255,255,255,0.14); color:rgba(90,40,5,0.95);
-                    border-color:rgba(200,140,80,0.5); transform:translateY(-2px);
-                }
-
-                /* GLASS CARD — igual al original */
-                .glass-card {
-                    background: rgba(255,255,255,0.04);
-                    backdrop-filter: blur(22px) saturate(150%);
-                    -webkit-backdrop-filter: blur(22px) saturate(150%);
-                    border-radius: 24px;
-                    border: 1px solid rgba(255,255,255,0.65);
-                    box-shadow:
-                        0 16px 48px rgba(180,90,20,0.1),
-                        0 4px 14px rgba(180,90,20,0.06),
-                        inset 0 1.5px 0 rgba(255,255,255,0.88),
-                        inset 0 -1px 0 rgba(180,90,20,0.04),
-                        inset 1px 0 0 rgba(255,255,255,0.32),
-                        inset -1px 0 0 rgba(255,255,255,0.1);
-                    position: relative; overflow: hidden;
-                    transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
-                    padding: 2rem;
-                }
-                .glass-card::before {
-                    content:''; position:absolute; top:0; left:0; right:0; height:1px;
-                    background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.95) 25%,rgba(255,255,255,0.95) 75%,transparent 100%);
-                    pointer-events:none; z-index:1;
-                }
-                .glass-card::after {
-                    content:''; position:absolute; top:0; left:0; width:52%; height:58%;
-                    background:radial-gradient(ellipse at 28% 18%,rgba(255,255,255,0.12) 0%,transparent 65%);
-                    pointer-events:none; z-index:1;
-                }
-                .glass-card:hover {
-                    transform:translateY(-3px);
-                    background:rgba(255,255,255,0.08);
-                    border-color:rgba(255,255,255,0.82);
-                    box-shadow:0 24px 64px rgba(180,90,20,0.13),0 6px 20px rgba(180,90,20,0.07),inset 0 1.5px 0 rgba(255,255,255,0.95);
-                }
-
-                .features-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1.25rem; }
-                .anim-1 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.1s both; }
-                .anim-2 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.2s both; }
-                .anim-3 { animation:staggerUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.3s both; }
-
-                /* FOOTER */
-                .glass-footer {
+                /* Footer */
+                .w-footer {
                     position:relative; z-index:2;
-                    background:rgba(255,255,255,0.06);
-                    backdrop-filter:blur(20px);
-                    border-top:1px solid rgba(255,255,255,0.55);
-                    padding:1.25rem 2rem;
-                    text-align:center;
-                    font-size:0.78rem;
-                    color:rgba(150,80,20,0.45);
+                    border-top:1px solid rgba(200,140,80,0.1);
+                    padding:1.25rem 1.5rem;
+                    display:flex; align-items:center; justify-content:space-between;
+                    flex-wrap:wrap; gap:0.5rem;
+                }
+                .w-footer p { font-size:0.72rem; color:rgba(150,80,20,0.42); }
+                .w-footer-links { display:flex; gap:1.25rem; }
+                .w-footer-links a { font-size:0.72rem; color:rgba(150,80,20,0.42); text-decoration:none; transition:color 0.12s; }
+                .w-footer-links a:hover { color:rgba(120,55,10,0.7); }
+
+                /* ── RESPONSIVE ── */
+
+                /* Tablet / móvil grande: achicamos padding del header */
+                @media (max-width: 640px) {
+                    .w-header-inner {
+                        padding: 0 1rem;
+                        height: 56px;
+                        gap: 0.5rem;
+                    }
+                    /* Ocultamos el enlace "Catálogo" del nav en móvil para dar espacio a los botones */
+                    .w-nav-text { display: none; }
+
+                    /* Botones del header más compactos */
+                    .w-nav-ghost,
+                    .w-nav-primary {
+                        font-size: 0.74rem;
+                        padding: 0.28rem 0.55rem;
+                    }
+
+                    .w-features { grid-template-columns: 1fr; }
+                    .w-hero { padding: 3rem 1.25rem 2.5rem; }
+                    .w-footer { justify-content: center; text-align: center; }
+                    .w-footer-links { justify-content: center; }
+                }
+
+                /* Móvil pequeño: botones del hero en columna */
+                @media (max-width: 420px) {
+                    .w-header-inner { padding: 0 0.875rem; }
+
+                    /* En pantallas muy pequeñas, apilar botones del header verticalmente
+                       usando un segundo row bajo el logo */
+                    .w-header-inner {
+                        flex-wrap: wrap;
+                        height: auto;
+                        padding-top: 0.6rem;
+                        padding-bottom: 0.6rem;
+                    }
+                    .w-logo { flex: 1; }
+                    .w-nav {
+                        width: 100%;
+                        justify-content: flex-end;
+                        gap: 0.35rem;
+                    }
+                    .w-nav-ghost,
+                    .w-nav-primary {
+                        flex: 1;
+                        text-align: center;
+                        font-size: 0.76rem;
+                        padding: 0.38rem 0.5rem;
+                    }
+
+                    .w-cta { flex-direction: column; align-items: stretch; }
+                    .w-btn-primary, .w-btn-ghost { text-align: center; }
                 }
             `}</style>
 
-            <div className="welcome-bg">
-                {/* Floating deco */}
-                <div className="bg-deco bd1"/><div className="bg-deco bd2"/>
-                <div className="bg-deco bd3"/><div className="bg-deco bd4"/>
-                <div className="bg-deco bd5"/><div className="bg-deco bd6"/>
+            <div className="w-root">
+                <div className="w-deco wd1"/><div className="w-deco wd2"/>
+                <div className="w-deco wd3"/><div className="w-deco wd4"/>
 
                 {/* Header */}
-                <header className="glass-header">
-                    <div className="header-inner">
-                        <div className="logo-wrap">
-                            <div className="logo-icon">
-                                <svg width="22" height="22" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" style={{position:'relative',zIndex:1}}>
+                <header className="w-header">
+                    <div className="w-header-inner">
+                        <Link href="/" className="w-logo">
+                            <div className="w-logo-mark">
+                                <svg width="13" height="13" fill="none" stroke="rgba(185,28,28,0.65)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                                     <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                                 </svg>
                             </div>
-                            <span className="logo-text">Vitali Store</span>
-                        </div>
+                            <span className="w-logo-text">VitaliStore</span>
+                        </Link>
 
-                        {/* Navegación */}
-                        <div style={{display:'flex',alignItems:'center',gap:'0.5rem',flexWrap:'wrap'}}>
-                            <Link href="/catalogo" className="catalogo-link">Ver catálogo</Link>
-
+                        <nav className="w-nav">
+                            <Link href="/catalogo" className="w-nav-link w-nav-text">Catálogo</Link>
                             {canLogin && (
                                 <>
-                                    <Link href="/login" className="glass-ghost-btn">
-                                        Iniciar sesión
-                                    </Link>
-                                    <Link href="/registro" className="glass-login-btn">
-                                        Crear cuenta
-                                    </Link>
+                                    <Link href="/login" className="w-nav-ghost">Iniciar sesión</Link>
+                                    <Link href="/registro" className="w-nav-primary">Crear cuenta</Link>
                                 </>
                             )}
-                        </div>
+                        </nav>
                     </div>
                 </header>
 
-                {/* Main */}
-                <main className="welcome-main">
-                    <div className="hero-inner">
-                        <div className="hero-icon">
-                            <svg width="48" height="48" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" style={{position:'relative',zIndex:1}}>
-                                <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                            </svg>
+                {/* Hero */}
+                <main className="w-hero">
+                    <div className="w-hero-inner">
+
+                        <div className="w-eyebrow">
+                            <div className="w-eyebrow-dot"/>
+                            <span className="w-eyebrow-text">Envío a todo Colombia</span>
                         </div>
 
-                        <h1 className="hero-title">Vitali Store</h1>
-                        <p className="hero-sub">
-                            Sistema integral de gestión para control de inventario,<br/>
-                            ventas y administración de tu negocio.
+                        <h1 className="w-title">
+                            <strong>Vitali Store</strong>
+                        </h1>
+
+                        <p className="w-subtitle">
+                            Descubre nuestra colección de productos seleccionados con cuidado.
+                            Compra con confianza, paga por transferencia y recibe en la puerta de tu casa.
                         </p>
 
-                        {/* CTAs para el cliente */}
-                        <div className="hero-cta-row">
-                            <Link href="/catalogo" className="btn-hero-primary">
-                                Explorar catálogo →
+                        <div className="w-cta">
+                            <Link href="/catalogo" className="w-btn-primary">
+                                Ver catálogo
                             </Link>
-                            <Link href="/registro" className="btn-hero-ghost">
-                                Crear cuenta gratis
-                            </Link>
+                            {canLogin && (
+                                <Link href="/registro" className="w-btn-ghost">
+                                    Crear cuenta gratis
+                                </Link>
+                            )}
                         </div>
 
-                        <div className="features-grid">
-                            <div className="anim-1">
-                                <FeatureCard
-                                    accent="rgba(220,38,38,0.75)"
-                                    icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>}
-                                    title="Seguro"
-                                    description="Autenticación 2FA para máxima seguridad"
-                                />
+                        <div className="w-divider"/>
+
+                        <div className="w-features">
+                            <div className="w-feat s1">
+                                <div style={{width:'36px',height:'36px',borderRadius:'9px',marginBottom:'0.875rem',
+                                    background:'rgba(185,28,28,0.06)',border:'1px solid rgba(185,28,28,0.14)',
+                                    display:'flex',alignItems:'center',justifyContent:'center'}}>
+                                    <svg width="16" height="16" fill="none" stroke="rgba(185,28,28,0.7)" strokeWidth="1.8" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                                    </svg>
+                                </div>
+                                <h3 style={{fontSize:'0.86rem',fontWeight:'600',color:'#2d1a08',marginBottom:'0.3rem',letterSpacing:'-0.02em'}}>Envío nacional</h3>
+                                <p style={{fontSize:'0.74rem',color:'rgba(150,80,20,0.58)',lineHeight:'1.6'}}>Entregamos en todo el país de forma rápida y segura.</p>
                             </div>
-                            <div className="anim-2">
-                                <FeatureCard
-                                    accent="rgba(59,130,246,0.75)"
-                                    icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M13 10V3L4 14h7v7l9-11h-7z"/>}
-                                    title="Rápido"
-                                    description="Gestión eficiente de tu negocio"
-                                />
+
+                            <div className="w-feat s2">
+                                <div style={{width:'36px',height:'36px',borderRadius:'9px',marginBottom:'0.875rem',
+                                    background:'rgba(59,130,246,0.06)',border:'1px solid rgba(59,130,246,0.14)',
+                                    display:'flex',alignItems:'center',justifyContent:'center'}}>
+                                    <svg width="16" height="16" fill="none" stroke="rgba(59,130,246,0.7)" strokeWidth="1.8" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                    </svg>
+                                </div>
+                                <h3 style={{fontSize:'0.86rem',fontWeight:'600',color:'#2d1a08',marginBottom:'0.3rem',letterSpacing:'-0.02em'}}>Compra segura</h3>
+                                <p style={{fontSize:'0.74rem',color:'rgba(150,80,20,0.58)',lineHeight:'1.6'}}>Verificamos cada pago y te notificamos en cada paso.</p>
                             </div>
-                            <div className="anim-3">
-                                <FeatureCard
-                                    accent="rgba(16,185,129,0.75)"
-                                    icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>}
-                                    title="Completo"
-                                    description="Control total de inventario y ventas"
-                                />
+
+                            <div className="w-feat s3">
+                                <div style={{width:'36px',height:'36px',borderRadius:'9px',marginBottom:'0.875rem',
+                                    background:'rgba(16,185,129,0.06)',border:'1px solid rgba(16,185,129,0.14)',
+                                    display:'flex',alignItems:'center',justifyContent:'center'}}>
+                                    <svg width="16" height="16" fill="none" stroke="rgba(16,185,129,0.7)" strokeWidth="1.8" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                    </svg>
+                                </div>
+                                <h3 style={{fontSize:'0.86rem',fontWeight:'600',color:'#2d1a08',marginBottom:'0.3rem',letterSpacing:'-0.02em'}}>Seguimiento</h3>
+                                <p style={{fontSize:'0.74rem',color:'rgba(150,80,20,0.58)',lineHeight:'1.6'}}>Consulta el estado de tu pedido en todo momento.</p>
                             </div>
                         </div>
                     </div>
                 </main>
 
                 {/* Footer */}
-                <footer className="glass-footer">
-                    © {new Date().getFullYear()} VitaliStore. Todos los derechos reservados.
+                <footer className="w-footer">
+                    <p>© {new Date().getFullYear()} VitaliStore. Todos los derechos reservados.</p>
+                    <div className="w-footer-links">
+                        <Link href="/catalogo">Catálogo</Link>
+                        <Link href="/login">Acceso</Link>
+                    </div>
                 </footer>
             </div>
         </>
-    );
-}
-
-function FeatureCard({ accent, icon, title, description }) {
-    return (
-        <div className="glass-card" style={{textAlign:'left'}}>
-            <div style={{
-                width:'52px', height:'52px', borderRadius:'18px',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                marginBottom:'1.25rem',
-                background: accent.replace(/[\d.]+\)$/, '0.1)'),
-                border: `1px solid ${accent.replace(/[\d.]+\)$/, '0.2)')}`,
-                boxShadow: `0 4px 14px ${accent.replace(/[\d.]+\)$/, '0.1)')}`,
-            }}>
-                <svg width="26" height="26" fill="none" stroke={accent} viewBox="0 0 24 24">{icon}</svg>
-            </div>
-            <h3 style={{fontSize:'1rem', fontWeight:'600', color:'#2d1a08', marginBottom:'0.35rem', letterSpacing:'-0.02em'}}>{title}</h3>
-            <p style={{fontSize:'0.8rem', color:'rgba(150,80,20,0.6)', lineHeight:'1.5'}}>{description}</p>
-        </div>
     );
 }

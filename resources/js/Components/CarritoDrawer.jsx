@@ -1,30 +1,38 @@
 // resources/js/Components/CarritoDrawer.jsx
 import { Link, router } from '@inertiajs/react';
+import { useState } from 'react';
 
 const formatCOP = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
 
-// ✅ Helper seguro: evita doble prefijo si la imagen ya es URL completa
 const imgSrc = (imagen) => {
     if (!imagen) return null;
     if (imagen.startsWith('http')) return imagen;
     return `/storage/${imagen}`;
 };
 
-export default function CarritoDrawer({ open, onClose, carrito, setCarrito, auth }) {
+const PER_PAGE = 4;
 
-    const total = carrito.reduce((sum, i) => sum + i.precio * i.cantidad, 0);
-    const totalItems = carrito.reduce((sum, i) => sum + i.cantidad, 0);
+export default function CarritoDrawer({ open, onClose, carrito, setCarrito, auth }) {
+    const [pagina, setPagina] = useState(1);
+
+    const total         = carrito.reduce((sum, i) => sum + i.precio * i.cantidad, 0);
+    const totalItems    = carrito.reduce((sum, i) => sum + i.cantidad, 0);
+    const totalPags     = Math.ceil(carrito.length / PER_PAGE) || 1;
+    const itemsVisibles = carrito.slice((pagina - 1) * PER_PAGE, pagina * PER_PAGE);
 
     const cambiarCantidad = (id, delta) => {
-        setCarrito(prev => prev.map(i => {
-            if (i.id !== id) return i;
-            const nueva = Math.max(1, Math.min(i.stock, i.cantidad + delta));
-            return { ...i, cantidad: nueva };
-        }));
+        setCarrito(prev => prev.map(i =>
+            i.id !== id ? i : { ...i, cantidad: Math.max(1, Math.min(i.stock, i.cantidad + delta)) }
+        ));
     };
 
     const eliminar = (id) => {
-        setCarrito(prev => prev.filter(i => i.id !== id));
+        setCarrito(prev => {
+            const nuevo = prev.filter(i => i.id !== id);
+            const np    = Math.ceil(nuevo.length / PER_PAGE) || 1;
+            if (pagina > np) setPagina(np);
+            return nuevo;
+        });
     };
 
     const irAlCheckout = () => {
@@ -38,227 +46,270 @@ export default function CarritoDrawer({ open, onClose, carrito, setCarrito, auth
         onClose();
     };
 
+    if (!open) return null;
+
     return (
         <>
             <style>{`
-                @keyframes slideInRight {
-                    from { transform:translateX(100%); opacity:0; }
-                    to   { transform:translateX(0); opacity:1; }
-                }
-                @keyframes fadeOverlay {
-                    from { opacity:0; }
-                    to   { opacity:1; }
+                @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+                @keyframes dropDown { from{opacity:0;transform:translateY(-8px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+
+                .c-overlay {
+                    position: fixed; inset: 0; z-index: 200;
+                    background: rgba(20,8,0,0.18);
+                    backdrop-filter: blur(3px);
+                    animation: fadeIn 0.16s ease;
                 }
 
-                .carrito-overlay {
-                    position:fixed; inset:0; z-index:200;
-                    background:rgba(30,10,0,0.3);
-                    backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
-                    animation:fadeOverlay 0.2s ease both;
-                }
-                .carrito-drawer {
-                    position:fixed; top:0; right:0; bottom:0; z-index:201;
-                    width:min(440px,100vw);
-                    background:rgba(255,250,245,0.95);
-                    backdrop-filter:blur(40px) saturate(180%); -webkit-backdrop-filter:blur(40px) saturate(180%);
-                    border-left:1px solid rgba(255,255,255,0.72);
-                    box-shadow:-16px 0 48px rgba(180,90,20,0.12), inset 1px 0 0 rgba(255,255,255,0.9);
-                    display:flex; flex-direction:column;
-                    animation:slideInRight 0.3s cubic-bezier(0.16,1,0.3,1) both;
-                    font-family:'Inter',-apple-system,sans-serif;
-                }
-
-                .drawer-header {
-                    padding:1.5rem 1.5rem 1.25rem;
-                    border-bottom:1px solid rgba(200,140,80,0.12);
-                    display:flex; align-items:center; justify-content:space-between;
-                }
-                .drawer-close {
-                    width:34px; height:34px; border-radius:10px; border:none; cursor:pointer;
-                    background:rgba(255,255,255,0.1); border:1px solid rgba(200,140,80,0.25);
-                    display:flex; align-items:center; justify-content:center;
-                    color:rgba(120,60,10,0.6); transition:all 0.15s;
-                }
-                .drawer-close:hover { background:rgba(255,255,255,0.25); color:rgba(90,40,5,0.9); }
-
-                .drawer-items { flex:1; overflow-y:auto; padding:1rem 1.5rem; }
-                .drawer-items::-webkit-scrollbar { width:4px; }
-                .drawer-items::-webkit-scrollbar-track { background:transparent; }
-                .drawer-items::-webkit-scrollbar-thumb { background:rgba(200,140,80,0.3); border-radius:4px; }
-
-                .item-card {
-                    display:flex; gap:0.875rem; padding:0.875rem;
-                    background:rgba(255,255,255,0.06);
-                    border:1px solid rgba(255,255,255,0.65);
-                    border-radius:18px; margin-bottom:0.75rem;
-                    box-shadow:0 4px 14px rgba(180,90,20,0.05), inset 0 1px 0 rgba(255,255,255,0.8);
-                }
-                .item-img {
-                    width:72px; height:72px; border-radius:12px;
-                    object-fit:cover; flex-shrink:0;
-                    background:rgba(255,255,255,0.1);
-                }
-                .item-placeholder {
-                    width:72px; height:72px; border-radius:12px; flex-shrink:0;
-                    background:rgba(255,255,255,0.08); border:1px solid rgba(200,140,80,0.15);
-                    display:flex; align-items:center; justify-content:center; font-size:1.6rem;
+                /* Ventana flotante — siempre en la esquina superior derecha */
+                .c-modal {
+                    position: fixed;
+                    top: 64px;   /* justo debajo del nav */
+                    right: 1rem;
+                    z-index: 201;
+                    background: rgba(253,248,244,0.98);
+                    border: 1px solid rgba(200,140,80,0.16);
+                    border-radius: 16px;
+                    box-shadow: 0 16px 48px rgba(180,90,20,0.14), 0 4px 12px rgba(180,90,20,0.08);
+                    width: 360px;
+                    max-width: calc(100vw - 1.5rem);
+                    max-height: calc(100vh - 80px);
+                    display: flex; flex-direction: column;
+                    overflow: hidden;
+                    font-family: 'Inter',-apple-system,sans-serif;
+                    animation: dropDown 0.22s cubic-bezier(0.16,1,0.3,1);
                 }
 
-                .qty-mini-btn {
-                    width:26px; height:26px; border-radius:8px; border:none; cursor:pointer;
-                    background:rgba(255,255,255,0.15); border:1px solid rgba(200,140,80,0.25);
-                    display:flex; align-items:center; justify-content:center;
-                    color:rgba(120,60,10,0.75); font-size:0.9rem; font-weight:600;
-                    transition:all 0.15s; font-family:'Inter',sans-serif;
+                .c-header {
+                    padding: 0.875rem 1.1rem 0.75rem;
+                    border-bottom: 1px solid rgba(200,140,80,0.1);
+                    display: flex; align-items: center; justify-content: space-between;
+                    flex-shrink: 0;
                 }
-                .qty-mini-btn:hover { background:rgba(255,255,255,0.3); }
+                .c-close {
+                    width: 26px; height: 26px; border-radius: 6px;
+                    background: none; border: 1px solid rgba(200,140,80,0.18);
+                    display: flex; align-items: center; justify-content: center;
+                    cursor: pointer; color: rgba(150,80,20,0.5); transition: all 0.12s;
+                }
+                .c-close:hover { background: rgba(200,140,80,0.06); }
 
-                .btn-eliminar {
-                    background:none; border:none; cursor:pointer; padding:0.25rem;
-                    color:rgba(150,80,20,0.35); transition:color 0.15s; border-radius:6px;
+                .c-list {
+                    flex: 1; overflow-y: auto;
+                    padding: 0.2rem 1.1rem;
+                    min-height: 0;
                 }
-                .btn-eliminar:hover { color:rgba(185,28,28,0.7); background:rgba(220,38,38,0.06); }
+                .c-list::-webkit-scrollbar { width: 3px; }
+                .c-list::-webkit-scrollbar-thumb { background: rgba(200,140,80,0.2); border-radius: 3px; }
 
-                .drawer-footer {
-                    padding:1.25rem 1.5rem 1.5rem;
-                    border-top:1px solid rgba(200,140,80,0.12);
-                    background:rgba(255,255,255,0.04);
+                .c-item {
+                    display: flex; gap: 0.6rem;
+                    padding: 0.6rem 0;
+                    border-bottom: 1px solid rgba(200,140,80,0.07);
+                    align-items: flex-start;
                 }
+                .c-item:last-child { border-bottom: none; }
 
-                .btn-checkout {
-                    width:100%; padding:0.95rem; border-radius:16px;
-                    font-family:'Inter',sans-serif; font-size:0.95rem; font-weight:600;
-                    cursor:pointer; transition:all 0.25s ease;
-                    position:relative; overflow:hidden; border:none;
-                    background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.38);
-                    color:rgba(185,28,28,0.95);
-                    box-shadow:0 8px 24px rgba(220,38,38,0.12),inset 0 1.5px 0 rgba(255,120,120,0.3);
+                .c-img {
+                    width: 50px; height: 50px; border-radius: 7px; object-fit: cover;
+                    flex-shrink: 0; border: 1px solid rgba(200,140,80,0.1);
                 }
-                .btn-checkout::after {
-                    content:''; position:absolute; top:0; left:-120%; width:80%; height:100%;
-                    background:linear-gradient(105deg,transparent 20%,rgba(255,255,255,0.18) 50%,transparent 80%);
-                    transition:left 0.55s ease; pointer-events:none;
+                .c-placeholder {
+                    width: 50px; height: 50px; border-radius: 7px; flex-shrink: 0;
+                    background: rgba(200,140,80,0.05); border: 1px solid rgba(200,140,80,0.1);
+                    display: flex; align-items: center; justify-content: center;
+                    color: rgba(150,80,20,0.25);
                 }
-                .btn-checkout:hover::after { left:130%; }
-                .btn-checkout:hover {
-                    transform:translateY(-2px); background:rgba(220,38,38,0.15);
-                    box-shadow:0 14px 36px rgba(220,38,38,0.16);
+                .c-qty-btn {
+                    width: 20px; height: 20px; border-radius: 5px; cursor: pointer;
+                    background: rgba(200,140,80,0.07); border: 1px solid rgba(200,140,80,0.15);
+                    display: flex; align-items: center; justify-content: center;
+                    color: rgba(120,60,10,0.7); font-size: 0.76rem;
+                    transition: background 0.1s; font-family: inherit; flex-shrink: 0;
                 }
-                .btn-checkout:disabled { opacity:0.35; cursor:not-allowed; transform:none; }
+                .c-qty-btn:hover { background: rgba(200,140,80,0.14); }
+                .c-qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+                .c-rm {
+                    background: none; border: none; cursor: pointer; padding: 0.15rem;
+                    color: rgba(150,80,20,0.2); border-radius: 4px; transition: color 0.1s; flex-shrink: 0;
+                }
+                .c-rm:hover { color: rgba(185,28,28,0.55); }
+
+                .c-pag {
+                    display: flex; align-items: center; justify-content: center; gap: 0.25rem;
+                    padding: 0.4rem 1.1rem;
+                    border-top: 1px solid rgba(200,140,80,0.08);
+                    flex-shrink: 0;
+                }
+                .c-pb {
+                    width: 24px; height: 24px; border-radius: 5px; cursor: pointer;
+                    border: 1px solid rgba(200,140,80,0.15); background: rgba(255,255,255,0.45);
+                    display: flex; align-items: center; justify-content: center;
+                    font-size: 0.7rem; font-weight: 500; color: rgba(120,60,10,0.6);
+                    transition: all 0.1s; font-family: inherit;
+                }
+                .c-pb:hover:not(:disabled) { background: rgba(255,255,255,0.75); }
+                .c-pb:disabled { opacity: 0.3; cursor: not-allowed; }
+                .c-pb.on { background: rgba(185,28,28,0.07); border-color: rgba(185,28,28,0.2); color: rgba(185,28,28,0.85); font-weight: 600; }
+
+                .c-footer {
+                    padding: 0.7rem 1.1rem 0.9rem;
+                    border-top: 1px solid rgba(200,140,80,0.1);
+                    flex-shrink: 0;
+                }
+                .c-total-row {
+                    display: flex; justify-content: space-between; align-items: center;
+                    padding: 0.45rem 0; margin-bottom: 0.55rem;
+                    border-bottom: 1px solid rgba(200,140,80,0.1);
+                }
+                .c-checkout {
+                    width: 100%; padding: 0.72rem; border-radius: 9px;
+                    font-family: inherit; font-size: 0.83rem; font-weight: 500;
+                    cursor: pointer; transition: all 0.13s;
+                    background: rgba(185,28,28,0.08); border: 1px solid rgba(185,28,28,0.22);
+                    color: rgba(185,28,28,0.9); letter-spacing: -0.01em;
+                }
+                .c-checkout:hover { background: rgba(185,28,28,0.13); border-color: rgba(185,28,28,0.35); }
+
+                /* Móvil: ajustar posición para que siga desde arriba */
+                @media (max-width: 500px) {
+                    .c-modal {
+                        top: 60px;
+                        right: 0.75rem;
+                        left: 0.75rem;
+                        width: auto;
+                        max-width: 100%;
+                        max-height: calc(100vh - 72px);
+                        border-radius: 14px;
+                    }
+                }
             `}</style>
 
-            {!open ? null : (
-                <>
-                    <div className="carrito-overlay" onClick={onClose} />
-                    <div className="carrito-drawer">
+            {/* Overlay — cierra al clic fuera */}
+            <div className="c-overlay" onClick={onClose}/>
 
-                        {/* Header */}
-                        <div className="drawer-header">
-                            <div>
-                                <h2 style={{fontSize:'1.05rem',fontWeight:'600',color:'#2d1a08',letterSpacing:'-0.02em',margin:0}}>
-                                    Carrito
-                                </h2>
-                                <p style={{fontSize:'0.78rem',color:'rgba(150,80,20,0.55)',margin:'0.15rem 0 0'}}>
-                                    {totalItems} {totalItems === 1 ? 'artículo' : 'artículos'}
-                                </p>
-                            </div>
-                            <button className="drawer-close" onClick={onClose}>
-                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            {/* Ventana */}
+            <div className="c-modal">
+
+                {/* Header */}
+                <div className="c-header">
+                    <div>
+                        <p style={{fontSize:'0.84rem',fontWeight:'500',color:'#2d1a08',margin:0,letterSpacing:'-0.02em'}}>Carrito</p>
+                        <p style={{fontSize:'0.69rem',color:'rgba(150,80,20,0.48)',margin:'0.05rem 0 0'}}>
+                            {totalItems} {totalItems===1?'artículo':'artículos'}
+                            {carrito.length > PER_PAGE && ` · pág. ${pagina}/${totalPags}`}
+                        </p>
+                    </div>
+                    <button className="c-close" onClick={onClose}>
+                        <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                {/* Lista */}
+                <div className="c-list">
+                    {carrito.length === 0 ? (
+                        <div style={{textAlign:'center',padding:'1.75rem 0'}}>
+                            <div style={{width:'36px',height:'36px',margin:'0 auto 0.75rem',borderRadius:'9px',
+                                background:'rgba(200,140,80,0.06)',border:'1px solid rgba(200,140,80,0.12)',
+                                display:'flex',alignItems:'center',justifyContent:'center'}}>
+                                <svg width="14" height="14" fill="none" stroke="rgba(150,80,20,0.35)" strokeWidth="1.5" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/>
                                 </svg>
+                            </div>
+                            <p style={{fontSize:'0.78rem',color:'rgba(150,80,20,0.42)',marginBottom:'0.75rem'}}>Tu carrito está vacío</p>
+                            <button onClick={onClose} style={{
+                                padding:'0.42rem 0.85rem',borderRadius:'7px',
+                                border:'1px solid rgba(185,28,28,0.18)',background:'rgba(185,28,28,0.05)',
+                                color:'rgba(185,28,28,0.75)',fontSize:'0.74rem',fontWeight:'500',
+                                cursor:'pointer',fontFamily:'inherit',
+                            }}>
+                                Seguir comprando
                             </button>
                         </div>
-
-                        {/* Items */}
-                        <div className="drawer-items">
-                            {carrito.length === 0 ? (
-                                <div style={{textAlign:'center',paddingTop:'3rem'}}>
-                                    <div style={{fontSize:'3.5rem',marginBottom:'1rem'}}>🛒</div>
-                                    <p style={{fontSize:'0.9rem',color:'rgba(150,80,20,0.55)',marginBottom:'1.5rem'}}>Tu carrito está vacío</p>
-                                    <button onClick={onClose} style={{
-                                        padding:'0.6rem 1.25rem',borderRadius:'12px',border:'1px solid rgba(220,38,38,0.3)',
-                                        background:'rgba(220,38,38,0.07)',color:'rgba(185,28,28,0.85)',
-                                        fontSize:'0.85rem',fontWeight:'500',cursor:'pointer',fontFamily:'Inter,sans-serif',
-                                    }}>
-                                        Seguir comprando
+                    ) : itemsVisibles.map(item => (
+                        <div key={item.id} className="c-item">
+                            {imgSrc(item.imagen)
+                                ? <img src={imgSrc(item.imagen)} alt={item.nombre} className="c-img"/>
+                                : <div className="c-placeholder">
+                                    <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                                        <rect x="3" y="3" width="18" height="18" rx="3"/><path strokeLinecap="round" d="M3 9h18"/>
+                                    </svg>
+                                </div>
+                            }
+                            <div style={{flex:1,minWidth:0}}>
+                                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'0.18rem'}}>
+                                    <h4 style={{fontSize:'0.78rem',fontWeight:'500',color:'#2d1a08',margin:0,
+                                        overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
+                                        maxWidth:'170px',letterSpacing:'-0.01em'}}>
+                                        {item.nombre}
+                                    </h4>
+                                    <button className="c-rm" onClick={() => eliminar(item.id)}>
+                                        <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
                                     </button>
                                 </div>
-                            ) : carrito.map(item => (
-                                <div key={item.id} className="item-card">
-                                    {/* ✅ imgSrc maneja tanto rutas relativas como URLs completas */}
-                                    {imgSrc(item.imagen)
-                                        ? <img src={imgSrc(item.imagen)} alt={item.nombre} className="item-img" />
-                                        : <div className="item-placeholder">👔</div>
-                                    }
-                                    <div style={{flex:1,minWidth:0}}>
-                                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'0.25rem'}}>
-                                            <h4 style={{fontSize:'0.875rem',fontWeight:'600',color:'#2d1a08',margin:0,letterSpacing:'-0.01em',
-                                                overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'200px'}}>
-                                                {item.nombre}
-                                            </h4>
-                                            <button className="btn-eliminar" onClick={() => eliminar(item.id)}>
-                                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                </svg>
-                                            </button>
-                                        </div>
-
-                                        <p style={{fontSize:'0.92rem',fontWeight:'700',color:'#2d1a08',margin:'0 0 0.6rem',letterSpacing:'-0.02em'}}>
-                                            {formatCOP(item.precio * item.cantidad)}
-                                        </p>
-
-                                        <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-                                            <button className="qty-mini-btn" onClick={() => cambiarCantidad(item.id, -1)} disabled={item.cantidad <= 1}>−</button>
-                                            <span style={{fontSize:'0.85rem',fontWeight:'600',color:'rgba(120,55,10,0.85)',minWidth:'20px',textAlign:'center'}}>
-                                                {item.cantidad}
-                                            </span>
-                                            <button className="qty-mini-btn" onClick={() => cambiarCantidad(item.id, +1)} disabled={item.cantidad >= item.stock}>+</button>
-                                            <span style={{fontSize:'0.7rem',color:'rgba(150,80,20,0.45)',marginLeft:'0.25rem'}}>
-                                                {formatCOP(item.precio)} c/u
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Footer */}
-                        {carrito.length > 0 && (
-                            <div className="drawer-footer">
-                                {/* Subtotal */}
-                                <div style={{
-                                    display:'flex',justifyContent:'space-between',alignItems:'center',
-                                    padding:'0.875rem 1rem',borderRadius:'14px',marginBottom:'1rem',
-                                    background:'rgba(255,255,255,0.06)',border:'1px solid rgba(200,140,80,0.12)',
-                                }}>
-                                    <span style={{fontSize:'0.88rem',color:'rgba(120,60,10,0.7)',fontWeight:'500'}}>Total</span>
-                                    <span style={{fontSize:'1.25rem',fontWeight:'700',color:'#2d1a08',letterSpacing:'-0.03em'}}>
-                                        {formatCOP(total)}
+                                <p style={{fontSize:'0.84rem',fontWeight:'600',color:'#2d1a08',margin:'0 0 0.35rem',letterSpacing:'-0.02em'}}>
+                                    {formatCOP(item.precio * item.cantidad)}
+                                </p>
+                                <div style={{display:'flex',alignItems:'center',gap:'0.32rem'}}>
+                                    <button className="c-qty-btn" onClick={()=>cambiarCantidad(item.id,-1)} disabled={item.cantidad<=1}>−</button>
+                                    <span style={{fontSize:'0.75rem',fontWeight:'500',color:'rgba(120,55,10,0.8)',minWidth:'14px',textAlign:'center'}}>
+                                        {item.cantidad}
+                                    </span>
+                                    <button className="c-qty-btn" onClick={()=>cambiarCantidad(item.id,+1)} disabled={item.cantidad>=item.stock}>+</button>
+                                    <span style={{fontSize:'0.66rem',color:'rgba(150,80,20,0.38)',marginLeft:'0.1rem'}}>
+                                        {formatCOP(item.precio)} c/u
                                     </span>
                                 </div>
-
-                                {/* Nota de envío */}
-                                <p style={{fontSize:'0.75rem',color:'rgba(150,80,20,0.5)',textAlign:'center',marginBottom:'0.875rem',lineHeight:'1.5'}}>
-                                    🚚 Envío a todo Colombia · Pago por transferencia bancaria
-                                </p>
-
-                                <button className="btn-checkout" onClick={irAlCheckout}>
-                                    {auth?.user ? 'Proceder al pago →' : 'Iniciar sesión para comprar →'}
-                                </button>
-
-                                {!auth?.user && (
-                                    <p style={{fontSize:'0.75rem',color:'rgba(150,80,20,0.5)',textAlign:'center',marginTop:'0.6rem'}}>
-                                        ¿No tienes cuenta?{' '}
-                                        <Link href="/registro" style={{color:'rgba(185,28,28,0.75)',fontWeight:'500',textDecoration:'none'}}>
-                                            Crea una gratis
-                                        </Link>
-                                    </p>
-                                )}
                             </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Paginación */}
+                {carrito.length > PER_PAGE && (
+                    <div className="c-pag">
+                        <button className="c-pb" onClick={()=>setPagina(p=>p-1)} disabled={pagina===1}>
+                            <svg width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        {Array.from({length:totalPags},(_,i)=>i+1).map(p=>(
+                            <button key={p} className={`c-pb${p===pagina?' on':''}`} onClick={()=>setPagina(p)}>{p}</button>
+                        ))}
+                        <button className="c-pb" onClick={()=>setPagina(p=>p+1)} disabled={pagina===totalPags}>
+                            <svg width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>
+                )}
+
+                {/* Footer */}
+                {carrito.length > 0 && (
+                    <div className="c-footer">
+                        <div className="c-total-row">
+                            <span style={{fontSize:'0.78rem',color:'rgba(120,60,10,0.6)'}}>Total</span>
+                            <span style={{fontSize:'1.1rem',fontWeight:'600',color:'#2d1a08',letterSpacing:'-0.03em'}}>
+                                {formatCOP(total)}
+                            </span>
+                        </div>
+                        <p style={{fontSize:'0.68rem',color:'rgba(150,80,20,0.4)',textAlign:'center',marginBottom:'0.55rem',lineHeight:'1.5'}}>
+                            Envío a todo Colombia · Pago por transferencia
+                        </p>
+                        <button className="c-checkout" onClick={irAlCheckout}>
+                            {auth?.user ? 'Proceder al pago' : 'Iniciar sesión para comprar'}
+                        </button>
+                        {!auth?.user && (
+                            <p style={{fontSize:'0.68rem',color:'rgba(150,80,20,0.4)',textAlign:'center',marginTop:'0.42rem'}}>
+                                ¿Sin cuenta?{' '}
+                                <Link href="/registro" style={{color:'rgba(185,28,28,0.65)',fontWeight:'500',textDecoration:'none'}}>
+                                    Crear una gratis
+                                </Link>
+                            </p>
                         )}
                     </div>
-                </>
-            )}
+                )}
+            </div>
         </>
     );
 }
