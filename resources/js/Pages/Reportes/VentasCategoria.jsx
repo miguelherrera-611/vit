@@ -107,7 +107,7 @@ export default function VentasCategoria({ porCategoria = [], comparativa = [], k
         <AppLayout>
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-                .vc-bg { min-height:100vh; font-family:'Inter',-apple-system,sans-serif; background:${GLASS_BG}; }
+                .vc-bg { min-height:100vh; font-family:'Inter',-apple-system,sans-serif; background:${GLASS_BG}; overflow-x:hidden; }
                 @keyframes staggerUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
                 .vc-a1{animation:staggerUp .55s cubic-bezier(.16,1,.3,1) .05s both}
                 .vc-a2{animation:staggerUp .55s cubic-bezier(.16,1,.3,1) .12s both}
@@ -120,7 +120,7 @@ export default function VentasCategoria({ porCategoria = [], comparativa = [], k
                     backdrop-filter:blur(22px) saturate(150%); -webkit-backdrop-filter:blur(22px) saturate(150%);
                     border-radius:24px; border:1px solid rgba(255,255,255,0.65);
                     box-shadow:0 16px 48px rgba(180,90,20,0.1),0 4px 14px rgba(180,90,20,0.06),inset 0 1.5px 0 rgba(255,255,255,0.88);
-                    position:relative; overflow:hidden;
+                    position:relative;
                 }
                 .vc-glass::before {
                     content:''; position:absolute; top:0; left:0; right:0; height:1px;
@@ -148,13 +148,14 @@ export default function VentasCategoria({ porCategoria = [], comparativa = [], k
                     border-radius:12px; font-size:0.82rem; font-weight:600;
                     color:rgba(185,28,28,0.9); cursor:pointer;
                     font-family:'Inter',sans-serif; transition:all .18s; white-space:nowrap;
+                    box-sizing:border-box;
                 }
                 .vc-btn-apply:hover { background:rgba(185,28,28,0.14); transform:translateY(-1px); }
 
                 /* Filtro responsive */
-                .vc-fil-grid { display:flex; flex-wrap:wrap; gap:0.85rem; align-items:flex-end; }
-                .vc-fil-item { flex:1; min-width:130px; }
-                @media(max-width:480px) { .vc-fil-grid { flex-direction:column; } .vc-fil-item { min-width:unset; width:100%; } }
+                .vc-fil-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; align-items:flex-end; }
+                .vc-btn-apply-wrap { grid-column: 1 / -1; display:flex; justify-content:flex-end; }
+                @media(max-width:400px) { .vc-fil-grid { grid-template-columns:1fr; } .vc-btn-apply-wrap { justify-content:stretch; } .vc-btn-apply { width:100%; } }
 
                 /* Grids */
                 .vc-kpi-grid   { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; }
@@ -185,17 +186,17 @@ export default function VentasCategoria({ porCategoria = [], comparativa = [], k
                     </div>
                 </div>
 
-                <div style={{ maxWidth:'1280px', margin:'0 auto', padding:'1.5rem 1rem 3rem', display:'flex', flexDirection:'column', gap:'1.25rem' }}>
+                <div style={{ maxWidth:'1280px', margin:'0 auto', padding:'1.25rem 0.875rem 3rem', display:'flex', flexDirection:'column', gap:'1.25rem' }}>
 
                     {/* ── Filtro fechas ── */}
-                    <div className="vc-glass vc-a1" style={{ padding:'1.4rem 1.5rem' }}>
-                        <p style={{ fontSize:'0.82rem', fontWeight:'600', color:'rgba(150,80,20,0.55)', letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:'0.85rem' }}>
+                    <div className="vc-glass vc-a1" style={{ padding:'1.25rem', overflow:'visible' }}>
+                        <p style={{ fontSize:'0.75rem', fontWeight:'600', color:'rgba(150,80,20,0.55)', letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:'0.75rem' }}>
                             Filtrar período
                         </p>
                         <div className="vc-fil-grid">
-                            <GlassDateInput label="Desde" value={desde} onChange={e => setDesde(e.target.value)} />
-                            <GlassDateInput label="Hasta" value={hasta} onChange={e => setHasta(e.target.value)} />
-                            <div style={{ display:'flex', alignItems:'flex-end' }}>
+                            <GlassDateInput label="Desde" value={desde} onChange={val => setDesde(val)} />
+                            <GlassDateInput label="Hasta" value={hasta} onChange={val => setHasta(val)} />
+                            <div className="vc-btn-apply-wrap">
                                 <button onClick={aplicar} className="vc-btn-apply">Aplicar filtro</button>
                             </div>
                         </div>

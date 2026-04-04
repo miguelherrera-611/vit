@@ -52,7 +52,7 @@ export default function Rentabilidad({ productos = [], porCategoria = [], kpis =
         <AppLayout>
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-                .ren-bg { min-height:100vh; font-family:'Inter',-apple-system,sans-serif; background:${GLASS_BG}; }
+                .ren-bg { min-height:100vh; font-family:'Inter',-apple-system,sans-serif; background:${GLASS_BG}; overflow-x:hidden; }
                 @keyframes staggerUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
                 .ren-a1{animation:staggerUp .55s cubic-bezier(.16,1,.3,1) .05s both}
                 .ren-a2{animation:staggerUp .55s cubic-bezier(.16,1,.3,1) .12s both}
@@ -65,7 +65,7 @@ export default function Rentabilidad({ productos = [], porCategoria = [], kpis =
                     backdrop-filter:blur(22px) saturate(150%); -webkit-backdrop-filter:blur(22px) saturate(150%);
                     border-radius:24px; border:1px solid rgba(255,255,255,0.65);
                     box-shadow:0 16px 48px rgba(180,90,20,0.1),0 4px 14px rgba(180,90,20,0.06),inset 0 1.5px 0 rgba(255,255,255,0.88);
-                    position:relative; overflow:hidden;
+                    position:relative;
                 }
                 .ren-glass::before {
                     content:''; position:absolute; top:0; left:0; right:0; height:1px;
@@ -119,14 +119,14 @@ export default function Rentabilidad({ productos = [], porCategoria = [], kpis =
                 .ren-btn-apply:hover { background:rgba(185,28,28,0.14); transform:translateY(-1px); }
 
                 /* Filtro fechas responsive */
-                .ren-fil-grid { display:flex; flex-wrap:wrap; gap:0.85rem; align-items:flex-end; }
-                .ren-fil-item { flex:1; min-width:130px; }
+                .ren-fil-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; align-items:flex-end; }
+                .ren-btn-wrap { grid-column:1 / -1; display:flex; justify-content:flex-end; }
 
                 /* Grids */
                 .ren-kpi-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:1.1rem; }
                 @media(max-width:1000px){ .ren-kpi-grid { grid-template-columns:repeat(3,1fr); } }
                 @media(max-width:640px) { .ren-kpi-grid { grid-template-columns:1fr 1fr; gap:0.75rem; } }
-                @media(max-width:480px) { .ren-fil-grid { flex-direction:column; } .ren-fil-item { min-width:unset; width:100%; } }
+                @media(max-width:400px) { .ren-fil-grid { grid-template-columns:1fr; } .ren-btn-wrap { justify-content:stretch; } .ren-btn-apply { width:100%; box-sizing:border-box; } }
 
                 input[type="date"]::-webkit-calendar-picker-indicator {
                     opacity:0; width:100%; height:100%; position:absolute; top:0; left:0; cursor:pointer;
@@ -152,14 +152,14 @@ export default function Rentabilidad({ productos = [], porCategoria = [], kpis =
                 <div style={{ maxWidth:'1280px', margin:'0 auto', padding:'1.5rem 1rem 3rem', display:'flex', flexDirection:'column', gap:'1.25rem' }}>
 
                     {/* ── Filtro fechas ── */}
-                    <div className="ren-glass ren-a1" style={{ padding:'1.4rem 1.5rem' }}>
-                        <p style={{ fontSize:'0.82rem', fontWeight:'600', color:'rgba(150,80,20,0.55)', letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:'0.85rem' }}>
+                    <div className="ren-glass ren-a1" style={{ padding:'1.25rem', overflow:'visible' }}>
+                        <p style={{ fontSize:'0.75rem', fontWeight:'600', color:'rgba(150,80,20,0.55)', letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:'0.75rem' }}>
                             Filtrar período
                         </p>
                         <div className="ren-fil-grid">
-                            <GlassDateInput label="Desde" value={desde} onChange={e => setDesde(e.target.value)} />
-                            <GlassDateInput label="Hasta" value={hasta} onChange={e => setHasta(e.target.value)} />
-                            <div style={{ display:'flex', alignItems:'flex-end' }}>
+                            <GlassDateInput label="Desde" value={desde} onChange={val => setDesde(val)} />
+                            <GlassDateInput label="Hasta" value={hasta} onChange={val => setHasta(val)} />
+                            <div className="ren-btn-wrap">
                                 <button onClick={aplicar} className="ren-btn-apply">Aplicar</button>
                             </div>
                         </div>

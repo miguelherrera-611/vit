@@ -98,7 +98,7 @@ export default function ReporteVentas({
         <AppLayout>
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-                .vt-bg { min-height:100vh; font-family:'Inter',-apple-system,sans-serif; background:${GLASS_BG}; }
+                .vt-bg { min-height:100vh; font-family:'Inter',-apple-system,sans-serif; background:${GLASS_BG}; overflow-x:hidden; }
 
                 @keyframes staggerUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
                 .vt-a1{animation:staggerUp .55s cubic-bezier(.16,1,.3,1) .05s both}
@@ -113,7 +113,7 @@ export default function ReporteVentas({
                     -webkit-backdrop-filter:blur(22px) saturate(150%);
                     border-radius:24px; border:1px solid rgba(255,255,255,0.65);
                     box-shadow:0 16px 48px rgba(180,90,20,0.1),0 4px 14px rgba(180,90,20,0.06),inset 0 1.5px 0 rgba(255,255,255,0.88);
-                    position:relative; overflow:hidden; transition:all .25s cubic-bezier(.16,1,.3,1);
+                    position:relative; transition:all .25s cubic-bezier(.16,1,.3,1);
                 }
                 .vt-glass::before {
                     content:''; position:absolute; top:0; left:0; right:0; height:1px;
@@ -169,8 +169,8 @@ export default function ReporteVentas({
                     grid-template-columns:1fr 1fr 1fr auto;
                     gap:0.85rem; align-items:flex-end;
                 }
-                @media(max-width:700px) { .vt-fil-grid { grid-template-columns:1fr 1fr; } }
-                @media(max-width:480px) { .vt-fil-grid { grid-template-columns:1fr; } }
+                @media(max-width:800px) { .vt-fil-grid { grid-template-columns:1fr 1fr; } }
+                @media(max-width:480px) { .vt-fil-grid { grid-template-columns:1fr 1fr; gap:0.65rem; } }
 
                 /* Grids */
                 .vt-kpi-grid  { display:grid; grid-template-columns:repeat(5,1fr); gap:1.1rem; }
@@ -219,13 +219,13 @@ export default function ReporteVentas({
                 <div style={{ maxWidth:'1280px', margin:'0 auto', padding:'1.5rem 1rem 3rem', display:'flex', flexDirection:'column', gap:'1.25rem' }}>
 
                     {/* ── Filtros ── */}
-                    <div className="vt-glass vt-a1" style={{ padding:'1.4rem 1.5rem' }}>
+                    <div className="vt-glass vt-a1" style={{ padding:'1.4rem 1.5rem', overflow:'visible' }}>
                         <p style={{ fontSize:'0.82rem', fontWeight:'600', color:'rgba(150,80,20,0.55)', letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:'0.85rem' }}>
                             Filtrar período
                         </p>
                         <div className="vt-fil-grid">
-                            <GlassDateInput label="Desde" value={desde} onChange={e => setDesde(e.target.value)} />
-                            <GlassDateInput label="Hasta" value={hasta} onChange={e => setHasta(e.target.value)} />
+                            <GlassDateInput label="Desde" value={desde} onChange={val => setDesde(val)} />
+                            <GlassDateInput label="Hasta" value={hasta} onChange={val => setHasta(val)} />
                             <div style={{ flex:1, minWidth:'120px' }}>
                                 <label style={{ fontSize:'0.72rem', fontWeight:'600', color:'rgba(150,80,20,0.55)', letterSpacing:'0.05em', textTransform:'uppercase', display:'block', marginBottom:'0.35rem' }}>Estado</label>
                                 <div style={{ position:'relative' }}>
