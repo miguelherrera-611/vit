@@ -13,14 +13,12 @@ const CAT_POR_PAG      = 8;
 const PROD_POR_PAG     = 12;
 const OPCIONES_POR_PAG = 7;
 
-// ── Badge de estado ───────────────────────────────────────────────────────────
 function EstadoBadge({ stock, minimo }) {
     if (stock === 0)     return <span style={{ fontSize: '0.72rem', fontWeight: '600', padding: '0.22rem 0.65rem', borderRadius: '20px', background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: 'rgba(185,28,28,0.85)' }}>Agotado</span>;
     if (stock <= minimo) return <span style={{ fontSize: '0.72rem', fontWeight: '600', padding: '0.22rem 0.65rem', borderRadius: '20px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', color: 'rgba(146,64,14,0.9)' }}>Bajo stock</span>;
     return                      <span style={{ fontSize: '0.72rem', fontWeight: '600', padding: '0.22rem 0.65rem', borderRadius: '20px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: 'rgba(4,120,87,0.85)' }}>En stock</span>;
 }
 
-// ── Paginador ─────────────────────────────────────────────────────────────────
 function Paginador({ pagina, total, porPagina, onChange }) {
     const totalPags = Math.ceil(total / porPagina);
     if (totalPags <= 1) return null;
@@ -82,7 +80,6 @@ function Paginador({ pagina, total, porPagina, onChange }) {
     );
 }
 
-// ── Dropdown de estado ────────────────────────────────────────────────────────
 function EstadoDropdown({ value, onChange }) {
     const [open, setOpen] = useState(false);
     const ref             = useRef(null);
@@ -103,9 +100,20 @@ function EstadoDropdown({ value, onChange }) {
     const selected = options.find(o => o.value === value);
     const isActive = value !== '';
 
+    // Detectar si estamos cerca del borde derecho para abrir hacia la izquierda
+    const [openLeft, setOpenLeft] = useState(false);
+    const btnRef = useRef(null);
+    const handleOpen = () => {
+        if (btnRef.current) {
+            const rect = btnRef.current.getBoundingClientRect();
+            setOpenLeft(rect.right + 200 > window.innerWidth);
+        }
+        setOpen(o => !o);
+    };
+
     return (
         <div ref={ref} style={{ position: 'relative' }}>
-            <button type="button" onClick={() => setOpen(o => !o)} style={{
+            <button ref={btnRef} type="button" onClick={handleOpen} style={{
                 display: 'flex', alignItems: 'center', gap: '0.5rem',
                 padding: '0.5rem 0.9rem',
                 background: isActive ? 'rgba(220,38,38,0.06)' : 'rgba(255,255,255,0.08)',
@@ -131,14 +139,17 @@ function EstadoDropdown({ value, onChange }) {
 
             {open && (
                 <div style={{
-                    position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    // Abre hacia la izquierda si no hay espacio a la derecha
+                    ...(openLeft ? { right: 0 } : { left: 0 }),
                     minWidth: '190px',
                     background: 'rgba(255,250,245,0.97)',
                     backdropFilter: 'blur(32px) saturate(180%)',
                     border: '1px solid rgba(255,255,255,0.72)',
                     borderRadius: '16px',
                     boxShadow: '0 16px 48px rgba(180,90,20,0.12), inset 0 1px 0 rgba(255,255,255,0.9)',
-                    overflow: 'hidden', zIndex: 50,
+                    overflow: 'hidden', zIndex: 200,
                     animation: 'invDropIn 0.18s cubic-bezier(0.16,1,0.3,1)',
                 }}>
                     {options.map((opt, i) => {
@@ -176,13 +187,14 @@ function EstadoDropdown({ value, onChange }) {
     );
 }
 
-// ── Dropdown de categorías ────────────────────────────────────────────────────
 function CategoriaDropdown({ value, onChange, categorias }) {
     const [open,     setOpen]     = useState(false);
     const [busqueda, setBusqueda] = useState('');
     const [pagina,   setPagina]   = useState(1);
     const ref                     = useRef(null);
     const inputRef                = useRef(null);
+    const [openLeft, setOpenLeft] = useState(false);
+    const btnRef                  = useRef(null);
 
     useEffect(() => {
         const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -197,6 +209,15 @@ function CategoriaDropdown({ value, onChange, categorias }) {
 
     useEffect(() => { setPagina(1); }, [busqueda]);
 
+    const handleOpen = () => {
+        if (btnRef.current) {
+            const rect = btnRef.current.getBoundingClientRect();
+            // El panel mide ~240px; si no cabe a la derecha, abre a la izquierda
+            setOpenLeft(rect.left + 240 > window.innerWidth - 8);
+        }
+        setOpen(o => !o);
+    };
+
     const filtradas  = useMemo(() => {
         const q = normalize(busqueda);
         return q ? categorias.filter(c => normalize(c).includes(q)) : categorias;
@@ -208,7 +229,7 @@ function CategoriaDropdown({ value, onChange, categorias }) {
 
     return (
         <div ref={ref} style={{ position: 'relative' }}>
-            <button type="button" onClick={() => setOpen(o => !o)} style={{
+            <button ref={btnRef} type="button" onClick={handleOpen} style={{
                 display: 'flex', alignItems: 'center', gap: '0.5rem',
                 padding: '0.5rem 0.9rem',
                 background: isActive ? 'rgba(220,38,38,0.06)' : 'rgba(255,255,255,0.08)',
@@ -220,7 +241,7 @@ function CategoriaDropdown({ value, onChange, categorias }) {
                 fontFamily: 'Inter, sans-serif',
                 backdropFilter: 'blur(12px)',
                 transition: 'all 0.18s',
-                maxWidth: '200px',
+                maxWidth: '180px',
             }}>
                 {isActive && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'rgba(220,38,38,0.7)', flexShrink: 0 }} />}
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{isActive ? value : 'Categoría'}</span>
@@ -232,14 +253,19 @@ function CategoriaDropdown({ value, onChange, categorias }) {
 
             {open && (
                 <div style={{
-                    position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    // Posición inteligente: si no hay espacio a la derecha, abre hacia la izquierda
+                    ...(openLeft ? { right: 0 } : { left: 0 }),
                     width: '240px',
+                    // En móvil muy pequeño, no sobrepasar el viewport
+                    maxWidth: 'calc(100vw - 16px)',
                     background: 'rgba(255,250,245,0.97)',
                     backdropFilter: 'blur(32px) saturate(180%)',
                     border: '1px solid rgba(255,255,255,0.72)',
                     borderRadius: '16px',
                     boxShadow: '0 16px 48px rgba(180,90,20,0.12), inset 0 1px 0 rgba(255,255,255,0.9)',
-                    overflow: 'hidden', zIndex: 50,
+                    overflow: 'hidden', zIndex: 200,
                     animation: 'invDropIn 0.18s cubic-bezier(0.16,1,0.3,1)',
                 }}>
                     {/* Buscador */}
@@ -358,7 +384,6 @@ function CategoriaDropdown({ value, onChange, categorias }) {
     );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 export default function ReporteInventario({ productos = [], porCategoria = [], criticos = [], kpis = {} }) {
     const [vistaProductos, setVistaProductos] = useState('criticos');
     const [busqueda,        setBusqueda]       = useState('');
@@ -477,10 +502,29 @@ export default function ReporteInventario({ productos = [], porCategoria = [], c
                     background: rgba(255,255,255,0.1);
                 }
 
-                /* Responsive */
+                /* ── Filtros responsive ── */
+                .inv-filtros-row {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 0.65rem;
+                    align-items: center;
+                }
+                /* En móvil el buscador ocupa toda la fila, dropdowns en fila */
+                @media (max-width: 600px) {
+                    .inv-filtros-row { gap: 0.5rem; }
+                    .inv-search-wrap { width: 100%; }
+                    .inv-search { width: 100%; box-sizing: border-box; }
+                }
+
+                /* Responsive KPIs */
                 .inv-kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; }
                 @media (max-width: 1100px) { .inv-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
                 @media (max-width: 700px)  { .inv-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; } }
+
+                /* Tabs en móvil */
+                @media (max-width: 480px) {
+                    .inv-tab-btn { font-size: 0.75rem !important; padding: 0.45rem 0.65rem !important; }
+                }
             `}</style>
 
             <div className="inv-bg">
@@ -500,7 +544,7 @@ export default function ReporteInventario({ productos = [], porCategoria = [], c
                                 </svg>
                             </Link>
                             <div>
-                                <h1 style={{ fontSize: '1.65rem', fontWeight: '300', color: '#2d1a08', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                                <h1 style={{ fontSize: 'clamp(1.2rem,4vw,1.65rem)', fontWeight: '300', color: '#2d1a08', letterSpacing: '-0.03em', lineHeight: 1 }}>
                                     Reporte de Inventario
                                 </h1>
                                 <p style={{ marginTop: '0.3rem', fontSize: '0.85rem', color: 'rgba(150,80,20,0.6)' }}>
@@ -511,16 +555,16 @@ export default function ReporteInventario({ productos = [], porCategoria = [], c
                     </div>
                 </div>
 
-                <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem 1rem 3rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
                     {/* ── KPIs ── */}
                     <div className="inv-kpi-grid inv-a1">
                         {[
                             { label: 'Productos activos',      value: kpis.total_productos,              accent: 'rgba(120,60,10,0.8)',   accentBg: 'rgba(120,60,10,0.07)',   accentBorder: 'rgba(120,60,10,0.18)',  tip: null },
-                            { label: 'Valor total en venta',   value: fmt(kpis.valor_inventario_venta),  accent: 'rgba(16,185,129,0.9)',  accentBg: 'rgba(16,185,129,0.07)',  accentBorder: 'rgba(16,185,129,0.2)',  tip: 'Suma precio venta × stock' },
-                            { label: 'Valor total en compra',  value: fmt(kpis.valor_inventario_compra), accent: 'rgba(59,130,246,0.9)',  accentBg: 'rgba(59,130,246,0.07)',  accentBorder: 'rgba(59,130,246,0.2)',  tip: 'Suma costo compra × stock' },
-                            { label: 'Ganancia potencial',     value: fmt(kpis.ganancia_potencial),      accent: 'rgba(139,92,246,0.9)', accentBg: 'rgba(139,92,246,0.07)',  accentBorder: 'rgba(139,92,246,0.2)', tip: 'Valor venta − valor compra' },
-                            { label: 'Bajo stock',             value: kpis.bajo_stock,                   accent: 'rgba(245,158,11,0.9)', accentBg: 'rgba(245,158,11,0.07)',  accentBorder: 'rgba(245,158,11,0.2)', tip: 'Stock ≤ mínimo configurado' },
+                            { label: 'Valor total en venta',   value: fmt(kpis.valor_inventario_venta),  accent: 'rgba(16,185,129,0.9)',  accentBg: 'rgba(16,185,129,0.07)',  accentBorder: 'rgba(16,185,129,0.2)',  tip: 'Precio venta × stock' },
+                            { label: 'Valor total en compra',  value: fmt(kpis.valor_inventario_compra), accent: 'rgba(59,130,246,0.9)',  accentBg: 'rgba(59,130,246,0.07)',  accentBorder: 'rgba(59,130,246,0.2)',  tip: 'Costo compra × stock' },
+                            { label: 'Ganancia potencial',     value: fmt(kpis.ganancia_potencial),      accent: 'rgba(139,92,246,0.9)', accentBg: 'rgba(139,92,246,0.07)',  accentBorder: 'rgba(139,92,246,0.2)', tip: 'Venta − compra' },
+                            { label: 'Bajo stock',             value: kpis.bajo_stock,                   accent: 'rgba(245,158,11,0.9)', accentBg: 'rgba(245,158,11,0.07)',  accentBorder: 'rgba(245,158,11,0.2)', tip: 'Stock ≤ mínimo' },
                             { label: 'Agotados',               value: kpis.agotados,                     accent: 'rgba(220,38,38,0.9)',  accentBg: 'rgba(220,38,38,0.07)',   accentBorder: 'rgba(220,38,38,0.2)',  tip: 'Stock = 0' },
                         ].map(({ label, value, accent, accentBg, accentBorder, tip }) => (
                             <div key={label} className="inv-glass" style={{ padding: '1.25rem', position: 'relative' }}>
@@ -649,17 +693,17 @@ export default function ReporteInventario({ productos = [], porCategoria = [], c
 
                         {/* Filtros — solo en "todos" */}
                         {vistaProductos === 'todos' && (
-                            <div style={{ padding: '0.85rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.38)', background: 'rgba(255,255,255,0.03)' }}>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', alignItems: 'center' }}>
-                                    {/* Buscador */}
-                                    <div style={{ position: 'relative', flex: 1, minWidth: '180px' }}>
+                            <div style={{ padding: '0.85rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.38)', background: 'rgba(255,255,255,0.03)' }}>
+                                <div className="inv-filtros-row">
+                                    {/* Buscador — ocupa toda la fila en móvil */}
+                                    <div className="inv-search-wrap" style={{ position: 'relative', flex: 1, minWidth: '160px' }}>
                                         <svg style={{ position: 'absolute', left: '0.7rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(180,100,30,0.4)', pointerEvents: 'none' }}
                                              width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                         </svg>
                                         <input type="text" placeholder="Buscar por nombre o categoría..."
                                                value={busqueda} onChange={e => cambiarBusqueda(e.target.value)}
-                                               className="inv-search" />
+                                               className="inv-search" style={{ width: '100%', boxSizing: 'border-box' }} />
                                         {busqueda && (
                                             <button onClick={() => cambiarBusqueda('')} style={{ position: 'absolute', right: '0.6rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(150,80,20,0.5)', padding: 0 }}>
                                                 <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -668,25 +712,29 @@ export default function ReporteInventario({ productos = [], porCategoria = [], c
                                             </button>
                                         )}
                                     </div>
-                                    <CategoriaDropdown value={filtroCat} onChange={cambiarCat} categorias={categorias} />
-                                    <EstadoDropdown value={filtroEstado} onChange={cambiarEstado} />
-                                    {hayFiltros && (
-                                        <button onClick={() => { cambiarBusqueda(''); cambiarCat(''); cambiarEstado(''); }}
-                                                style={{
-                                                    display: 'flex', alignItems: 'center', gap: '0.4rem',
-                                                    padding: '0.5rem 0.85rem',
-                                                    fontSize: '0.78rem', fontWeight: '500',
-                                                    background: 'none', border: '1px solid rgba(220,38,38,0.2)',
-                                                    borderRadius: '10px', cursor: 'pointer',
-                                                    color: 'rgba(185,28,28,0.7)', fontFamily: 'Inter, sans-serif',
-                                                    transition: 'all 0.15s',
-                                                }}>
-                                            <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
-                                            Limpiar
-                                        </button>
-                                    )}
+
+                                    {/* Dropdowns en fila */}
+                                    <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                                        <CategoriaDropdown value={filtroCat} onChange={cambiarCat} categorias={categorias} />
+                                        <EstadoDropdown value={filtroEstado} onChange={cambiarEstado} />
+                                        {hayFiltros && (
+                                            <button onClick={() => { cambiarBusqueda(''); cambiarCat(''); cambiarEstado(''); }}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '0.4rem',
+                                                        padding: '0.5rem 0.75rem',
+                                                        fontSize: '0.78rem', fontWeight: '500',
+                                                        background: 'none', border: '1px solid rgba(220,38,38,0.2)',
+                                                        borderRadius: '10px', cursor: 'pointer',
+                                                        color: 'rgba(185,28,28,0.7)', fontFamily: 'Inter, sans-serif',
+                                                        transition: 'all 0.15s', whiteSpace: 'nowrap',
+                                                    }}>
+                                                <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                                Limpiar
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                 {hayFiltros && (
                                     <p style={{ fontSize: '0.75rem', color: 'rgba(150,80,20,0.55)', marginTop: '0.5rem' }}>
