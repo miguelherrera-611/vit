@@ -1,15 +1,15 @@
 // resources/js/Components/GlassDateInput.jsx
 // Calendario glassmorphism pastel.
-// - Se ancla al botón con requestAnimationFrame en scroll/resize
-// - Fondo opaco para que se vea bien sobre cualquier contenido
-// - onChange(string "YYYY-MM-DD") — valor directo, NO evento
+// - Panel siempre aparece DEBAJO del botón trigger, nunca se desplaza.
+// - Posición relativa al contenedor padre (no fixed al viewport).
+// - Fondo completamente sólido — opaco, legible sobre cualquier fondo.
+// - onChange(string "YYYY-MM-DD") — valor directo, NO evento.
 
 import { useState, useRef, useEffect } from 'react';
 
-const MESES      = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MESES      = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+    'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const DIAS_CORTO = ['Do','Lu','Ma','Mi','Ju','Vi','Sá'];
-const PANEL_W    = 260;
-const PANEL_H    = 295;
 
 function parseDate(str) {
     if (!str) return null;
@@ -37,57 +37,8 @@ export default function GlassDateInput({ label, value, onChange, placeholder = '
     const [open,      setOpen]      = useState(false);
     const [viewYear,  setViewYear]  = useState(parsed?.getFullYear() ?? today.getFullYear());
     const [viewMonth, setViewMonth] = useState(parsed?.getMonth()    ?? today.getMonth());
-    const [pos,       setPos]       = useState({ top: 0, left: 0, width: PANEL_W, openUp: false });
 
-    const wrapRef   = useRef(null);
-    const btnRef    = useRef(null);
-    const rafRef    = useRef(null);
-    const openRef   = useRef(false); // ref para acceder al estado dentro del listener
-
-    // Calcula la posición del panel anclado al botón
-    const calcPos = () => {
-        if (!btnRef.current || !openRef.current) return;
-        const rect = btnRef.current.getBoundingClientRect();
-        const vw   = window.innerWidth;
-        const vh   = window.innerHeight;
-        const w    = Math.min(PANEL_W, vw - 16);
-
-        // Horizontal: alinear izquierda con el botón, sin salirse
-        let left = rect.left;
-        if (left + w > vw - 8) left = vw - w - 8;
-        if (left < 8)          left = 8;
-
-        // Vertical: pegar justo debajo, o arriba si no hay espacio
-        const openUp = rect.bottom + PANEL_H + 8 > vh;
-        const top    = openUp ? rect.top - PANEL_H - 4 : rect.bottom + 4;
-
-        setPos({ top, left, width: w, openUp });
-    };
-
-    // Listener de scroll/resize usando rAF para no hacer trabajo innecesario
-    const onScrollOrResize = () => {
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rafRef.current = requestAnimationFrame(calcPos);
-    };
-
-    useEffect(() => {
-        openRef.current = open;
-        if (!open) return;
-
-        calcPos(); // posición inicial
-
-        // Captura scroll en TODOS los elementos (true = capture phase)
-        window.addEventListener('scroll',  onScrollOrResize, { passive: true, capture: true });
-        window.addEventListener('resize',  onScrollOrResize, { passive: true });
-        document.addEventListener('scroll', onScrollOrResize, { passive: true, capture: true });
-
-        return () => {
-            window.removeEventListener('scroll',  onScrollOrResize, { capture: true });
-            window.removeEventListener('resize',  onScrollOrResize);
-            document.removeEventListener('scroll', onScrollOrResize, { capture: true });
-            if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        };
-    }, [open]);
+    const wrapRef = useRef(null);
 
     // Cerrar al click fuera
     useEffect(() => {
@@ -108,17 +59,23 @@ export default function GlassDateInput({ label, value, onChange, placeholder = '
         setOpen(o => !o);
     };
 
-    const prevMonth = () => { if (viewMonth===0) { setViewMonth(11); setViewYear(y=>y-1); } else setViewMonth(m=>m-1); };
-    const nextMonth = () => { if (viewMonth===11){ setViewMonth(0);  setViewYear(y=>y+1); } else setViewMonth(m=>m+1); };
+    const prevMonth = () => {
+        if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+        else setViewMonth(m => m - 1);
+    };
+    const nextMonth = () => {
+        if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+        else setViewMonth(m => m + 1);
+    };
 
     const buildGrid = () => {
         const firstDow = new Date(viewYear, viewMonth, 1).getDay();
-        const daysInM  = new Date(viewYear, viewMonth+1, 0).getDate();
+        const daysInM  = new Date(viewYear, viewMonth + 1, 0).getDate();
         const prevLast = new Date(viewYear, viewMonth, 0).getDate();
         const cells    = [];
-        for (let i = firstDow-1; i >= 0; i--) cells.push({ day: prevLast-i, cur: false });
-        for (let d = 1; d <= daysInM; d++)     cells.push({ day: d, cur: true });
-        while (cells.length < 42)              cells.push({ day: cells.length - firstDow - daysInM + 1, cur: false });
+        for (let i = firstDow - 1; i >= 0; i--) cells.push({ day: prevLast - i, cur: false });
+        for (let d = 1; d <= daysInM; d++)       cells.push({ day: d, cur: true });
+        while (cells.length < 42)                cells.push({ day: cells.length - firstDow - daysInM + 1, cur: false });
         return cells;
     };
 
@@ -126,126 +83,173 @@ export default function GlassDateInput({ label, value, onChange, placeholder = '
     const todayStr = toStr(today);
 
     return (
-        <div ref={wrapRef} style={{ position:'relative', flex:1, minWidth:'100px' }}>
-
-            {/* Label */}
+        <div
+            ref={wrapRef}
+            style={{ position: 'relative', flex: 1, minWidth: '130px' }}
+        >
+            {/* ── Label ── */}
             {label && (
                 <label style={{
-                    display:'block', marginBottom:'0.3rem',
-                    fontSize:'0.68rem', fontWeight:'600',
-                    color:'rgba(150,80,20,0.55)',
-                    letterSpacing:'0.06em', textTransform:'uppercase',
+                    display: 'block', marginBottom: '0.3rem',
+                    fontSize: '0.68rem', fontWeight: '700',
+                    color: 'rgba(140,70,15,0.6)',
+                    letterSpacing: '0.07em', textTransform: 'uppercase',
                 }}>
                     {label}
                 </label>
             )}
 
-            {/* Botón trigger */}
+            {/* ── Botón trigger ── */}
             <button
-                ref={btnRef}
                 type="button"
                 onClick={handleToggle}
                 style={{
-                    width:'100%',
-                    display:'flex', alignItems:'center', justifyContent:'space-between',
-                    padding:'0.55rem 0.75rem',
-                    background: open ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.65)',
+                    width: '100%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '0.58rem 0.85rem',
+                    background: open
+                        ? 'rgba(255,248,242,0.98)'
+                        : 'rgba(255,252,248,0.82)',
                     border: open
-                        ? '1px solid rgba(185,28,28,0.4)'
-                        : '1px solid rgba(200,140,80,0.28)',
-                    borderRadius:'10px',
-                    cursor:'pointer',
-                    fontFamily:'Inter, sans-serif',
-                    fontSize:'0.8rem',
-                    color: value ? '#2d1a08' : 'rgba(180,100,30,0.38)',
+                        ? '1.5px solid rgba(185,28,28,0.45)'
+                        : '1.5px solid rgba(200,130,60,0.32)',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '0.82rem',
+                    color: value ? '#2d1a08' : 'rgba(170,90,20,0.42)',
                     boxShadow: open
-                        ? '0 0 0 3px rgba(185,28,28,0.08)'
-                        : '0 1px 4px rgba(180,90,20,0.08), inset 0 1px 0 rgba(255,255,255,0.85)',
-                    transition:'all 0.15s',
-                    boxSizing:'border-box',
-                    gap:'0.4rem',
-                    userSelect:'none',
+                        ? '0 0 0 3px rgba(185,28,28,0.09), 0 2px 8px rgba(180,80,10,0.1)'
+                        : '0 1px 3px rgba(180,90,20,0.1), inset 0 1px 0 rgba(255,255,255,0.9)',
+                    transition: 'all 0.15s ease',
+                    boxSizing: 'border-box',
+                    gap: '0.4rem',
+                    userSelect: 'none',
+                    backdropFilter: 'blur(8px)',
                 }}
             >
-                <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1, textAlign:'left' }}>
-                    {value ? formatDisplay(value) : placeholder}
-                </span>
-                <div style={{ display:'flex', alignItems:'center', gap:'0.2rem', flexShrink:0 }}>
-                    {value && (
-                        <span
-                            onClick={e => { e.stopPropagation(); onChange(''); }}
-                            style={{ fontSize:'1rem', lineHeight:1, color:'rgba(180,100,30,0.4)', cursor:'pointer' }}
-                        >×</span>
-                    )}
-                    <svg width="12" height="12" fill="none" stroke="rgba(150,80,20,0.5)" viewBox="0 0 24 24">
+                {/* Icono calendario izquierda */}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flex: 1, minWidth: 0 }}>
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"
+                         stroke={open ? 'rgba(185,28,28,0.7)' : 'rgba(160,80,20,0.5)'} style={{ flexShrink: 0 }}>
                         <rect x="3" y="4" width="18" height="18" rx="3" strokeWidth="2"/>
                         <path strokeLinecap="round" strokeWidth="2" d="M16 2v4M8 2v4M3 10h18"/>
                     </svg>
-                </div>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {value ? formatDisplay(value) : placeholder}
+                    </span>
+                </span>
+
+                {/* Botón X limpiar */}
+                {value && (
+                    <span
+                        onClick={e => { e.stopPropagation(); onChange(''); }}
+                        style={{
+                            fontSize: '1.05rem', lineHeight: 1,
+                            color: 'rgba(185,28,28,0.45)',
+                            cursor: 'pointer', flexShrink: 0,
+                            padding: '0 2px',
+                            transition: 'color 0.12s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'rgba(185,28,28,0.8)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(185,28,28,0.45)'}
+                    >×</span>
+                )}
+
+                {/* Chevron */}
+                <svg
+                    width="11" height="11" fill="none" viewBox="0 0 24 24"
+                    stroke="rgba(150,70,15,0.45)"
+                    style={{
+                        flexShrink: 0,
+                        transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease',
+                    }}
+                >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"/>
+                </svg>
             </button>
 
-            {/* Panel calendario — position:fixed, se ancla al botón con rAF en scroll */}
+            {/* ── Panel calendario — posición absoluta, siempre debajo del botón ── */}
             {open && (
                 <div style={{
-                    position:'fixed',
-                    top:   `${pos.top}px`,
-                    left:  `${pos.left}px`,
-                    width: `${pos.width}px`,
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    left: 0,
+                    width: '272px',
                     zIndex: 99999,
-                    // Fondo completamente sólido — sin transparencia para que nada se vea debajo
-                    background:'#fdf6f0',
-                    border:'1px solid rgba(200,140,80,0.22)',
-                    borderRadius:'16px',
-                    boxShadow:'0 20px 56px rgba(140,70,10,0.22), 0 6px 16px rgba(140,70,10,0.12), 0 0 0 1px rgba(255,255,255,0.7)',
-                    overflow:'hidden',
-                    animation:'gcalIn 0.16s cubic-bezier(0.16,1,0.3,1)',
-                    fontFamily:'Inter, sans-serif',
+                    // Fondo completamente sólido
+                    background: 'linear-gradient(145deg, #fef9f4 0%, #fdf5ed 100%)',
+                    border: '1.5px solid rgba(210,150,80,0.25)',
+                    borderRadius: '18px',
+                    boxShadow: [
+                        '0 24px 64px rgba(130,60,10,0.22)',
+                        '0 8px 20px rgba(130,60,10,0.14)',
+                        '0 2px 6px rgba(130,60,10,0.08)',
+                        'inset 0 1px 0 rgba(255,255,255,0.95)',
+                    ].join(', '),
+                    overflow: 'hidden',
+                    animation: 'gcalIn 0.18s cubic-bezier(0.16,1,0.3,1)',
                 }}>
                     <style>{`
                         @keyframes gcalIn {
-                            from { opacity:0; transform:scale(0.97) translateY(-3px); }
+                            from { opacity:0; transform:scale(0.96) translateY(-4px); }
                             to   { opacity:1; transform:scale(1) translateY(0); }
                         }
-                        .gcal-d:hover { background:rgba(200,140,80,0.14) !important; }
-                        .gcal-n:hover { background:rgba(200,140,80,0.2)  !important; }
+                        .gcal-day-btn:hover:not(:disabled) {
+                            background: rgba(200,120,50,0.13) !important;
+                        }
+                        .gcal-nav-btn:hover {
+                            background: rgba(200,120,50,0.16) !important;
+                        }
                     `}</style>
 
                     {/* ── Cabecera mes / año ── */}
                     <div style={{
-                        display:'flex', alignItems:'center', justifyContent:'space-between',
-                        padding:'0.65rem 0.875rem',
-                        background:'rgba(255,245,235,0.95)',
-                        borderBottom:'1px solid rgba(200,140,80,0.12)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '0.85rem 1rem 0.7rem',
+                        background: 'linear-gradient(135deg, rgba(255,240,220,0.95) 0%, rgba(255,232,205,0.9) 100%)',
+                        borderBottom: '1px solid rgba(210,150,70,0.15)',
                     }}>
-                        <button type="button" className="gcal-n" onClick={prevMonth} style={{
-                            width:'26px', height:'26px', borderRadius:'7px',
-                            border:'1px solid rgba(200,140,80,0.22)',
-                            background:'white',
-                            display:'flex', alignItems:'center', justifyContent:'center',
-                            cursor:'pointer', color:'rgba(150,80,20,0.65)',
-                            transition:'background 0.12s', flexShrink:0,
+                        <button type="button" className="gcal-nav-btn" onClick={prevMonth} style={{
+                            width: '28px', height: '28px', borderRadius: '8px',
+                            border: '1px solid rgba(200,130,60,0.25)',
+                            background: 'rgba(255,255,255,0.7)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', color: 'rgba(140,70,15,0.7)',
+                            transition: 'background 0.12s',
+                            flexShrink: 0,
                         }}>
                             <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"/>
                             </svg>
                         </button>
 
-                        <div style={{ textAlign:'center', userSelect:'none' }}>
-                            <p style={{ margin:0, fontSize:'0.85rem', fontWeight:'600', color:'#2d1a08', letterSpacing:'-0.01em' }}>
+                        <div style={{ textAlign: 'center', userSelect: 'none' }}>
+                            <p style={{
+                                margin: 0, fontSize: '0.9rem', fontWeight: '700',
+                                color: '#2d1a08', letterSpacing: '-0.01em',
+                                fontFamily: 'Inter, sans-serif',
+                            }}>
                                 {MESES[viewMonth]}
                             </p>
-                            <p style={{ margin:0, fontSize:'0.64rem', color:'rgba(150,80,20,0.5)', marginTop:'1px' }}>
+                            <p style={{
+                                margin: 0, fontSize: '0.65rem', fontWeight: '600',
+                                color: 'rgba(150,80,20,0.55)', marginTop: '1px',
+                                letterSpacing: '0.04em',
+                            }}>
                                 {viewYear}
                             </p>
                         </div>
 
-                        <button type="button" className="gcal-n" onClick={nextMonth} style={{
-                            width:'26px', height:'26px', borderRadius:'7px',
-                            border:'1px solid rgba(200,140,80,0.22)',
-                            background:'white',
-                            display:'flex', alignItems:'center', justifyContent:'center',
-                            cursor:'pointer', color:'rgba(150,80,20,0.65)',
-                            transition:'background 0.12s', flexShrink:0,
+                        <button type="button" className="gcal-nav-btn" onClick={nextMonth} style={{
+                            width: '28px', height: '28px', borderRadius: '8px',
+                            border: '1px solid rgba(200,130,60,0.25)',
+                            background: 'rgba(255,255,255,0.7)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', color: 'rgba(140,70,15,0.7)',
+                            transition: 'background 0.12s',
+                            flexShrink: 0,
                         }}>
                             <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"/>
@@ -255,42 +259,51 @@ export default function GlassDateInput({ label, value, onChange, placeholder = '
 
                     {/* ── Días de la semana ── */}
                     <div style={{
-                        display:'grid', gridTemplateColumns:'repeat(7,1fr)',
-                        padding:'0.4rem 0.5rem 0.06rem',
-                        background:'#fdf6f0',
+                        display: 'grid', gridTemplateColumns: 'repeat(7,1fr)',
+                        padding: '0.6rem 0.75rem 0.2rem',
+                        background: 'rgba(255,248,238,0.7)',
                     }}>
                         {DIAS_CORTO.map(d => (
                             <div key={d} style={{
-                                textAlign:'center', fontSize:'0.57rem', fontWeight:'700',
-                                color:'rgba(150,80,20,0.38)', letterSpacing:'0.04em',
-                                userSelect:'none', padding:'0.08rem 0',
+                                textAlign: 'center',
+                                fontSize: '0.6rem', fontWeight: '700',
+                                color: 'rgba(150,80,20,0.42)',
+                                letterSpacing: '0.05em',
+                                userSelect: 'none',
+                                padding: '0.1rem 0',
+                                fontFamily: 'Inter, sans-serif',
                             }}>{d}</div>
                         ))}
                     </div>
 
                     {/* ── Grilla de días ── */}
                     <div style={{
-                        display:'grid', gridTemplateColumns:'repeat(7,1fr)',
-                        padding:'0.04rem 0.5rem 0.4rem',
-                        gap:'1px',
-                        background:'#fdf6f0',
+                        display: 'grid', gridTemplateColumns: 'repeat(7,1fr)',
+                        padding: '0.15rem 0.75rem 0.5rem',
+                        gap: '2px',
+                        background: 'rgba(254,248,240,0.85)',
                     }}>
                         {cells.map((cell, i) => {
                             const ds    = cell.cur ? toStr(new Date(viewYear, viewMonth, cell.day)) : '';
                             const isTod = cell.cur && ds === todayStr;
                             const isSel = cell.cur && ds === value;
 
-                            let bg  = 'transparent';
-                            let col = cell.cur ? '#2d1a08' : 'rgba(180,100,30,0.22)';
-                            let brd = '1px solid transparent';
-                            let fw  = cell.cur ? '400' : '300';
+                            let bg    = 'transparent';
+                            let color = cell.cur ? '#2d1a08' : 'rgba(180,100,30,0.22)';
+                            let brd   = '1.5px solid transparent';
+                            let fw    = cell.cur ? '450' : '300';
+                            let shadow = 'none';
 
                             if (isSel) {
-                                bg='rgba(185,28,28,0.1)'; col='rgba(185,28,28,0.9)';
-                                brd='1px solid rgba(185,28,28,0.28)'; fw='700';
+                                bg     = 'linear-gradient(135deg, rgba(185,28,28,0.18) 0%, rgba(185,28,28,0.12) 100%)';
+                                color  = 'rgba(185,28,28,0.95)';
+                                brd    = '1.5px solid rgba(185,28,28,0.35)';
+                                fw     = '700';
+                                shadow = '0 2px 6px rgba(185,28,28,0.15)';
                             } else if (isTod) {
-                                brd='1.5px solid rgba(185,28,28,0.3)';
-                                col='rgba(185,28,28,0.7)'; fw='600';
+                                brd   = '1.5px solid rgba(185,28,28,0.38)';
+                                color = 'rgba(185,28,28,0.8)';
+                                fw    = '700';
                             }
 
                             return (
@@ -298,17 +311,25 @@ export default function GlassDateInput({ label, value, onChange, placeholder = '
                                     key={i}
                                     type="button"
                                     disabled={!cell.cur}
-                                    onClick={() => { if(cell.cur){ onChange(toStr(new Date(viewYear,viewMonth,cell.day))); setOpen(false); } }}
-                                    className={cell.cur && !isSel ? 'gcal-d' : ''}
+                                    onClick={() => {
+                                        if (cell.cur) {
+                                            onChange(toStr(new Date(viewYear, viewMonth, cell.day)));
+                                            setOpen(false);
+                                        }
+                                    }}
+                                    className={cell.cur && !isSel ? 'gcal-day-btn' : ''}
                                     style={{
-                                        height:'28px', borderRadius:'6px',
-                                        border:brd, background:bg,
-                                        fontSize:'0.73rem', fontWeight:fw, color:col,
-                                        fontFamily:'Inter, sans-serif',
+                                        height: '30px',
+                                        borderRadius: '7px',
+                                        border: brd,
+                                        background: bg,
+                                        boxShadow: shadow,
+                                        fontSize: '0.74rem', fontWeight: fw, color,
+                                        fontFamily: 'Inter, sans-serif',
                                         cursor: cell.cur ? 'pointer' : 'default',
-                                        transition:'background 0.1s',
-                                        display:'flex', alignItems:'center', justifyContent:'center',
-                                        userSelect:'none',
+                                        transition: 'background 0.1s, box-shadow 0.1s',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        userSelect: 'none',
                                     }}
                                 >{cell.day}</button>
                             );
@@ -317,35 +338,56 @@ export default function GlassDateInput({ label, value, onChange, placeholder = '
 
                     {/* ── Footer ── */}
                     <div style={{
-                        display:'flex', justifyContent:'space-between', alignItems:'center',
-                        padding:'0.4rem 0.875rem',
-                        borderTop:'1px solid rgba(200,140,80,0.12)',
-                        background:'rgba(255,245,235,0.95)',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '0.55rem 1rem',
+                        borderTop: '1px solid rgba(210,150,70,0.15)',
+                        background: 'linear-gradient(135deg, rgba(255,240,220,0.9) 0%, rgba(255,232,205,0.85) 100%)',
                     }}>
-                        <button type="button"
-                                onClick={() => { onChange(''); setOpen(false); }}
-                                style={{
-                                    fontSize:'0.69rem', fontWeight:'500', color:'rgba(150,80,20,0.55)',
-                                    background:'none', border:'none', cursor:'pointer',
-                                    fontFamily:'Inter, sans-serif',
-                                    padding:'0.15rem 0.4rem', borderRadius:'5px',
-                                    transition:'background 0.1s',
-                                }}
-                                onMouseEnter={e=>e.currentTarget.style.background='rgba(200,140,80,0.1)'}
-                                onMouseLeave={e=>e.currentTarget.style.background='none'}
+                        <button
+                            type="button"
+                            onClick={() => { onChange(''); setOpen(false); }}
+                            style={{
+                                fontSize: '0.72rem', fontWeight: '600',
+                                color: 'rgba(150,80,20,0.6)',
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontFamily: 'Inter, sans-serif',
+                                padding: '0.2rem 0.5rem', borderRadius: '6px',
+                                transition: 'background 0.1s, color 0.1s',
+                                letterSpacing: '0.01em',
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.background = 'rgba(200,120,50,0.12)';
+                                e.currentTarget.style.color = 'rgba(140,60,10,0.9)';
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.background = 'none';
+                                e.currentTarget.style.color = 'rgba(150,80,20,0.6)';
+                            }}
                         >Limpiar</button>
 
-                        <button type="button"
-                                onClick={() => { onChange(todayStr); setOpen(false); }}
-                                style={{
-                                    fontSize:'0.69rem', fontWeight:'600', color:'rgba(185,28,28,0.82)',
-                                    background:'rgba(185,28,28,0.07)', border:'1px solid rgba(185,28,28,0.18)',
-                                    cursor:'pointer', fontFamily:'Inter, sans-serif',
-                                    padding:'0.18rem 0.65rem', borderRadius:'6px',
-                                    transition:'background 0.1s',
-                                }}
-                                onMouseEnter={e=>e.currentTarget.style.background='rgba(185,28,28,0.14)'}
-                                onMouseLeave={e=>e.currentTarget.style.background='rgba(185,28,28,0.07)'}
+                        <button
+                            type="button"
+                            onClick={() => { onChange(todayStr); setOpen(false); }}
+                            style={{
+                                fontSize: '0.72rem', fontWeight: '700',
+                                color: 'rgba(185,28,28,0.9)',
+                                background: 'rgba(185,28,28,0.09)',
+                                border: '1.5px solid rgba(185,28,28,0.22)',
+                                cursor: 'pointer',
+                                fontFamily: 'Inter, sans-serif',
+                                padding: '0.22rem 0.75rem', borderRadius: '8px',
+                                transition: 'all 0.12s',
+                                letterSpacing: '0.01em',
+                                boxShadow: '0 1px 3px rgba(185,28,28,0.1)',
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.background = 'rgba(185,28,28,0.16)';
+                                e.currentTarget.style.boxShadow = '0 2px 6px rgba(185,28,28,0.2)';
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.background = 'rgba(185,28,28,0.09)';
+                                e.currentTarget.style.boxShadow = '0 1px 3px rgba(185,28,28,0.1)';
+                            }}
                         >Hoy</button>
                     </div>
                 </div>

@@ -1,12 +1,189 @@
 // resources/js/Pages/Reportes/Ventas.jsx
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, router } from '@inertiajs/react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import Pagination from '@/Components/Pagination';
 import GlassDateInput from '@/Components/GlassDateInput';
 
 const fmt = (v) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v ?? 0);
+
+// ── Dropdown custom para Estado ───────────────────────────────────────────────
+function EstadoDropdown({ value, onChange }) {
+    const [open, setOpen] = useState(false);
+    const ref             = useRef(null);
+
+    const opciones = [
+        { value: '',           label: 'Todos',       dot: null,                         textColor: 'rgba(120,60,10,0.75)' },
+        { value: 'Completada', label: 'Completada',  dot: 'rgba(16,185,129,0.8)',       textColor: 'rgba(4,120,87,0.9)'   },
+        { value: 'Pendiente',  label: 'Pendiente',   dot: 'rgba(245,158,11,0.85)',      textColor: 'rgba(146,64,14,0.9)'  },
+        { value: 'Cancelada',  label: 'Cancelada',   dot: 'rgba(220,38,38,0.8)',        textColor: 'rgba(185,28,28,0.9)'  },
+    ];
+
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, []);
+
+    const selected  = opciones.find(o => o.value === value) ?? opciones[0];
+    const isActive  = value !== '';
+
+    return (
+        <div ref={ref} style={{ position: 'relative', flex: 1, minWidth: '130px' }}>
+            <label style={{
+                display: 'block', marginBottom: '0.3rem',
+                fontSize: '0.68rem', fontWeight: '700',
+                color: 'rgba(140,70,15,0.6)',
+                letterSpacing: '0.07em', textTransform: 'uppercase',
+            }}>
+                Estado
+            </label>
+
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                style={{
+                    width: '100%',
+                    display: 'flex', alignItems: 'center', gap: '0.45rem',
+                    padding: '0.58rem 0.85rem',
+                    background: open
+                        ? 'rgba(255,248,242,0.98)'
+                        : 'rgba(255,252,248,0.82)',
+                    border: open
+                        ? '1.5px solid rgba(185,28,28,0.45)'
+                        : isActive
+                            ? '1.5px solid rgba(185,28,28,0.3)'
+                            : '1.5px solid rgba(200,130,60,0.32)',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '0.82rem',
+                    color: isActive ? selected.textColor : 'rgba(120,60,10,0.75)',
+                    boxShadow: open
+                        ? '0 0 0 3px rgba(185,28,28,0.09), 0 2px 8px rgba(180,80,10,0.1)'
+                        : '0 1px 3px rgba(180,90,20,0.1), inset 0 1px 0 rgba(255,255,255,0.9)',
+                    transition: 'all 0.15s ease',
+                    boxSizing: 'border-box',
+                    userSelect: 'none',
+                    backdropFilter: 'blur(8px)',
+                }}
+            >
+                {/* Icono filtro */}
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"
+                     stroke={isActive ? selected.textColor : 'rgba(160,80,20,0.5)'}
+                     style={{ flexShrink: 0 }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                          d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/>
+                </svg>
+
+                {/* Dot de estado si activo */}
+                {isActive && selected.dot && (
+                    <span style={{
+                        width: '7px', height: '7px', borderRadius: '50%',
+                        background: selected.dot, flexShrink: 0,
+                        boxShadow: `0 0 0 2px ${selected.dot.replace(/[\d.]+\)$/, '0.2)')}`,
+                    }}/>
+                )}
+
+                <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {selected.label}
+                </span>
+
+                {/* Chevron */}
+                <svg
+                    width="11" height="11" fill="none" viewBox="0 0 24 24"
+                    stroke="rgba(150,70,15,0.45)"
+                    style={{
+                        flexShrink: 0,
+                        transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease',
+                    }}
+                >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+
+            {/* Panel dropdown */}
+            {open && (
+                <div style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    left: 0,
+                    minWidth: '100%',
+                    zIndex: 99999,
+                    background: 'linear-gradient(145deg, #fef9f4 0%, #fdf5ed 100%)',
+                    border: '1.5px solid rgba(210,150,80,0.25)',
+                    borderRadius: '14px',
+                    boxShadow: [
+                        '0 20px 56px rgba(130,60,10,0.2)',
+                        '0 6px 16px rgba(130,60,10,0.12)',
+                        'inset 0 1px 0 rgba(255,255,255,0.95)',
+                    ].join(', '),
+                    overflow: 'hidden',
+                    animation: 'estDropIn 0.18s cubic-bezier(0.16,1,0.3,1)',
+                }}>
+                    <style>{`
+                        @keyframes estDropIn {
+                            from { opacity:0; transform:scale(0.96) translateY(-4px); }
+                            to   { opacity:1; transform:scale(1) translateY(0); }
+                        }
+                    `}</style>
+                    {opciones.map((opt, i) => {
+                        const sel = opt.value === value;
+                        return (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => { onChange(opt.value); setOpen(false); }}
+                                style={{
+                                    width: '100%',
+                                    display: 'flex', alignItems: 'center', gap: '0.6rem',
+                                    padding: '0.65rem 0.9rem',
+                                    fontSize: '0.83rem', fontWeight: sel ? '700' : '500',
+                                    color: sel ? (opt.textColor ?? 'rgba(185,28,28,0.9)') : 'rgba(100,50,10,0.75)',
+                                    background: sel ? 'rgba(185,28,28,0.07)' : 'transparent',
+                                    border: 'none',
+                                    borderBottom: i < opciones.length - 1
+                                        ? '1px solid rgba(210,150,70,0.12)'
+                                        : 'none',
+                                    cursor: 'pointer', textAlign: 'left',
+                                    fontFamily: 'Inter, sans-serif',
+                                    transition: 'background 0.12s',
+                                    boxSizing: 'border-box',
+                                }}
+                                onMouseEnter={e => {
+                                    if (!sel) e.currentTarget.style.background = 'rgba(210,150,70,0.08)';
+                                }}
+                                onMouseLeave={e => {
+                                    if (!sel) e.currentTarget.style.background = 'transparent';
+                                }}
+                            >
+                                {/* Dot de color */}
+                                <span style={{
+                                    width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                                    background: opt.dot ?? 'rgba(180,100,20,0.3)',
+                                    boxShadow: opt.dot
+                                        ? `0 0 0 2px ${opt.dot.replace(/[\d.]+\)$/, '0.18)')}`
+                                        : 'none',
+                                }}/>
+                                <span style={{ flex: 1 }}>{opt.label}</span>
+                                {sel && (
+                                    <svg width="13" height="13" fill="none" stroke={opt.textColor ?? 'rgba(185,28,28,0.8)'}
+                                         viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function HBar({ label, value, max, color, sub }) {
     const pct = max > 0 ? (value / max) * 100 : 0;
@@ -78,7 +255,10 @@ export default function ReporteVentas({
     const [currentPage, setCurrentPage] = useState(1);
     const PER_PAGE = 20;
 
-    const aplicarFiltros = () => { setCurrentPage(1); router.get('/reportes/ventas', { desde, hasta, estado }, { preserveState: true }); };
+    const aplicarFiltros = () => {
+        setCurrentPage(1);
+        router.get('/reportes/ventas', { desde, hasta, estado }, { preserveState: true });
+    };
     const maxMetodo = Math.max(...porMetodoPago.map(m => m.total || 0), 1);
 
     const ventasPaginadas = useMemo(
@@ -97,7 +277,7 @@ export default function ReporteVentas({
     return (
         <AppLayout>
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
                 .vt-bg { min-height:100vh; font-family:'Inter',-apple-system,sans-serif; background:${GLASS_BG}; overflow-x:hidden; }
 
                 @keyframes staggerUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
@@ -133,35 +313,21 @@ export default function ReporteVentas({
                 .vt-table-row:hover { background:rgba(255,255,255,0.12); }
                 .vt-table-row:last-child { border-bottom:none; }
 
-                /* Select de estado con estilo glass */
-                .vt-select {
-                    width:100%; padding:0.6rem 0.9rem;
-                    background:rgba(255,255,255,0.55);
-                    border:1px solid rgba(200,140,80,0.22);
-                    border-radius:12px; font-size:0.82rem; color:#2d1a08;
-                    font-family:'Inter',sans-serif; outline:none;
-                    box-shadow:0 2px 8px rgba(180,90,20,0.06),inset 0 1px 0 rgba(255,255,255,0.75);
-                    backdrop-filter:blur(12px); transition:all .18s;
-                    cursor:pointer; appearance:none; -webkit-appearance:none;
-                    box-sizing:border-box;
-                }
-                .vt-select:focus {
-                    border-color:rgba(185,28,28,0.35);
-                    box-shadow:0 0 0 3px rgba(185,28,28,0.07),inset 0 1px 0 rgba(255,255,255,0.8);
-                    background:rgba(255,255,255,0.75);
-                }
-                .vt-select option { background:#fdf6f0; color:#2d1a08; }
-
                 /* Botón Aplicar glass */
                 .vt-btn-apply {
-                    padding:0.6rem 1.4rem;
-                    background:rgba(185,28,28,0.08); border:1px solid rgba(185,28,28,0.28);
-                    border-radius:12px; font-size:0.82rem; font-weight:600;
-                    color:rgba(185,28,28,0.9); cursor:pointer;
+                    padding:0.58rem 1.4rem;
+                    background:rgba(185,28,28,0.09); border:1.5px solid rgba(185,28,28,0.3);
+                    border-radius:12px; font-size:0.82rem; font-weight:700;
+                    color:rgba(185,28,28,0.92); cursor:pointer;
                     font-family:'Inter',sans-serif; transition:all .18s; white-space:nowrap;
-                    box-shadow:0 2px 8px rgba(185,28,28,0.08);
+                    box-shadow:0 2px 8px rgba(185,28,28,0.1), inset 0 1px 0 rgba(255,255,255,0.5);
+                    display:flex; align-items:center; gap:0.4rem;
                 }
-                .vt-btn-apply:hover { background:rgba(185,28,28,0.14); transform:translateY(-1px); }
+                .vt-btn-apply:hover {
+                    background:rgba(185,28,28,0.16);
+                    transform:translateY(-1px);
+                    box-shadow:0 4px 12px rgba(185,28,28,0.18);
+                }
 
                 /* Filtro responsive */
                 .vt-fil-grid {
@@ -169,8 +335,13 @@ export default function ReporteVentas({
                     grid-template-columns:1fr 1fr 1fr auto;
                     gap:0.85rem; align-items:flex-end;
                 }
-                @media(max-width:800px) { .vt-fil-grid { grid-template-columns:1fr 1fr; } }
-                @media(max-width:480px) { .vt-fil-grid { grid-template-columns:1fr 1fr; gap:0.65rem; } }
+                @media(max-width:800px) {
+                    .vt-fil-grid { grid-template-columns:1fr 1fr; }
+                    .vt-btn-col  { grid-column: 1 / -1; display:flex; justify-content:flex-end; }
+                }
+                @media(max-width:480px) {
+                    .vt-fil-grid { grid-template-columns:1fr 1fr; gap:0.65rem; }
+                }
 
                 /* Grids */
                 .vt-kpi-grid  { display:grid; grid-template-columns:repeat(5,1fr); gap:1.1rem; }
@@ -180,12 +351,6 @@ export default function ReporteVentas({
                 @media(max-width:1024px){ .vt-kpi-grid { grid-template-columns:repeat(3,1fr); } }
                 @media(max-width:900px) { .vt-mid-grid { grid-template-columns:1fr; } .vt-bot-grid { grid-template-columns:1fr; } }
                 @media(max-width:600px) { .vt-kpi-grid { grid-template-columns:1fr 1fr; gap:0.75rem; } }
-
-                /* date input icon override en webkit */
-                input[type="date"]::-webkit-calendar-picker-indicator {
-                    opacity:0; width:100%; height:100%;
-                    position:absolute; top:0; left:0; cursor:pointer;
-                }
             `}</style>
 
             <div className="vt-bg">
@@ -220,29 +385,20 @@ export default function ReporteVentas({
 
                     {/* ── Filtros ── */}
                     <div className="vt-glass vt-a1" style={{ padding:'1.4rem 1.5rem', overflow:'visible' }}>
-                        <p style={{ fontSize:'0.82rem', fontWeight:'600', color:'rgba(150,80,20,0.55)', letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:'0.85rem' }}>
+                        <p style={{ fontSize:'0.75rem', fontWeight:'700', color:'rgba(140,70,15,0.6)', letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:'0.85rem' }}>
                             Filtrar período
                         </p>
                         <div className="vt-fil-grid">
                             <GlassDateInput label="Desde" value={desde} onChange={val => setDesde(val)} />
                             <GlassDateInput label="Hasta" value={hasta} onChange={val => setHasta(val)} />
-                            <div style={{ flex:1, minWidth:'120px' }}>
-                                <label style={{ fontSize:'0.72rem', fontWeight:'600', color:'rgba(150,80,20,0.55)', letterSpacing:'0.05em', textTransform:'uppercase', display:'block', marginBottom:'0.35rem' }}>Estado</label>
-                                <div style={{ position:'relative' }}>
-                                    <select value={estado} onChange={e => setEstado(e.target.value)} className="vt-select">
-                                        <option value="">Todos</option>
-                                        <option value="Completada">Completada</option>
-                                        <option value="Pendiente">Pendiente</option>
-                                        <option value="Cancelada">Cancelada</option>
-                                    </select>
-                                    <svg style={{ position:'absolute', right:'0.75rem', top:'50%', transform:'translateY(-50%)', pointerEvents:'none', color:'rgba(150,80,20,0.45)' }}
-                                         width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                            <EstadoDropdown value={estado} onChange={setEstado} />
+                            <div className="vt-btn-col" style={{ display:'flex', alignItems:'flex-end' }}>
+                                <button onClick={aplicarFiltros} className="vt-btn-apply">
+                                    <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"/>
                                     </svg>
-                                </div>
-                            </div>
-                            <div style={{ display:'flex', alignItems:'flex-end' }}>
-                                <button onClick={aplicarFiltros} className="vt-btn-apply">Aplicar</button>
+                                    Aplicar
+                                </button>
                             </div>
                         </div>
                     </div>
