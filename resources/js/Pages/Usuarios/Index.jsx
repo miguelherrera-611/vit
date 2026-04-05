@@ -4,28 +4,20 @@ import { useState } from 'react';
 
 export default function UsuariosIndex({ usuarios }) {
     const { flash } = usePage().props;
-    const [eliminando, setEliminando]   = useState(null);
-    const [password, setPassword]       = useState('');
-    const [error, setError]             = useState('');
-    // NUEVO — estado para confirmar desbloqueo
+    const [eliminando, setEliminando]       = useState(null);
+    const [password, setPassword]           = useState('');
+    const [error, setError]                 = useState('');
     const [desbloqueando, setDesbloqueando] = useState(null);
 
-    const toggleActivo = (id) => {
-        router.patch(`/usuarios/${id}/toggle`);
-    };
+    const toggleActivo = (id) => router.patch(`/usuarios/${id}/toggle`);
 
-    // NUEVO — llamada al endpoint de desbloqueo
     const ejecutarDesbloquear = () => {
         router.patch(`/usuarios/${desbloqueando.id}/desbloquear`, {}, {
             onSuccess: () => setDesbloqueando(null),
         });
     };
 
-    const confirmarEliminar = (usuario) => {
-        setEliminando(usuario);
-        setPassword('');
-        setError('');
-    };
+    const confirmarEliminar = (usuario) => { setEliminando(usuario); setPassword(''); setError(''); };
 
     const ejecutarEliminar = () => {
         router.delete(`/usuarios/${eliminando.id}`, {
@@ -35,284 +27,405 @@ export default function UsuariosIndex({ usuarios }) {
         });
     };
 
-    const rolBadge = (rol) => {
-        if (rol === 'admin')    return 'bg-red-100 text-red-700';
-        if (rol === 'empleado') return 'bg-blue-100 text-blue-700';
-        return 'bg-gray-100 text-gray-600';
-    };
-
-    const rolLabel = (rol) => {
-        if (rol === 'admin')    return 'Administrador';
-        if (rol === 'empleado') return 'Empleado';
-        return 'Sin rol';
+    const rolMeta = (rol) => {
+        if (rol === 'admin')    return { label: 'Administrador', cls: 'u-badge-admin' };
+        if (rol === 'empleado') return { label: 'Empleado',      cls: 'u-badge-emp'   };
+        return { label: 'Sin rol', cls: 'u-badge-none' };
     };
 
     return (
         <AppLayout>
-            <div className="min-h-screen bg-gray-50">
-                {/* Header */}
-                <div className="bg-white border-b border-gray-200">
-                    <div className="max-w-7xl mx-auto px-6 py-8 flex items-center justify-between">
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600&family=DM+Serif+Display&display=swap');
+                *, *::before, *::after { box-sizing: border-box; }
+
+                @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+                .u-root {
+                    min-height: 100vh;
+                    font-family: 'DM Sans', sans-serif;
+                    background:
+                        radial-gradient(ellipse 70% 55% at 5% 0%, rgba(255,215,175,0.18) 0%, transparent 55%),
+                        radial-gradient(ellipse 55% 50% at 95% 100%, rgba(255,195,145,0.13) 0%, transparent 55%),
+                        linear-gradient(150deg, #fdf6f0 0%, #fdf3ec 40%, #fef5ef 70%, #fef8f4 100%);
+                }
+
+                /* ── Header ── */
+                .u-header {
+                    background: rgba(253,246,240,0.75);
+                    backdrop-filter: blur(28px) saturate(160%);
+                    border-bottom: 1px solid rgba(200,140,80,0.1);
+                    position: sticky; top: 0; z-index: 40;
+                }
+                .u-header-inner {
+                    max-width: 1180px; margin: 0 auto;
+                    padding: 1.25rem 1.5rem;
+                    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+                }
+                .u-title { font-family: 'DM Serif Display', serif; font-size: 1.55rem; font-weight: 400; color: #2d1a08; letter-spacing: -0.02em; margin: 0; }
+                .u-subtitle { font-size: 0.78rem; color: rgba(150,80,20,0.55); margin: 0.15rem 0 0; }
+
+                /* ── Btn primario ── */
+                .u-btn-primary {
+                    display: inline-flex; align-items: center; gap: 0.5rem;
+                    padding: 0.6rem 1.25rem; border-radius: 10px;
+                    background: rgba(185,28,28,0.08); border: 1px solid rgba(185,28,28,0.22);
+                    color: rgba(185,28,28,0.9); font-size: 0.83rem; font-weight: 500;
+                    text-decoration: none; font-family: 'DM Sans', sans-serif;
+                    transition: all 0.16s; letter-spacing: -0.01em; cursor: pointer;
+                }
+                .u-btn-primary:hover { background: rgba(185,28,28,0.13); border-color: rgba(185,28,28,0.35); }
+
+                /* ── Contenido ── */
+                .u-content { max-width: 1180px; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
+
+                /* ── Flash ── */
+                .u-flash {
+                    margin-bottom: 1.25rem; padding: 0.8rem 1rem; border-radius: 10px;
+                    background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.2);
+                    font-size: 0.81rem; color: rgba(4,120,87,0.85);
+                    animation: fadeUp 0.4s ease both;
+                }
+
+                /* ── Glass card ── */
+                .u-glass {
+                    background: rgba(255,255,255,0.48);
+                    backdrop-filter: blur(20px) saturate(150%);
+                    border: 1px solid rgba(200,140,80,0.12);
+                    border-radius: 16px;
+                    box-shadow: 0 4px 24px rgba(180,90,20,0.05), inset 0 1px 0 rgba(255,255,255,0.9);
+                    overflow: hidden;
+                    animation: fadeUp 0.45s cubic-bezier(0.16,1,0.3,1) both;
+                }
+
+                /* ── Tabla ── */
+                .u-table { width: 100%; border-collapse: collapse; }
+                .u-thead th {
+                    padding: 0.75rem 1.25rem;
+                    text-align: left; font-size: 0.67rem; font-weight: 600;
+                    color: rgba(150,80,20,0.45); text-transform: uppercase; letter-spacing: 0.08em;
+                    background: rgba(255,255,255,0.3); border-bottom: 1px solid rgba(200,140,80,0.08);
+                }
+                .u-tbody tr {
+                    border-bottom: 1px solid rgba(200,140,80,0.06);
+                    transition: background 0.12s;
+                }
+                .u-tbody tr:last-child { border-bottom: none; }
+                .u-tbody tr:hover { background: rgba(255,255,255,0.35); }
+                .u-tbody tr.locked { background: rgba(220,38,38,0.03); }
+                .u-tbody td { padding: 0.9rem 1.25rem; font-size: 0.82rem; color: #2d1a08; vertical-align: middle; }
+
+                /* ── Badges ── */
+                .u-badge {
+                    display: inline-flex; align-items: center;
+                    padding: 0.18rem 0.6rem; border-radius: 5px;
+                    font-size: 0.69rem; font-weight: 500; letter-spacing: 0.01em;
+                }
+                .u-badge-admin { background: rgba(185,28,28,0.07); border: 1px solid rgba(185,28,28,0.18); color: rgba(185,28,28,0.9); }
+                .u-badge-emp   { background: rgba(59,130,246,0.07); border: 1px solid rgba(59,130,246,0.18); color: rgba(29,78,216,0.9); }
+                .u-badge-none  { background: rgba(200,140,80,0.06); border: 1px solid rgba(200,140,80,0.15); color: rgba(120,60,10,0.6); }
+
+                .u-badge-locked {
+                    display: inline-flex; align-items: center; gap: 0.3rem;
+                    margin-top: 0.25rem; padding: 0.15rem 0.5rem; border-radius: 4px;
+                    font-size: 0.67rem; font-weight: 500;
+                    background: rgba(220,38,38,0.06); border: 1px solid rgba(220,38,38,0.15); color: rgba(185,28,28,0.85);
+                }
+
+                /* ── Toggle ── */
+                .u-toggle {
+                    position: relative; display: inline-flex;
+                    width: 40px; height: 22px; border-radius: 11px;
+                    transition: background 0.2s; cursor: pointer; border: none;
+                }
+                .u-toggle.on  { background: rgba(16,185,129,0.75); }
+                .u-toggle.off { background: rgba(200,140,80,0.25); }
+                .u-toggle-knob {
+                    position: absolute; top: 3px;
+                    width: 16px; height: 16px; border-radius: 50%; background: white;
+                    transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+                }
+                .u-toggle.on  .u-toggle-knob { left: 21px; }
+                .u-toggle.off .u-toggle-knob { left: 3px; }
+
+                /* ── Permiso tags ── */
+                .u-perm {
+                    display: inline-block; padding: 0.13rem 0.5rem; border-radius: 4px;
+                    font-size: 0.67rem; background: rgba(200,140,80,0.07);
+                    border: 1px solid rgba(200,140,80,0.15); color: rgba(120,60,10,0.7);
+                    margin: 0.1rem 0.1rem 0 0;
+                }
+
+                /* ── Acciones ── */
+                .u-icon-btn {
+                    padding: 0.45rem; border-radius: 8px; border: none; background: transparent;
+                    cursor: pointer; color: rgba(150,80,20,0.4); transition: all 0.14s;
+                    display: inline-flex; align-items: center; justify-content: center;
+                }
+                .u-icon-btn:hover.unlock { background: rgba(16,185,129,0.08); color: rgba(4,120,87,0.85); }
+                .u-icon-btn:hover.edit   { background: rgba(59,130,246,0.07); color: rgba(29,78,216,0.85); }
+                .u-icon-btn:hover.del    { background: rgba(185,28,28,0.07); color: rgba(185,28,28,0.85); }
+
+                /* ── Avatar ── */
+                .u-avatar {
+                    width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+                    display: flex; align-items: center; justify-content: center;
+                    font-size: 0.78rem; font-weight: 600; color: white; letter-spacing: -0.01em;
+                    background: linear-gradient(135deg, rgba(185,28,28,0.7), rgba(185,28,28,0.5));
+                }
+                .u-avatar.locked { background: linear-gradient(135deg, rgba(150,80,20,0.35), rgba(150,80,20,0.2)); color: rgba(120,60,10,0.6); }
+
+                /* ── Modal ── */
+                .u-modal-overlay {
+                    position: fixed; inset: 0; z-index: 200;
+                    background: rgba(20,8,0,0.18); backdrop-filter: blur(6px);
+                    display: flex; align-items: center; justify-content: center; padding: 1rem;
+                }
+                .u-modal {
+                    width: 100%; max-width: 380px;
+                    background: rgba(253,248,244,0.97);
+                    backdrop-filter: blur(40px);
+                    border: 1px solid rgba(200,140,80,0.16);
+                    border-radius: 18px; padding: 2rem;
+                    box-shadow: 0 20px 60px rgba(180,90,20,0.12);
+                }
+                .u-modal-icon {
+                    width: 48px; height: 48px; border-radius: 12px; margin: 0 auto 1.25rem;
+                    display: flex; align-items: center; justify-content: center;
+                }
+                .u-modal-title {
+                    font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: #2d1a08;
+                    text-align: center; margin: 0 0 0.5rem; letter-spacing: -0.02em;
+                }
+                .u-modal-desc { font-size: 0.8rem; color: rgba(150,80,20,0.6); text-align: center; line-height: 1.6; margin: 0 0 1.25rem; }
+                .u-modal-sub  { font-size: 0.73rem; color: rgba(150,80,20,0.45); text-align: center; margin: 0 0 1.5rem; }
+
+                .u-modal-input {
+                    width: 100%; padding: 0.7rem 0.9rem; margin-bottom: 0.4rem;
+                    background: rgba(255,255,255,0.6); border: 1px solid rgba(200,140,80,0.2);
+                    border-radius: 9px; font-size: 0.84rem; color: #2d1a08;
+                    font-family: 'DM Sans', sans-serif; outline: none;
+                    transition: border-color 0.14s;
+                }
+                .u-modal-input:focus { border-color: rgba(200,140,80,0.38); background: rgba(255,255,255,0.85); }
+
+                .u-modal-error { font-size: 0.74rem; color: rgba(185,28,28,0.8); margin: 0 0 1rem; }
+
+                .u-modal-row { display: flex; gap: 0.6rem; margin-top: 0.5rem; }
+                .u-modal-btn {
+                    flex: 1; padding: 0.72rem; border-radius: 9px; font-family: 'DM Sans', sans-serif;
+                    font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: all 0.14s;
+                    border: none; letter-spacing: -0.01em;
+                }
+                .u-modal-btn.cancel {
+                    background: rgba(255,255,255,0.5); border: 1px solid rgba(200,140,80,0.18);
+                    color: rgba(120,60,10,0.7);
+                }
+                .u-modal-btn.cancel:hover { background: rgba(255,255,255,0.8); }
+                .u-modal-btn.confirm-del {
+                    background: rgba(185,28,28,0.08); border: 1px solid rgba(185,28,28,0.22);
+                    color: rgba(185,28,28,0.9);
+                }
+                .u-modal-btn.confirm-del:hover { background: rgba(185,28,28,0.14); }
+                .u-modal-btn.confirm-ok {
+                    background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.22);
+                    color: rgba(4,120,87,0.9);
+                }
+                .u-modal-btn.confirm-ok:hover { background: rgba(16,185,129,0.14); }
+
+                /* ── Empty state ── */
+                .u-empty { text-align: center; padding: 3.5rem 0; font-size: 0.84rem; color: rgba(150,80,20,0.45); }
+
+                /* ── Intentos ── */
+                .u-attempts { font-size: 0.71rem; color: rgba(180,100,10,0.7); margin-top: 0.25rem; }
+
+                /* ── Scroll horizontal tabla ── */
+                .u-table-scroll {
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    /* Indicador sutil de que hay más contenido */
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(200,140,80,0.25) transparent;
+                }
+                .u-table-scroll::-webkit-scrollbar { height: 4px; }
+                .u-table-scroll::-webkit-scrollbar-track { background: transparent; }
+                .u-table-scroll::-webkit-scrollbar-thumb { background: rgba(200,140,80,0.25); border-radius: 2px; }
+                .u-table-scroll::-webkit-scrollbar-thumb:hover { background: rgba(200,140,80,0.45); }
+
+                .u-table { min-width: 720px; } /* fuerza scroll antes de comprimir */
+
+                /* ── Responsive ── */
+                @media (max-width: 600px) {
+                    .u-header-inner { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+                    .u-content { padding: 1.25rem 1rem 2.5rem; }
+                    .u-title { font-size: 1.3rem; }
+                    .u-thead th { padding: 0.6rem 0.875rem; white-space: nowrap; }
+                    .u-tbody td  { padding: 0.75rem 0.875rem; }
+                }
+            `}</style>
+
+            <div className="u-root">
+
+                <div className="u-header">
+                    <div className="u-header-inner">
                         <div>
-                            <h1 className="text-3xl font-light text-gray-900">Gestión de Usuarios</h1>
-                            <p className="mt-1 text-sm text-gray-500">{usuarios.length} usuario(s) registrado(s)</p>
+                            <h1 className="u-title">Usuarios</h1>
+                            <p className="u-subtitle">{usuarios.length} usuario{usuarios.length !== 1 ? 's' : ''} registrado{usuarios.length !== 1 ? 's' : ''}</p>
                         </div>
-                        <Link
-                            href="/usuarios/create"
-                            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl font-medium transition"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                        <Link href="/usuarios/create" className="u-btn-primary">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
                             </svg>
-                            Nuevo Usuario
+                            Nuevo usuario
                         </Link>
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-6 py-10">
-                    {/* Flash */}
-                    {flash?.success && (
-                        <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded-lg text-sm">
-                            {flash.success}
-                        </div>
-                    )}
+                <div className="u-content">
+                    {flash?.success && <div className="u-flash">{flash.success}</div>}
 
-                    {/* Tabla */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                        <table className="w-full">
-                            <thead className="bg-gray-50 border-b border-gray-100">
-                            <tr>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Usuario</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rol</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Permisos</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Creado</th>
-                                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
-                            </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                            {usuarios.map((u) => (
-                                <tr
-                                    key={u.id}
-                                    className={
-                                        'hover:bg-gray-50 transition ' +
-                                        // NUEVO — fila con fondo rojo suave si está bloqueada
-                                        (u.bloqueado ? 'bg-red-50 hover:bg-red-50' : '')
-                                    }
-                                >
-                                    {/* Usuario */}
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className={
-                                                'w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ' +
-                                                // NUEVO — avatar gris si está bloqueado
-                                                (u.bloqueado
-                                                    ? 'bg-gradient-to-br from-red-400 to-red-500'
-                                                    : 'bg-gradient-to-br from-red-500 to-red-600')
-                                            }>
-                                                {u.bloqueado
-                                                    ? '🔒'
-                                                    : u.name.charAt(0).toUpperCase()
-                                                }
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-900">{u.name}</p>
-                                                <p className="text-xs text-gray-500">{u.email}</p>
-                                                {/* NUEVO — badge "Cuenta bloqueada" bajo el email */}
-                                                {u.bloqueado && (
-                                                    <span className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full">
-                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                                            </svg>
-                                                            Cuenta bloqueada
-                                                        {u.bloqueado_hasta && (
-                                                            <span className="font-normal">· hasta {u.bloqueado_hasta}</span>
-                                                        )}
-                                                        </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    {/* Rol */}
-                                    <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${rolBadge(u.rol)}`}>
-                                                {rolLabel(u.rol)}
-                                            </span>
-                                    </td>
-
-                                    {/* Permisos */}
-                                    <td className="px-6 py-4">
-                                        {u.permisos.length > 0 ? (
-                                            <div className="flex flex-wrap gap-1">
-                                                {u.permisos.slice(0, 3).map(p => (
-                                                    <span key={p} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
-                                                            {p.replace(/_/g, ' ')}
-                                                        </span>
-                                                ))}
-                                                {u.permisos.length > 3 && (
-                                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">
-                                                            +{u.permisos.length - 3}
-                                                        </span>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <span className="text-xs text-gray-400 italic">
-                                                    {u.rol === 'admin' ? 'Acceso total' : 'Sin permisos extra'}
-                                                </span>
-                                        )}
-                                    </td>
-
-                                    {/* Estado */}
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-col gap-1">
-                                            {/* Toggle activo/inactivo — se mantiene igual */}
-                                            <button
-                                                onClick={() => toggleActivo(u.id)}
-                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${u.activo !== false ? 'bg-green-500' : 'bg-gray-300'}`}
-                                                title={u.activo !== false ? 'Activo — clic para desactivar' : 'Inactivo — clic para activar'}
-                                            >
-                                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${u.activo !== false ? 'translate-x-6' : 'translate-x-1'}`} />
-                                            </button>
-                                            {/* NUEVO — intentos fallidos visibles si hay alguno */}
-                                            {!u.bloqueado && u.intentos_fallidos > 0 && (
-                                                <span className="text-xs text-amber-600 font-medium">
-                                                        ⚠ {u.intentos_fallidos} intento(s) fallido(s)
-                                                    </span>
-                                            )}
-                                        </div>
-                                    </td>
-
-                                    {/* Creado */}
-                                    <td className="px-6 py-4 text-sm text-gray-500">{u.created_at}</td>
-
-                                    {/* Acciones */}
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center justify-end gap-2">
-                                            {/* NUEVO — botón desbloquear, solo visible si bloqueado=true */}
-                                            {u.bloqueado && (
-                                                <button
-                                                    onClick={() => setDesbloqueando(u)}
-                                                    className="p-2 text-red-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition"
-                                                    title="Desbloquear cuenta"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 018 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                                                    </svg>
-                                                </button>
-                                            )}
-
-                                            <Link
-                                                href={`/usuarios/${u.id}/edit`}
-                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                                title="Editar"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>
-                                            </Link>
-
-                                            <button
-                                                onClick={() => confirmarEliminar(u)}
-                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                                                title="Eliminar"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </td>
+                    <div className="u-glass">
+                        <div className="u-table-scroll">
+                            <table className="u-table">
+                                <thead className="u-thead">
+                                <tr>
+                                    <th>Usuario</th>
+                                    <th>Rol</th>
+                                    <th>Permisos</th>
+                                    <th>Estado</th>
+                                    <th>Creado</th>
+                                    <th style={{textAlign:'right'}}>Acciones</th>
                                 </tr>
-                            ))}
-                            </tbody>
-                        </table>
-
-                        {usuarios.length === 0 && (
-                            <div className="text-center py-16">
-                                <p className="text-gray-400 text-sm">No hay usuarios registrados.</p>
-                            </div>
-                        )}
+                                </thead>
+                                <tbody className="u-tbody">
+                                {usuarios.map((u) => {
+                                    const rm = rolMeta(u.rol);
+                                    return (
+                                        <tr key={u.id} className={u.bloqueado ? 'locked' : ''}>
+                                            <td>
+                                                <div style={{display:'flex', alignItems:'center', gap:'0.65rem'}}>
+                                                    <div className={`u-avatar${u.bloqueado ? ' locked' : ''}`}>
+                                                        {u.bloqueado
+                                                            ? <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                                            : u.name.charAt(0).toUpperCase()
+                                                        }
+                                                    </div>
+                                                    <div>
+                                                        <p style={{margin:0, fontWeight:500, fontSize:'0.84rem', color:'#2d1a08', letterSpacing:'-0.01em'}}>{u.name}</p>
+                                                        <p style={{margin:0, fontSize:'0.72rem', color:'rgba(150,80,20,0.5)'}}>{u.email}</p>
+                                                        {u.bloqueado && (
+                                                            <div className="u-badge-locked">
+                                                                <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                                                Bloqueado{u.bloqueado_hasta && ` · hasta ${u.bloqueado_hasta}`}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={`u-badge ${rm.cls}`}>{rm.label}</span>
+                                            </td>
+                                            <td>
+                                                {u.permisos.length > 0 ? (
+                                                    <div>
+                                                        {u.permisos.slice(0, 3).map(p => (
+                                                            <span key={p} className="u-perm">{p.replace(/_/g, ' ')}</span>
+                                                        ))}
+                                                        {u.permisos.length > 3 && (
+                                                            <span className="u-perm">+{u.permisos.length - 3}</span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span style={{fontSize:'0.74rem', color:'rgba(150,80,20,0.4)', fontStyle:'italic'}}>
+                                                        {u.rol === 'admin' ? 'Acceso total' : 'Sin permisos'}
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <button
+                                                        onClick={() => toggleActivo(u.id)}
+                                                        className={`u-toggle ${u.activo !== false ? 'on' : 'off'}`}
+                                                        title={u.activo !== false ? 'Activo' : 'Inactivo'}
+                                                    >
+                                                        <span className="u-toggle-knob"/>
+                                                    </button>
+                                                    {!u.bloqueado && u.intentos_fallidos > 0 && (
+                                                        <p className="u-attempts">{u.intentos_fallidos} intento{u.intentos_fallidos !== 1 ? 's' : ''} fallido{u.intentos_fallidos !== 1 ? 's' : ''}</p>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td style={{color:'rgba(120,60,10,0.55)', fontSize:'0.78rem', whiteSpace:'nowrap'}}>{u.created_at}</td>
+                                            <td>
+                                                <div style={{display:'flex', alignItems:'center', justifyContent:'flex-end', gap:'0.25rem'}}>
+                                                    {u.bloqueado && (
+                                                        <button className="u-icon-btn unlock" onClick={() => setDesbloqueando(u)} title="Desbloquear">
+                                                            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 018 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+                                                        </button>
+                                                    )}
+                                                    <Link href={`/usuarios/${u.id}/edit`} className="u-icon-btn edit" title="Editar">
+                                                        <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                                    </Link>
+                                                    <button className="u-icon-btn del" onClick={() => confirmarEliminar(u)} title="Eliminar">
+                                                        <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                </tbody>
+                            </table>
+                            {usuarios.length === 0 && <div className="u-empty">No hay usuarios registrados.</div>}
+                        </div>  {/* u-table-scroll */}
                     </div>
                 </div>
             </div>
 
-            {/* ── NUEVO Modal Desbloquear ── */}
+            {/* Modal Desbloquear */}
             {desbloqueando && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-                        <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 018 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                            </svg>
+                <div className="u-modal-overlay" onClick={() => setDesbloqueando(null)}>
+                    <div className="u-modal" onClick={e => e.stopPropagation()}>
+                        <div className="u-modal-icon" style={{background:'rgba(16,185,129,0.08)', border:'1px solid rgba(16,185,129,0.18)'}}>
+                            <svg width="20" height="20" fill="none" stroke="rgba(4,120,87,0.8)" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 018 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
-                            Desbloquear cuenta
-                        </h3>
-                        <p className="text-sm text-gray-500 text-center mb-2">
-                            La cuenta de <strong>{desbloqueando.name}</strong> está bloqueada por{' '}
-                            <strong>{desbloqueando.intentos_fallidos} intentos fallidos</strong>.
+                        <h3 className="u-modal-title">Desbloquear cuenta</h3>
+                        <p className="u-modal-desc">
+                            La cuenta de <strong style={{color:'#2d1a08'}}>{desbloqueando.name}</strong> está bloqueada
+                            por {desbloqueando.intentos_fallidos} intentos fallidos.
                         </p>
                         {desbloqueando.bloqueado_hasta && (
-                            <p className="text-xs text-gray-400 text-center mb-6">
-                                Se desbloquearía automáticamente el {desbloqueando.bloqueado_hasta}
-                            </p>
+                            <p className="u-modal-sub">Se desbloquearía automáticamente el {desbloqueando.bloqueado_hasta}.</p>
                         )}
-                        <p className="text-sm text-gray-600 text-center mb-6">
-                            ¿Deseas desbloquearla ahora manualmente?
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setDesbloqueando(null)}
-                                className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition font-medium"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={ejecutarDesbloquear}
-                                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition font-medium"
-                            >
-                                Sí, desbloquear
-                            </button>
+                        <div className="u-modal-row">
+                            <button className="u-modal-btn cancel" onClick={() => setDesbloqueando(null)}>Cancelar</button>
+                            <button className="u-modal-btn confirm-ok" onClick={ejecutarDesbloquear}>Desbloquear</button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Modal Eliminar — idéntico al original */}
+            {/* Modal Eliminar */}
             {eliminando && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-                        <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg className="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                            </svg>
+                <div className="u-modal-overlay" onClick={() => setEliminando(null)}>
+                    <div className="u-modal" onClick={e => e.stopPropagation()}>
+                        <div className="u-modal-icon" style={{background:'rgba(185,28,28,0.07)', border:'1px solid rgba(185,28,28,0.18)'}}>
+                            <svg width="20" height="20" fill="none" stroke="rgba(185,28,28,0.8)" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Eliminar Usuario</h3>
-                        <p className="text-sm text-gray-500 text-center mb-6">
-                            Vas a eliminar a <strong>{eliminando.name}</strong> permanentemente. Confirma con tu contraseña.
+                        <h3 className="u-modal-title">Eliminar usuario</h3>
+                        <p className="u-modal-desc">
+                            Vas a eliminar a <strong style={{color:'#2d1a08'}}>{eliminando.name}</strong> de forma permanente. Confirma con tu contraseña de administrador.
                         </p>
                         <input
-                            type="password"
-                            value={password}
+                            type="password" value={password}
                             onChange={e => setPassword(e.target.value)}
                             placeholder="Tu contraseña"
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 mb-2"
+                            className="u-modal-input"
                         />
-                        {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
-                        <div className="flex gap-3 mt-4">
-                            <button
-                                onClick={() => setEliminando(null)}
-                                className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition font-medium"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={ejecutarEliminar}
-                                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-medium"
-                            >
-                                Eliminar
-                            </button>
+                        {error && <p className="u-modal-error">{error}</p>}
+                        <div className="u-modal-row">
+                            <button className="u-modal-btn cancel" onClick={() => setEliminando(null)}>Cancelar</button>
+                            <button className="u-modal-btn confirm-del" onClick={ejecutarEliminar}>Eliminar</button>
                         </div>
                     </div>
                 </div>

@@ -40,7 +40,7 @@ export default function AppLayout({ children }) {
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
                 .app-nav {
-                    position: sticky; top: 0; z-index: 50;
+                    position: sticky; top: 0; z-index: 1000;
                     background: rgba(255,255,255,0.55);
                     backdrop-filter: blur(32px) saturate(180%);
                     -webkit-backdrop-filter: blur(32px) saturate(180%);

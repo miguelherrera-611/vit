@@ -41,29 +41,39 @@ function CalendarPortal({ triggerRef, open, onClose, children }) {
         const r      = triggerRef.current.getBoundingClientRect();
         const vw     = window.innerWidth;
         const vh     = window.innerHeight;
-        const panelW = Math.min(280, vw - 24); // nunca más ancho que la pantalla
-        const panelH = 360; // altura estimada del panel
+        const panelW = Math.min(280, vw - 24);
+        const panelH = 360;
+
+        // Altura del navbar sticky
+        const navEl     = document.querySelector('.app-nav');
+        const navBottom = navEl ? navEl.getBoundingClientRect().bottom : 64;
 
         let left = r.left;
         let top  = r.bottom + 6 + window.scrollY;
 
         // Si se sale por la derecha → alinear a la derecha del trigger
-        if (left + panelW > vw - 8) {
-            left = r.right - panelW;
-        }
+        if (left + panelW > vw - 8) left = r.right - panelW;
         // Si se sale por la izquierda → fijar al margen
         if (left < 8) left = 8;
 
-        // Si no hay espacio abajo → abrir hacia arriba
+        // Abrir hacia arriba solo si hay espacio Y no tapa el navbar
         const bottomSpace = vh - r.bottom;
         if (bottomSpace < panelH + 12 && r.top > panelH + 12) {
-            top = r.top + window.scrollY - panelH - 6;
+            const topViewportIfUp = r.top - panelH - 6;
+            if (topViewportIfUp >= navBottom) {
+                top = r.top + window.scrollY - panelH - 6;
+            }
+            // Si tapara el navbar, se queda abajo
+        }
+
+        // Nunca quedar detrás del navbar (por scroll o trigger cercano al top)
+        const topViewport = top - window.scrollY;
+        if (topViewport < navBottom + 4) {
+            top = navBottom + 4 + window.scrollY;
         }
 
         // En móvil muy pequeño → centrar horizontalmente
-        if (vw < 360) {
-            left = (vw - panelW) / 2;
-        }
+        if (vw < 360) left = (vw - panelW) / 2;
 
         setPos({ top, left, width: panelW });
     }, [triggerRef]);
@@ -103,7 +113,7 @@ function CalendarPortal({ triggerRef, open, onClose, children }) {
                 top:  pos.top,
                 left: pos.left,
                 width: pos.width,
-                zIndex: 999, // por debajo del navbar (z-index: 1000)
+                zIndex: 9999, // por debajo del navbar (z-index: 1000)
             }}
         >
             {children}

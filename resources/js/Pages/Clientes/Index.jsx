@@ -1,8 +1,9 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { useState, useMemo, useEffect } from 'react';
 import ClienteDetalleModal from '@/Components/ClienteDetalleModal';
 import Pagination from '@/Components/Pagination';
+import PasswordConfirmModal from '@/Components/PasswordConfirmModal';
 
 const PER_PAGE = 15;
 
@@ -11,6 +12,9 @@ export default function ClientesIndex({ clientes = [] }) {
     const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
     const [modalOpen, setModalOpen]                 = useState(false);
     const [currentPage, setCurrentPage]             = useState(1);
+    const [confirmDelete, setConfirmDelete]         = useState(null);
+    const [delProcessing, setDelProcessing]         = useState(false);
+    const [delError, setDelError]                   = useState(null);
 
     const normalizeText = (text) =>
         (text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -42,6 +46,23 @@ export default function ClientesIndex({ clientes = [] }) {
         () => clientesFiltrados.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE),
         [clientesFiltrados, currentPage]
     );
+
+    const handleDelete = (password) => {
+        if (!confirmDelete) return;
+        setDelProcessing(true);
+        router.delete(`/clientes/${confirmDelete.id}`, {
+            data: { password },
+            onSuccess: () => {
+                setConfirmDelete(null);
+                setDelProcessing(false);
+                setDelError(null);
+            },
+            onError: (errs) => {
+                setDelError(errs.password || 'Error al eliminar.');
+                setDelProcessing(false);
+            },
+        });
+    };
 
     return (
         <AppLayout>
@@ -139,10 +160,26 @@ export default function ClientesIndex({ clientes = [] }) {
                                                     </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <button onClick={() => { setClienteSeleccionado(cliente); setModalOpen(true); }}
-                                                        className="text-pink-600 hover:text-pink-900 transition">
-                                                    Ver Detalle
-                                                </button>
+                                                <div className="flex items-center justify-end gap-3">
+                                                    <button
+                                                        onClick={() => { setClienteSeleccionado(cliente); setModalOpen(true); }}
+                                                        className="text-pink-600 hover:text-pink-900 transition font-medium"
+                                                    >
+                                                        Ver Detalle
+                                                    </button>
+                                                    <Link
+                                                        href={`/clientes/${cliente.id}/edit`}
+                                                        className="text-blue-600 hover:text-blue-900 transition font-medium"
+                                                    >
+                                                        Editar
+                                                    </Link>
+                                                    <button
+                                                        onClick={() => { setConfirmDelete(cliente); setDelError(null); }}
+                                                        className="text-red-600 hover:text-red-900 transition font-medium"
+                                                    >
+                                                        Eliminar
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -167,6 +204,21 @@ export default function ClientesIndex({ clientes = [] }) {
             </div>
 
             <ClienteDetalleModal cliente={clienteSeleccionado} open={modalOpen} onClose={() => setModalOpen(false)} />
+
+            {/* Modal confirmación eliminar */}
+            <PasswordConfirmModal
+                open={!!confirmDelete}
+                onClose={() => {
+                    setConfirmDelete(null);
+                    setDelError(null);
+                }}
+                onConfirm={handleDelete}
+                processing={delProcessing}
+                error={delError}
+                title={`¿Eliminar a "${confirmDelete?.nombre}"?`}
+                description="El cliente se moverá a la papelera y podrá ser restaurado posteriormente. Esta acción requiere tu contraseña para continuar."
+                confirmLabel="Eliminar Cliente"
+            />
         </AppLayout>
     );
 }

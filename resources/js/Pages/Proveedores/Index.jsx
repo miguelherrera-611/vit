@@ -101,42 +101,32 @@ export default function ProveedoresIndex({ proveedores = [] }) {
 
                     {/* STATS */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-
-                        <StatCard
-                            color="indigo"
-                            value={stats.total}
-                            label="Total Proveedores"
-                        />
-
-                        <StatCard
-                            color="green"
-                            value={stats.activos}
-                            label="Activos"
-                        />
-
-                        <StatCard
-                            color="blue"
-                            value="0"
-                            label="Productos surtidos"
-                        />
-
-                        <StatCard
-                            color="purple"
-                            value="$0"
-                            label="Compras este mes"
-                        />
+                        <StatCard color="indigo" value={stats.total}   label="Total Proveedores" />
+                        <StatCard color="green"  value={stats.activos} label="Activos" />
+                        <StatCard color="blue"   value="0"             label="Productos surtidos" />
+                        <StatCard color="purple" value="$0"            label="Compras este mes" />
                     </div>
 
                     {/* BUSCADOR */}
                     {proveedores.length > 0 && (
                         <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-                            <input
-                                type="text"
-                                placeholder="Buscar proveedores..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                            />
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Buscar proveedores por nombre, empresa, email o teléfono..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
+                                />
+                                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            {searchTerm && (
+                                <p className="mt-2 text-sm text-gray-500">
+                                    <span className="font-medium text-gray-700">{proveedoresFiltrados.length}</span> resultado{proveedoresFiltrados.length !== 1 ? 's' : ''} para "<em>{searchTerm}</em>"
+                                </p>
+                            )}
                         </div>
                     )}
 
@@ -146,49 +136,79 @@ export default function ProveedoresIndex({ proveedores = [] }) {
 
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-gray-50 border-b">
+                                    <thead className="bg-gray-50 border-b border-gray-200">
                                     <tr>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
+                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Proveedor
                                         </th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
+                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Empresa
                                         </th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
+                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Contacto
                                         </th>
-                                        <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase">
+                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Estado
+                                        </th>
+                                        <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Acciones
                                         </th>
                                     </tr>
                                     </thead>
 
-                                    <tbody className="divide-y">
+                                    <tbody className="bg-white divide-y divide-gray-200">
                                     {proveedoresPaginados.map((proveedor) => (
-                                        <tr key={proveedor.id}>
-                                            <td className="px-6 py-4">
-                                                {proveedor.nombre}
+                                        <tr key={proveedor.id} className="hover:bg-gray-50 transition">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mr-3 flex-shrink-0">
+                                                        <span className="text-white font-semibold text-sm">
+                                                            {proveedor.nombre.charAt(0).toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-medium text-gray-900">{proveedor.nombre}</div>
+                                                        <div className="text-sm text-gray-500">{proveedor.documento || 'Sin documento'}</div>
+                                                    </div>
+                                                </div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                {proveedor.empresa || '-'}
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-900">{proveedor.empresa || '—'}</div>
+                                                {proveedor.sitio_web && (
+                                                    <a
+                                                        href={proveedor.sitio_web}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-xs text-indigo-600 hover:underline"
+                                                    >
+                                                        {proveedor.sitio_web}
+                                                    </a>
+                                                )}
                                             </td>
-                                            <td className="px-6 py-4">
-                                                {proveedor.email || '-'}
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-900">{proveedor.email || 'Sin email'}</div>
+                                                <div className="text-sm text-gray-500">{proveedor.telefono || 'Sin teléfono'}</div>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <Link
-                                                    href={`/proveedores/${proveedor.id}/edit`}
-                                                    className="text-indigo-600 hover:underline mr-4"
-                                                >
-                                                    Editar
-                                                </Link>
-
-                                                <button
-                                                    onClick={() => setConfirmDelete(proveedor)}
-                                                    className="text-red-600 hover:underline"
-                                                >
-                                                    Eliminar
-                                                </button>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${proveedor.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                    {proveedor.activo ? 'Activo' : 'Inactivo'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <div className="flex items-center justify-end gap-3">
+                                                    <Link
+                                                        href={`/proveedores/${proveedor.id}/edit`}
+                                                        className="text-indigo-600 hover:text-indigo-900 transition font-medium text-sm"
+                                                    >
+                                                        Editar
+                                                    </Link>
+                                                    <button
+                                                        onClick={() => { setConfirmDelete(proveedor); setDelError(null); }}
+                                                        className="text-red-600 hover:text-red-900 transition font-medium text-sm"
+                                                    >
+                                                        Eliminar
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -214,7 +234,7 @@ export default function ProveedoresIndex({ proveedores = [] }) {
                 </div>
             </div>
 
-            {/* MODAL */}
+            {/* MODAL ELIMINAR */}
             <PasswordConfirmModal
                 open={!!confirmDelete}
                 onClose={() => {
@@ -224,9 +244,9 @@ export default function ProveedoresIndex({ proveedores = [] }) {
                 onConfirm={handleDelete}
                 processing={delProcessing}
                 error={delError}
-                title={`¿Eliminar "${confirmDelete?.nombre}"?`}
-                description="El proveedor se moverá a la papelera."
-                confirmLabel="Eliminar"
+                title={`¿Eliminar a "${confirmDelete?.nombre}"?`}
+                description="El proveedor se moverá a la papelera y podrá ser restaurado posteriormente. Esta acción requiere tu contraseña para continuar."
+                confirmLabel="Eliminar Proveedor"
             />
         </AppLayout>
     );
@@ -246,16 +266,24 @@ function StatCard({ color, value, label }) {
 function EmptyState() {
     return (
         <div className="bg-white rounded-2xl shadow-sm p-16 text-center">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-indigo-50 rounded-full mb-6">
+                <svg className="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+            </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 No hay proveedores registrados
             </h3>
             <p className="text-gray-500 mb-6">
-                Comienza agregando tus proveedores
+                Comienza agregando tus proveedores al sistema
             </p>
             <Link
                 href="/proveedores/crear"
-                className="px-6 py-3 bg-indigo-600 text-white rounded-xl"
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200"
             >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
                 Agregar Proveedor
             </Link>
         </div>
