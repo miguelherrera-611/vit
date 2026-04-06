@@ -92,15 +92,15 @@ function SelectPortal({ triggerRef, open, onClose, children }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function GlassSelect({
-                                        label,
-                                        value,
-                                        onChange,
-                                        options = [],        // [{ value, label, icon? }]  — icon es JSX SVG opcional
-                                        placeholder = 'Seleccionar...',
-                                        allLabel = 'Todos',
-                                        searchable = false,
-                                        allValue = '',
-                                    }) {
+    label,
+    value,
+    onChange,
+    options = [],        // [{ value, label, icon? }]  — icon es JSX SVG opcional
+    placeholder = 'Seleccionar...',
+    allLabel = 'Todos',
+    searchable = false,
+    allValue = '',
+}) {
     const [open,   setOpen]   = useState(false);
     const [search, setSearch] = useState('');
     const triggerRef          = useRef(null);
@@ -135,15 +135,79 @@ export default function GlassSelect({
                 background: rgba(200,120,50,0.10) !important;
                 color: #2d1a08 !important;
             }
+
+            .gsel-search-wrap{
+                display:flex; align-items:center; gap:0.45rem;
+                background: linear-gradient(160deg, rgba(255,255,255,0.94), rgba(255,250,245,0.88));
+                border: 1.5px solid rgba(200,130,60,0.24);
+                border-radius: 10px;
+                padding: 0.42rem 0.62rem;
+                box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 3px rgba(130,60,10,0.08);
+                transition: all .15s ease;
+            }
+            .gsel-search-wrap:focus-within{
+                border-color: rgba(185,28,28,0.35);
+                box-shadow: 0 0 0 3px rgba(185,28,28,0.07), inset 0 1px 0 rgba(255,255,255,0.95);
+                background: rgba(255,255,255,0.98);
+            }
+            .gsel-search-input{
+                border:none !important;
+                outline:none !important;
+                box-shadow:none !important;
+                background:transparent;
+                width:100%;
+                font-size:0.76rem;
+                color:#2d1a08;
+                font-family:'Inter',sans-serif;
+                letter-spacing:-0.01em;
+                appearance:none;
+                -webkit-appearance:none;
+            }
+            .gsel-search-input:focus,
+            .gsel-search-input:focus-visible{
+                outline:none !important;
+                box-shadow:none !important;
+                border:none !important;
+            }
+            .gsel-search-input::placeholder{
+                color: rgba(170,90,20,0.42);
+            }
         `;
         document.head.appendChild(style);
     }, []);
 
+    const normalizeLabel = useCallback((txt = '') => {
+        const minorWords = new Set(['de', 'del', 'la', 'las', 'el', 'los', 'y', 'o', 'en', 'a', 'por', 'para', 'con']);
+
+        const pretty = String(txt ?? '')
+            .replace(/_/g, ' ')
+            .replace(/([a-záéíóúñ])([A-ZÁÉÍÓÚÑ])/g, '$1 $2') // corta camelCase roto
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLocaleLowerCase('es-ES')
+            .split(' ')
+            .map((word, idx) => {
+                if (!word) return word;
+                if (idx > 0 && minorWords.has(word)) return word;
+                return word.charAt(0).toLocaleUpperCase('es-ES') + word.slice(1);
+            })
+            .join(' ');
+
+        // Correcciones frecuentes
+        return pretty
+            .replace(/\bAccion\b/gi, 'Acción')
+            .replace(/\bModulo\b/gi, 'Módulo')
+            .replace(/\bDescripcion\b/gi, 'Descripción')
+            .replace(/\bNumero\b/gi, 'Número')
+            .replace(/\bTelefono\b/gi, 'Teléfono')
+            .replace(/\bDireccion\b/gi, 'Dirección');
+    }, []);
+
     const selectedOption = options.find(o => o.value === value);
-    const displayLabel   = selectedOption ? selectedOption.label : null;
+    const displayLabel   = selectedOption ? normalizeLabel(selectedOption.label ?? selectedOption.value) : null;
 
     const filtered = searchable && search.trim()
-        ? options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()))
+        ? options.filter(o => normalizeLabel(o.label ?? o.value).toLowerCase().includes(search.toLowerCase()))
         : options;
 
     return (
@@ -177,8 +241,11 @@ export default function GlassSelect({
                         : '1.5px solid rgba(200,130,60,0.32)',
                     borderRadius: '12px',
                     cursor: 'pointer',
-                    fontFamily: 'Inter, sans-serif',
-                    fontSize: '0.82rem',
+                    fontFamily: '"Inter", "Plus Jakarta Sans", "SF Pro Text", system-ui, sans-serif',
+                    fontSize: '0.83rem',
+                    fontWeight: 500,
+                    letterSpacing: '-0.01em',
+                    textTransform: 'none',
                     color: value ? '#2d1a08' : 'rgba(170,90,20,0.42)',
                     boxShadow: open
                         ? '0 0 0 3px rgba(185,28,28,0.09), 0 2px 8px rgba(180,80,10,0.1)'
@@ -195,8 +262,13 @@ export default function GlassSelect({
                         ? <span style={{ display: 'flex', flexShrink: 0, opacity: open ? 0.7 : 0.5 }}>{selectedOption.icon}</span>
                         : <DefaultSelectIcon open={open} />
                     }
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {displayLabel ?? placeholder}
+                    <span style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        textTransform: 'capitalize'
+                    }}>
+                        {displayLabel ?? normalizeLabel(placeholder)}
                     </span>
                 </span>
 
@@ -252,13 +324,7 @@ export default function GlassSelect({
                             borderBottom: '1px solid rgba(210,150,70,0.18)',
                             background: '#fdecd8',
                         }}>
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: '0.4rem',
-                                background: 'rgba(255,255,255,0.7)',
-                                border: '1px solid rgba(200,130,60,0.2)',
-                                borderRadius: '8px',
-                                padding: '0.38rem 0.6rem',
-                            }}>
+                            <div className="gsel-search-wrap">
                                 <svg width="11" height="11" fill="none" viewBox="0 0 24 24"
                                      stroke="rgba(160,80,20,0.45)" style={{ flexShrink: 0 }}>
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"
@@ -270,11 +336,7 @@ export default function GlassSelect({
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
                                     placeholder="Buscar..."
-                                    style={{
-                                        border: 'none', outline: 'none', background: 'transparent',
-                                        fontSize: '0.75rem', color: '#2d1a08',
-                                        fontFamily: 'Inter, sans-serif', width: '100%',
-                                    }}
+                                    className="gsel-search-input"
                                 />
                             </div>
                         </div>
@@ -301,12 +363,13 @@ export default function GlassSelect({
                                     fontStyle: !value ? 'normal' : 'italic',
                                     cursor: 'pointer', display: 'flex', alignItems: 'center',
                                     justifyContent: 'space-between',
-                                    fontFamily: 'Inter, sans-serif',
+                                    fontFamily: '"Inter", "Plus Jakarta Sans", "SF Pro Text", system-ui, sans-serif',
+                                    letterSpacing: '-0.005em',
                                     transition: 'background 0.1s',
                                     background: !value ? 'rgba(185,28,28,0.07)' : 'transparent',
                                 }}
                             >
-                                <span>{allLabel}</span>
+                                <span style={{ textTransform: 'capitalize' }}>{normalizeLabel(allLabel)}</span>
                                 {!value && (
                                     <svg width="11" height="11" fill="none" viewBox="0 0 24 24"
                                          stroke="rgba(185,28,28,0.8)" strokeWidth="2.5">
@@ -336,14 +399,15 @@ export default function GlassSelect({
                                         fontWeight: isSelected ? '600' : '400',
                                         cursor: 'pointer', display: 'flex', alignItems: 'center',
                                         justifyContent: 'space-between',
-                                        fontFamily: 'Inter, sans-serif',
+                                        fontFamily: '"Inter", "Plus Jakarta Sans", "SF Pro Text", system-ui, sans-serif',
+                                        letterSpacing: '-0.005em',
                                         background: isSelected ? 'rgba(185,28,28,0.08)' : 'transparent',
                                         border: isSelected ? '1px solid rgba(185,28,28,0.15)' : '1px solid transparent',
                                         transition: 'background 0.1s',
                                         marginBottom: '1px',
                                     }}
                                 >
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textTransform: 'capitalize' }}>
                                         {opt.icon && (
                                             <span style={{
                                                 display: 'flex', flexShrink: 0,
@@ -352,7 +416,7 @@ export default function GlassSelect({
                                                 {opt.icon}
                                             </span>
                                         )}
-                                        {opt.label}
+                                        {normalizeLabel(opt.label ?? opt.value)}
                                     </span>
                                     {isSelected && (
                                         <svg width="11" height="11" fill="none" viewBox="0 0 24 24"

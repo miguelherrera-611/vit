@@ -243,8 +243,17 @@ export default function ClienteLayout({ children }) {
                 @media (max-width: 700px) {
                     .cli-nav-links { display: none !important; }
                     .cli-user-name { display: none; }
-                    .cli-auth-link { display: none; }
                     .cli-logo-text { font-size: 0.85rem; }
+
+                    /* Mantener visibles ambos botones de auth en móvil */
+                    .cli-auth-link,
+                    .cli-auth-link-primary {
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 0.32rem 0.58rem;
+                        font-size: 0.74rem;
+                    }
                 }
                 @media (max-width: 400px) {
                     .cli-cart-btn span.cart-label { display: none; }
@@ -277,8 +286,10 @@ export default function ClienteLayout({ children }) {
                     {/* Derecha */}
                     <div className="cli-nav-right">
                         <button className="cli-cart-btn" onClick={abrirCarrito}>
-                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/>
+                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                                <circle cx="9" cy="20" r="1.5" />
+                                <circle cx="17" cy="20" r="1.5" />
+                                <path d="M3 4h2l2.1 10.2a1 1 0 0 0 .98.8h9.72a1 1 0 0 0 .98-.8L20 8H7" />
                             </svg>
                             <span className="cart-label">Carrito</span>
                             {totalItems > 0 && <span className="cli-cart-count">{totalItems}</span>}

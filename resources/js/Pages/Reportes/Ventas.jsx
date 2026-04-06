@@ -351,6 +351,50 @@ export default function ReporteVentas({
                 @media(max-width:1024px){ .vt-kpi-grid { grid-template-columns:repeat(3,1fr); } }
                 @media(max-width:900px) { .vt-mid-grid { grid-template-columns:1fr; } .vt-bot-grid { grid-template-columns:1fr; } }
                 @media(max-width:600px) { .vt-kpi-grid { grid-template-columns:1fr 1fr; gap:0.75rem; } }
+
+                /* IMPORTANTE: permite que hijos de grid/flex se encojan y activen overflow */
+                .vt-mid-grid > *,
+                .vt-bot-grid > *,
+                .vt-glass {
+                    min-width: 0;
+                }
+
+                /* Responsive tablas reportes */
+                .vt-report-scroll{
+                    display:block;
+                    width:100%;
+                    max-width:100%;
+                    overflow-x:auto;
+                    overflow-y:hidden;
+                    -webkit-overflow-scrolling:touch;
+                    touch-action:pan-x;
+                    scrollbar-width:thin;
+                    border-radius:10px;
+                }
+
+                .vt-report-table{
+                    width:max-content;      /* clave: deja crecer tabla */
+                    min-width:100%;         /* pero no menor al contenedor */
+                    border-collapse:collapse;
+                    table-layout:auto;      /* evita compresión rara */
+                }
+
+                .vt-report-table th,
+                .vt-report-table td{
+                    white-space:nowrap;
+                }
+
+                .vt-cut{
+                    overflow:hidden;
+                    text-overflow:ellipsis;
+                    white-space:nowrap;
+                }
+
+                @media(max-width:640px){
+                    .vt-bot-card{ padding:1rem !important; min-width:0; }
+                    .vt-top-table-mobile{ min-width:760px !important; }   /* fuerza scroll visible */
+                    .vt-state-table-mobile{ min-width:520px !important; } /* fuerza scroll visible */
+                }
             `}</style>
 
             <div className="vt-bg">
@@ -447,56 +491,89 @@ export default function ReporteVentas({
 
                     {/* ── Top productos + estados ── */}
                     <div className="vt-bot-grid vt-a4">
-                        <div className="vt-glass" style={{ padding:'1.5rem' }}>
+                        <div className="vt-glass vt-bot-card" style={{ padding:'1.5rem', minWidth:0 }}>
                             <h2 style={{ fontSize:'0.95rem', fontWeight:'600', color:'#2d1a08', margin:0 }}>Productos más vendidos</h2>
                             <p style={{ fontSize:'0.76rem', color:'rgba(150,80,20,0.55)', marginTop:'0.25rem', marginBottom:'1.25rem' }}>Ranking por unidades vendidas</p>
+
                             {productosTop.length === 0 ? (
                                 <p style={{ fontSize:'0.85rem', color:'rgba(150,80,20,0.4)', textAlign:'center', padding:'2rem 0' }}>Sin datos para el período</p>
                             ) : (
-                                <div style={{ overflowX:'auto' }}>
-                                    <table style={{ width:'100%', borderCollapse:'collapse', minWidth:'400px' }}>
+                                <div className="vt-report-scroll">
+                                    <table className="vt-report-table vt-top-table-mobile" style={{ minWidth:'760px' }}>
                                         <thead>
-                                        <tr style={{ borderBottom:'1px solid rgba(180,90,20,0.12)' }}>
-                                            {['#','Producto','Uds','Ingresos'].map(h => (
-                                                <th key={h} style={{ padding:'0.55rem 0.85rem', textAlign:'left', fontSize:'0.67rem', fontWeight:'600', color:'rgba(150,80,20,0.5)', letterSpacing:'0.08em', textTransform:'uppercase' }}>{h}</th>
-                                            ))}
-                                        </tr>
+                                            <tr style={{ borderBottom:'1px solid rgba(180,90,20,0.12)' }}>
+                                                {['#','Producto','Categoría','Uds','Ingresos'].map(h => (
+                                                    <th key={h} style={{ padding:'0.55rem 0.75rem', textAlign:'left', fontSize:'0.67rem', fontWeight:'600', color:'rgba(150,80,20,0.5)', letterSpacing:'0.08em', textTransform:'uppercase' }}>
+                                                        {h}
+                                                    </th>
+                                                ))}
+                                            </tr>
                                         </thead>
                                         <tbody>
-                                        {productosTop.map((p, i) => (
-                                            <tr key={i} className="vt-table-row">
-                                                <td style={{ padding:'0.7rem 0.85rem', fontSize:'0.78rem', color:'rgba(150,80,20,0.45)', fontWeight:'600' }}>{i+1}</td>
-                                                <td style={{ padding:'0.7rem 0.85rem' }}>
-                                                    <p style={{ fontSize:'0.87rem', fontWeight:'600', color:'#2d1a08', margin:0 }}>{p.nombre}</p>
-                                                    <p style={{ fontSize:'0.72rem', color:'rgba(150,80,20,0.5)', margin:'0.1rem 0 0' }}>{p.categoria}</p>
-                                                </td>
-                                                <td style={{ padding:'0.7rem 0.85rem', fontSize:'0.87rem', fontWeight:'700', color:'#2d1a08' }}>{p.total_cantidad}</td>
-                                                <td style={{ padding:'0.7rem 0.85rem', fontSize:'0.87rem', fontWeight:'700', color:'rgba(16,185,129,0.85)' }}>{fmt(p.total_ingresos)}</td>
-                                            </tr>
-                                        ))}
+                                            {productosTop.map((p, i) => (
+                                                <tr key={i} className="vt-table-row">
+                                                    <td style={{ padding:'0.68rem 0.75rem', fontSize:'0.78rem', color:'rgba(150,80,20,0.45)', fontWeight:'600' }}>{i+1}</td>
+                                                    <td style={{ padding:'0.68rem 0.75rem' }}>
+                                                        <p className="vt-cut" style={{ fontSize:'0.85rem', fontWeight:'600', color:'#2d1a08', margin:0, maxWidth:'220px' }}>{p.nombre}</p>
+                                                    </td>
+                                                    <td style={{ padding:'0.68rem 0.75rem', fontSize:'0.74rem', color:'rgba(150,80,20,0.55)' }}>
+                                                        <span className="vt-cut" style={{ display:'inline-block', maxWidth:'150px', verticalAlign:'bottom' }}>{p.categoria}</span>
+                                                    </td>
+                                                    <td style={{ padding:'0.68rem 0.75rem', fontSize:'0.85rem', fontWeight:'700', color:'#2d1a08' }}>{p.total_cantidad}</td>
+                                                    <td style={{ padding:'0.68rem 0.75rem', fontSize:'0.85rem', fontWeight:'700', color:'rgba(16,185,129,0.85)' }}>{fmt(p.total_ingresos)}</td>
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>
                             )}
                         </div>
-                        <div className="vt-glass" style={{ padding:'1.5rem' }}>
+
+                        <div className="vt-glass vt-bot-card" style={{ padding:'1.5rem', minWidth:0 }}>
                             <h2 style={{ fontSize:'0.95rem', fontWeight:'600', color:'#2d1a08', margin:0 }}>Por estado</h2>
                             <p style={{ fontSize:'0.76rem', color:'rgba(150,80,20,0.55)', marginTop:'0.25rem', marginBottom:'1.25rem' }}>Distribución de ventas</p>
-                            <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
-                                {porEstado.map(e => {
-                                    const col = COLORES_ESTADO[e.estado] ?? { bg:'rgba(180,90,20,0.07)', border:'rgba(180,90,20,0.15)', color:'rgba(120,60,10,0.8)' };
-                                    return (
-                                        <div key={e.estado} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0.85rem 1rem', borderRadius:'14px', background:col.bg, border:`1px solid ${col.border}` }}>
-                                            <div>
-                                                <span style={{ fontSize:'0.82rem', fontWeight:'600', color:col.color }}>{e.estado}</span>
-                                                <p style={{ fontSize:'0.72rem', color:col.color, opacity:0.65, marginTop:'0.1rem' }}>{e.count} ventas</p>
-                                            </div>
-                                            <p style={{ fontSize:'0.95rem', fontWeight:'700', color:col.color }}>{fmt(e.total)}</p>
-                                        </div>
-                                    );
-                                })}
-                                {porEstado.length === 0 && <p style={{ fontSize:'0.85rem', color:'rgba(150,80,20,0.4)', textAlign:'center', padding:'1rem 0' }}>Sin datos</p>}
-                            </div>
+
+                            {porEstado.length === 0 ? (
+                                <p style={{ fontSize:'0.85rem', color:'rgba(150,80,20,0.4)', textAlign:'center', padding:'1rem 0' }}>Sin datos</p>
+                            ) : (
+                                <div className="vt-report-scroll">
+                                    <table className="vt-report-table vt-state-table-mobile" style={{ minWidth:'520px' }}>
+                                        <thead>
+                                            <tr style={{ borderBottom:'1px solid rgba(180,90,20,0.12)' }}>
+                                                {['Estado','Ventas','Total'].map(h => (
+                                                    <th key={h} style={{ padding:'0.55rem 0.7rem', textAlign:'left', fontSize:'0.67rem', fontWeight:'600', color:'rgba(150,80,20,0.5)', letterSpacing:'0.08em', textTransform:'uppercase' }}>
+                                                        {h}
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {porEstado.map((e) => {
+                                                const col = COLORES_ESTADO[e.estado] ?? { bg:'rgba(180,90,20,0.07)', border:'rgba(180,90,20,0.15)', color:'rgba(120,60,10,0.8)' };
+                                                return (
+                                                    <tr key={e.estado} className="vt-table-row">
+                                                        <td style={{ padding:'0.66rem 0.7rem' }}>
+                                                            <span style={{
+                                                                display:'inline-flex',
+                                                                alignItems:'center',
+                                                                gap:'0.45rem',
+                                                                fontSize:'0.82rem',
+                                                                fontWeight:'700',
+                                                                color:col.color
+                                                            }}>
+                                                                <span style={{ width:'8px', height:'8px', borderRadius:'50%', background:col.color, opacity:0.9 }} />
+                                                                {e.estado}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding:'0.66rem 0.7rem', fontSize:'0.82rem', color:'rgba(120,60,10,0.75)', fontWeight:'600' }}>{e.count}</td>
+                                                        <td style={{ padding:'0.66rem 0.7rem', fontSize:'0.84rem', color:col.color, fontWeight:'700' }}>{fmt(e.total)}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     </div>
 

@@ -179,266 +179,276 @@ export default function ProductosEdit({ producto, categorias = [], proveedores =
 
                 <div style={{ maxWidth: '1024px', margin: '0 auto', padding: '2rem 1.5rem' }}>
                     <form onSubmit={submit} encType="multipart/form-data">
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1.5rem', alignItems: 'start' }}>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                                <div className="glass-panel">
-                                    <p className="panel-title">Información Básica</p>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                        <div>
-                                            <label className="form-label">Nombre del Producto <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span></label>
-                                            <input type="text" value={data.nombre} onChange={(e) => setData('nombre', e.target.value)} className="glass-input" />
-                                            {errors.nombre && <p className="error-text">{errors.nombre}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="form-label">Descripción</label>
-                                            <textarea value={data.descripcion} onChange={(e) => setData('descripcion', e.target.value)} rows={3} className="glass-input glass-textarea" />
-                                        </div>
-                                        <div>
-                                            <label className="form-label">Categoría <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span></label>
-                                            <select value={data.categoria} onChange={(e) => setData('categoria', e.target.value)} className="glass-select">
-                                                <option value="">Selecciona una categoría...</option>
-                                                {categorias.map((grupo) => (
-                                                    <optgroup key={grupo.grupo} label={grupo.grupo}>
-                                                        {grupo.opciones.map((op) => (
-                                                            <option key={op} value={op}>{op.replace(grupo.grupo + ' - ', '')}</option>
-                                                        ))}
-                                                    </optgroup>
-                                                ))}
-                                            </select>
-                                            {errors.categoria && <p className="error-text">{errors.categoria}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="form-label">Código / SKU</label>
-                                            <input type="text" value={data.codigo_barras} onChange={(e) => setData('codigo_barras', e.target.value)} className="glass-input" />
-                                            {errors.codigo_barras && <p className="error-text">{errors.codigo_barras}</p>}
+                        <div className="edit-grid">
+                            <div className="edit-left">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                    <div className="glass-panel">
+                                        <p className="panel-title">Información Básica</p>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                            <div>
+                                                <label className="form-label">Nombre del Producto <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span></label>
+                                                <input type="text" value={data.nombre} onChange={(e) => setData('nombre', e.target.value)} className="glass-input" />
+                                                {errors.nombre && <p className="error-text">{errors.nombre}</p>}
+                                            </div>
+                                            <div>
+                                                <label className="form-label">Descripción</label>
+                                                <textarea value={data.descripcion} onChange={(e) => setData('descripcion', e.target.value)} rows={3} className="glass-input glass-textarea" />
+                                            </div>
+                                            <div>
+                                                <label className="form-label">Categoría <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span></label>
+                                                <select value={data.categoria} onChange={(e) => setData('categoria', e.target.value)} className="glass-select">
+                                                    <option value="">Selecciona una categoría...</option>
+                                                    {categorias.map((grupo) => (
+                                                        <optgroup key={grupo.grupo} label={grupo.grupo}>
+                                                            {grupo.opciones.map((op) => (
+                                                                <option key={op} value={op}>{op.replace(grupo.grupo + ' - ', '')}</option>
+                                                            ))}
+                                                        </optgroup>
+                                                    ))}
+                                                </select>
+                                                {errors.categoria && <p className="error-text">{errors.categoria}</p>}
+                                            </div>
+                                            <div>
+                                                <label className="form-label">Código / SKU</label>
+                                                <input type="text" value={data.codigo_barras} onChange={(e) => setData('codigo_barras', e.target.value)} className="glass-input" />
+                                                {errors.codigo_barras && <p className="error-text">{errors.codigo_barras}</p>}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="glass-panel">
-                                    <p className="panel-title">Precios e Inventario</p>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                        <div>
-                                            <label className="form-label">Precio de Compra <span style={{ fontSize: '0.68rem', color: 'rgba(150,80,20,0.5)', textTransform: 'none', letterSpacing: 0 }}>(costo)</span></label>
-                                            <div className="prefix-wrap">
-                                                <span className="prefix-symbol">$</span>
-                                                <input type="number" value={data.precio_compra} onChange={(e) => setData('precio_compra', e.target.value)} className="glass-input prefix-input" min="0" step="100" />
-                                            </div>
-                                            {data.precio_compra && <p className="hint-text">{formatCurrency(data.precio_compra)}</p>}
-                                            {errors.precio_compra && <p className="error-text">{errors.precio_compra}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="form-label">Precio de Venta <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span></label>
-                                            <div className="prefix-wrap">
-                                                <span className="prefix-symbol">$</span>
-                                                <input type="number" value={data.precio} onChange={(e) => setData('precio', e.target.value)} className="glass-input prefix-input" min="0" step="100" />
-                                            </div>
-                                            {data.precio && <p className="hint-text">{formatCurrency(data.precio)}</p>}
-                                            {errors.precio && <p className="error-text">{errors.precio}</p>}
-                                        </div>
-
-                                        {data.precio_compra > 0 && data.precio > 0 && (
-                                            <div style={{ gridColumn: '1 / -1' }}>
-                                                <div className={`margin-panel ${(data.precio - data.precio_compra) >= 0 ? 'positive' : 'negative'}`}>
-                                                    <svg width="15" height="15" fill="none" stroke="rgba(4,120,87,0.8)" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                                                    </svg>
-                                                    <span style={{ color: 'rgba(4,120,87,0.85)', fontWeight: '500' }}>Margen: </span>
-                                                    <span style={{ color: 'rgba(4,120,87,0.8)' }}>
-                                                        {formatCurrency(data.precio - data.precio_compra)} ({data.precio_compra > 0 ? (((data.precio - data.precio_compra) / data.precio_compra) * 100).toFixed(1) : 0}%)
-                                                    </span>
+                                    <div className="glass-panel">
+                                        <p className="panel-title">Precios e Inventario</p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                            <div>
+                                                <label className="form-label">Precio de Compra <span style={{ fontSize: '0.68rem', color: 'rgba(150,80,20,0.5)', textTransform: 'none', letterSpacing: 0 }}>(costo)</span></label>
+                                                <div className="prefix-wrap">
+                                                    <span className="prefix-symbol">$</span>
+                                                    <input type="number" value={data.precio_compra} onChange={(e) => setData('precio_compra', e.target.value)} className="glass-input prefix-input" min="0" step="100" />
                                                 </div>
+                                                {data.precio_compra && <p className="hint-text">{formatCurrency(data.precio_compra)}</p>}
+                                                {errors.precio_compra && <p className="error-text">{errors.precio_compra}</p>}
+                                            </div>
+                                            <div>
+                                                <label className="form-label">Precio de Venta <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span></label>
+                                                <div className="prefix-wrap">
+                                                    <span className="prefix-symbol">$</span>
+                                                    <input type="number" value={data.precio} onChange={(e) => setData('precio', e.target.value)} className="glass-input prefix-input" min="0" step="100" />
+                                                </div>
+                                                {data.precio && <p className="hint-text">{formatCurrency(data.precio)}</p>}
+                                                {errors.precio && <p className="error-text">{errors.precio}</p>}
+                                            </div>
+
+                                            {data.precio_compra > 0 && data.precio > 0 && (
+                                                <div style={{ gridColumn: '1 / -1' }}>
+                                                    <div className={`margin-panel ${(data.precio - data.precio_compra) >= 0 ? 'positive' : 'negative'}`}>
+                                                        <svg width="15" height="15" fill="none" stroke="rgba(4,120,87,0.8)" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                                        </svg>
+                                                        <span style={{ color: 'rgba(4,120,87,0.85)', fontWeight: '500' }}>Margen: </span>
+                                                        <span style={{ color: 'rgba(4,120,87,0.8)' }}>
+                                                            {formatCurrency(data.precio - data.precio_compra)} ({data.precio_compra > 0 ? (((data.precio - data.precio_compra) / data.precio_compra) * 100).toFixed(1) : 0}%)
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div>
+                                                <label className="form-label">Stock Actual</label>
+                                                <input type="number" value={producto.stock ?? 0} readOnly className="glass-input-readonly" />
+                                                <p className="hint-text">Para ajustar stock usa el módulo de Inventario</p>
+                                            </div>
+                                            <div>
+                                                <label className="form-label">Stock Mínimo</label>
+                                                <input type="number" value={data.stock_minimo} onChange={(e) => setData('stock_minimo', e.target.value)} className="glass-input" min="0" />
+                                                {errors.stock_minimo && <p className="error-text">{errors.stock_minimo}</p>}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Proveedores */}
+                                    <div className="glass-panel">
+                                        <p className="panel-title">
+                                            Proveedores <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span>
+                                            {data.proveedores.length > 0 && (
+                                                <span style={{
+                                                    marginLeft: '0.6rem', fontSize: '0.72rem', fontWeight: '600',
+                                                    background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.22)',
+                                                    color: 'rgba(185,28,28,0.85)', padding: '0.15rem 0.55rem', borderRadius: '20px',
+                                                }}>
+                                                    {data.proveedores.length} seleccionado{data.proveedores.length > 1 ? 's' : ''}
+                                                </span>
+                                            )}
+                                        </p>
+
+                                        {proveedores.length > 5 && (
+                                            <div style={{ position: 'relative', marginBottom: '0.85rem' }}>
+                                                <svg
+                                                    style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(180,100,30,0.4)', pointerEvents: 'none' }}
+                                                    width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                                >
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                </svg>
+                                                <input
+                                                    type="text"
+                                                    value={buscarProv}
+                                                    onChange={e => setBuscarProv(e.target.value)}
+                                                    className="glass-input"
+                                                    style={{ paddingLeft: '2.2rem', paddingTop: '0.6rem', paddingBottom: '0.6rem' }}
+                                                    placeholder="Buscar proveedor..."
+                                                />
                                             </div>
                                         )}
 
-                                        <div>
-                                            <label className="form-label">Stock Actual</label>
-                                            <input type="number" value={producto.stock ?? 0} readOnly className="glass-input-readonly" />
-                                            <p className="hint-text">Para ajustar stock usa el módulo de Inventario</p>
-                                        </div>
-                                        <div>
-                                            <label className="form-label">Stock Mínimo</label>
-                                            <input type="number" value={data.stock_minimo} onChange={(e) => setData('stock_minimo', e.target.value)} className="glass-input" min="0" />
-                                            {errors.stock_minimo && <p className="error-text">{errors.stock_minimo}</p>}
-                                        </div>
+                                        {proveedoresFiltrados.length === 0 ? (
+                                            <p className="prov-empty">No hay proveedores registrados</p>
+                                        ) : (
+                                            <div className="prov-list"
+                                                 style={{ border: errors.proveedores ? '1px solid rgba(220,38,38,0.3)' : 'none', borderRadius: '12px', padding: errors.proveedores ? '0.5rem' : '0' }}>
+                                                {proveedoresFiltrados.map(prov => {
+                                                    const sel = data.proveedores.includes(prov.id);
+                                                    return (
+                                                        <div key={prov.id} className={`prov-item ${sel ? 'selected' : ''}`} onClick={() => toggleProveedor(prov.id)}>
+                                                            <div className="prov-checkbox">
+                                                                {sel && (
+                                                                    <svg width="11" height="11" fill="none" stroke="rgba(185,28,28,0.85)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                                                                        <path d="M20 6L9 17l-5-5" />
+                                                                    </svg>
+                                                                )}
+                                                            </div>
+                                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                                <p className="prov-name">{prov.nombre}</p>
+                                                                {prov.empresa && <p className="prov-empresa">{prov.empresa}</p>}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                        {errors.proveedores && <p className="error-text">{errors.proveedores}</p>}
                                     </div>
                                 </div>
+                            </div>
 
-                                {/* Proveedores */}
-                                <div className="glass-panel">
-                                    <p className="panel-title">
-                                        Proveedores <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span>
-                                        {data.proveedores.length > 0 && (
-                                            <span style={{
-                                                marginLeft: '0.6rem', fontSize: '0.72rem', fontWeight: '600',
-                                                background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.22)',
-                                                color: 'rgba(185,28,28,0.85)', padding: '0.15rem 0.55rem', borderRadius: '20px',
-                                            }}>
-                                                {data.proveedores.length} seleccionado{data.proveedores.length > 1 ? 's' : ''}
+                            <div className="edit-right">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                    <div className="glass-panel">
+                                        <p className="panel-title">Estado</p>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}
+                                               onClick={() => setData('activo', !data.activo)}>
+                                            <div className={`toggle-track ${data.activo ? 'on' : 'off'}`}>
+                                                <div className="toggle-thumb" />
+                                            </div>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: '500', color: 'rgba(120,60,10,0.78)' }}>
+                                                {data.activo ? 'Producto Activo' : 'Producto Inactivo'}
                                             </span>
+                                        </label>
+                                    </div>
+
+                                    <div className="glass-panel">
+                                        <p className="panel-title">Imagen</p>
+                                        {producto.imagen && !data.imagen && (
+                                            <div style={{ marginBottom: '0.75rem' }}>
+                                                <img src={`/storage/${producto.imagen}`} alt="Imagen actual"
+                                                     style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.55)' }} />
+                                                <p style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.45)', textAlign: 'center', marginTop: '0.4rem' }}>Imagen actual</p>
+                                            </div>
                                         )}
-                                    </p>
-
-                                    {proveedores.length > 5 && (
-                                        <div style={{ position: 'relative', marginBottom: '0.85rem' }}>
-                                            <svg style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(180,100,30,0.4)', pointerEvents: 'none' }}
-                                                 width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                            </svg>
-                                            <input type="text" value={buscarProv} onChange={e => setBuscarProv(e.target.value)}
-                                                   className="glass-input" style={{ paddingLeft: '2.2rem', paddingTop: '0.6rem', paddingBottom: '0.6rem' }}
-                                                   placeholder="Buscar proveedor..." />
+                                        <div className="upload-area">
+                                            {data.imagen ? (
+                                                <div>
+                                                    <img src={URL.createObjectURL(data.imagen)} alt="Preview"
+                                                         style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '10px', marginBottom: '0.6rem' }} />
+                                                    <button type="button" onClick={() => setData('imagen', null)}
+                                                            style={{ fontSize: '0.78rem', color: 'rgba(185,28,28,0.8)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                                                        Quitar nueva imagen
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <label style={{ cursor: 'pointer', display: 'block' }}>
+                                                    <p style={{ fontSize: '0.82rem', color: 'rgba(150,80,20,0.6)', marginBottom: '0.2rem' }}>Cambiar imagen</p>
+                                                    <p style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.4)' }}>JPG, PNG, WEBP hasta 2MB</p>
+                                                    <input type="file" accept="image/*" onChange={(e) => setData('imagen', e.target.files[0])} style={{ display: 'none' }} />
+                                                </label>
+                                            )}
                                         </div>
-                                    )}
+                                        {errors.imagen && <p className="error-text">{errors.imagen}</p>}
+                                    </div>
 
-                                    {proveedoresFiltrados.length === 0 ? (
-                                        <p className="prov-empty">No hay proveedores registrados</p>
-                                    ) : (
-                                        <div className="prov-list"
-                                             style={{ border: errors.proveedores ? '1px solid rgba(220,38,38,0.3)' : 'none', borderRadius: '12px', padding: errors.proveedores ? '0.5rem' : '0' }}>
-                                            {proveedoresFiltrados.map(prov => {
-                                                const sel = data.proveedores.includes(prov.id);
+                                    {/* ── NUEVO: Fotos adicionales ── */}
+                                    <div className="glass-panel">
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                            <p className="panel-title" style={{ margin: 0 }}>Fotos adicionales</p>
+                                            {(fotosExistentes.length + fotosNuevasPreviews.length) > 0 && (
+                                                <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.12rem 0.5rem', borderRadius: '20px', background: 'rgba(200,140,80,0.1)', border: '1px solid rgba(200,140,80,0.22)', color: 'rgba(150,80,20,0.7)' }}>
+                                                    {fotosExistentes.length + fotosNuevasPreviews.length} foto{(fotosExistentes.length + fotosNuevasPreviews.length) !== 1 ? 's' : ''}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="fotos-grid">
+                                            {/* Fotos existentes en BD */}
+                                            {fotosExistentes.map((foto) => {
+                                                const marcada = data.fotos_eliminar.includes(foto.id);
                                                 return (
-                                                    <div key={prov.id} className={`prov-item ${sel ? 'selected' : ''}`} onClick={() => toggleProveedor(prov.id)}>
-                                                        <div className="prov-checkbox">
-                                                            {sel && (
-                                                                <svg width="11" height="11" fill="none" stroke="rgba(185,28,28,0.85)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                                                    <path d="M20 6L9 17l-5-5" />
-                                                                </svg>
+                                                    <div key={foto.id} className={`foto-thumb-wrap${marcada ? ' foto-marcada-del' : ''}`}>
+                                                        <img src={fotoUrl(foto.ruta)} alt="Foto guardada" />
+                                                        <span className={`foto-badge ${marcada ? 'foto-badge-del' : 'foto-badge-saved'}`}>
+                                                            {marcada ? 'Se eliminará' : 'Guardada'}
+                                                        </span>
+                                                        <div className="foto-thumb-overlay">
+                                                            {marcada ? (
+                                                                <button type="button" className="foto-thumb-restore" onClick={() => toggleEliminarFoto(foto.id)} title="Deshacer">
+                                                                    <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                                                </button>
+                                                            ) : (
+                                                                <button type="button" className="foto-thumb-del" onClick={() => toggleEliminarFoto(foto.id)} title="Eliminar al guardar">
+                                                                    <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                                </button>
                                                             )}
-                                                        </div>
-                                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                                            <p className="prov-name">{prov.nombre}</p>
-                                                            {prov.empresa && <p className="prov-empresa">{prov.empresa}</p>}
                                                         </div>
                                                     </div>
                                                 );
                                             })}
-                                        </div>
-                                    )}
-                                    {errors.proveedores && <p className="error-text">{errors.proveedores}</p>}
-                                </div>
-                            </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                                <div className="glass-panel">
-                                    <p className="panel-title">Estado</p>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}
-                                           onClick={() => setData('activo', !data.activo)}>
-                                        <div className={`toggle-track ${data.activo ? 'on' : 'off'}`}>
-                                            <div className="toggle-thumb" />
-                                        </div>
-                                        <span style={{ fontSize: '0.85rem', fontWeight: '500', color: 'rgba(120,60,10,0.78)' }}>
-                                            {data.activo ? 'Producto Activo' : 'Producto Inactivo'}
-                                        </span>
-                                    </label>
-                                </div>
-
-                                <div className="glass-panel">
-                                    <p className="panel-title">Imagen</p>
-                                    {producto.imagen && !data.imagen && (
-                                        <div style={{ marginBottom: '0.75rem' }}>
-                                            <img src={`/storage/${producto.imagen}`} alt="Imagen actual"
-                                                 style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.55)' }} />
-                                            <p style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.45)', textAlign: 'center', marginTop: '0.4rem' }}>Imagen actual</p>
-                                        </div>
-                                    )}
-                                    <div className="upload-area">
-                                        {data.imagen ? (
-                                            <div>
-                                                <img src={URL.createObjectURL(data.imagen)} alt="Preview"
-                                                     style={{ width: '100%', height: '130px', objectFit: 'cover', borderRadius: '10px', marginBottom: '0.6rem' }} />
-                                                <button type="button" onClick={() => setData('imagen', null)}
-                                                        style={{ fontSize: '0.78rem', color: 'rgba(185,28,28,0.8)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                                                    Quitar nueva imagen
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <label style={{ cursor: 'pointer', display: 'block' }}>
-                                                <p style={{ fontSize: '0.82rem', color: 'rgba(150,80,20,0.6)', marginBottom: '0.2rem' }}>Cambiar imagen</p>
-                                                <p style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.4)' }}>JPG, PNG, WEBP hasta 2MB</p>
-                                                <input type="file" accept="image/*" onChange={(e) => setData('imagen', e.target.files[0])} style={{ display: 'none' }} />
-                                            </label>
-                                        )}
-                                    </div>
-                                    {errors.imagen && <p className="error-text">{errors.imagen}</p>}
-                                </div>
-
-                                {/* ── NUEVO: Fotos adicionales ── */}
-                                <div className="glass-panel">
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                                        <p className="panel-title" style={{ margin: 0 }}>Fotos adicionales</p>
-                                        {(fotosExistentes.length + fotosNuevasPreviews.length) > 0 && (
-                                            <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.12rem 0.5rem', borderRadius: '20px', background: 'rgba(200,140,80,0.1)', border: '1px solid rgba(200,140,80,0.22)', color: 'rgba(150,80,20,0.7)' }}>
-                                                {fotosExistentes.length + fotosNuevasPreviews.length} foto{(fotosExistentes.length + fotosNuevasPreviews.length) !== 1 ? 's' : ''}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <div className="fotos-grid">
-                                        {/* Fotos existentes en BD */}
-                                        {fotosExistentes.map((foto) => {
-                                            const marcada = data.fotos_eliminar.includes(foto.id);
-                                            return (
-                                                <div key={foto.id} className={`foto-thumb-wrap${marcada ? ' foto-marcada-del' : ''}`}>
-                                                    <img src={fotoUrl(foto.ruta)} alt="Foto guardada" />
-                                                    <span className={`foto-badge ${marcada ? 'foto-badge-del' : 'foto-badge-saved'}`}>
-                                                        {marcada ? 'Se eliminará' : 'Guardada'}
-                                                    </span>
+                                            {/* Fotos nuevas aún no guardadas */}
+                                            {fotosNuevasPreviews.map((preview, idx) => (
+                                                <div key={`nueva-${idx}`} className="foto-thumb-wrap">
+                                                    <img src={preview} alt={`Nueva ${idx + 1}`} />
+                                                    <span className="foto-badge foto-badge-new">Nueva</span>
                                                     <div className="foto-thumb-overlay">
-                                                        {marcada ? (
-                                                            <button type="button" className="foto-thumb-restore" onClick={() => toggleEliminarFoto(foto.id)} title="Deshacer">
-                                                                <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-                                                            </button>
-                                                        ) : (
-                                                            <button type="button" className="foto-thumb-del" onClick={() => toggleEliminarFoto(foto.id)} title="Eliminar al guardar">
-                                                                <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                                                            </button>
-                                                        )}
+                                                        <button type="button" className="foto-thumb-del" onClick={() => eliminarFotoNueva(idx)}>
+                                                            <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
+                                            ))}
 
-                                        {/* Fotos nuevas aún no guardadas */}
-                                        {fotosNuevasPreviews.map((preview, idx) => (
-                                            <div key={`nueva-${idx}`} className="foto-thumb-wrap">
-                                                <img src={preview} alt={`Nueva ${idx + 1}`} />
-                                                <span className="foto-badge foto-badge-new">Nueva</span>
-                                                <div className="foto-thumb-overlay">
-                                                    <button type="button" className="foto-thumb-del" onClick={() => eliminarFotoNueva(idx)}>
-                                                        <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                                                    </button>
-                                                </div>
+                                            {/* Botón agregar */}
+                                            <div className="foto-add-btn" onClick={() => fotosInputRef.current?.click()}>
+                                                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                                <span style={{ fontSize: '0.68rem', fontWeight: '500' }}>Agregar</span>
                                             </div>
-                                        ))}
-
-                                        {/* Botón agregar */}
-                                        <div className="foto-add-btn" onClick={() => fotosInputRef.current?.click()}>
-                                            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                            <span style={{ fontSize: '0.68rem', fontWeight: '500' }}>Agregar</span>
                                         </div>
+
+                                        <input ref={fotosInputRef} type="file" accept="image/*" multiple onChange={agregarFotos} style={{ display: 'none' }} />
+
+                                        {data.fotos_eliminar.length > 0 && (
+                                            <p style={{ fontSize: '0.72rem', color: 'rgba(185,28,28,0.75)', fontWeight: '500', marginTop: '0.65rem', padding: '0.5rem 0.75rem', borderRadius: '9px', background: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.15)' }}>
+                                                {data.fotos_eliminar.length} foto{data.fotos_eliminar.length !== 1 ? 's' : ''} se eliminarán al guardar.
+                                            </p>
+                                        )}
+
+                                        <p style={{ fontSize: '0.7rem', color: 'rgba(150,80,20,0.42)', marginTop: '0.6rem' }}>
+                                            Haz clic en una foto guardada para marcarla como eliminar.
+                                        </p>
                                     </div>
 
-                                    <input ref={fotosInputRef} type="file" accept="image/*" multiple onChange={agregarFotos} style={{ display: 'none' }} />
-
-                                    {data.fotos_eliminar.length > 0 && (
-                                        <p style={{ fontSize: '0.72rem', color: 'rgba(185,28,28,0.75)', fontWeight: '500', marginTop: '0.65rem', padding: '0.5rem 0.75rem', borderRadius: '9px', background: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.15)' }}>
-                                            {data.fotos_eliminar.length} foto{data.fotos_eliminar.length !== 1 ? 's' : ''} se eliminarán al guardar.
-                                        </p>
-                                    )}
-
-                                    <p style={{ fontSize: '0.7rem', color: 'rgba(150,80,20,0.42)', marginTop: '0.6rem' }}>
-                                        Haz clic en una foto guardada para marcarla como eliminar.
-                                    </p>
-                                </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                                    <button type="submit" disabled={processing} className="btn-primary">
-                                        {processing ? 'Guardando...' : 'Guardar Cambios'}
-                                    </button>
-                                    <Link href="/productos" className="btn-ghost">Cancelar</Link>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                                        <button type="submit" disabled={processing} className="btn-primary">
+                                            {processing ? 'Guardando...' : 'Guardar Cambios'}
+                                        </button>
+                                        <Link href="/productos" className="btn-ghost">Cancelar</Link>
+                                    </div>
                                 </div>
                             </div>
                         </div>

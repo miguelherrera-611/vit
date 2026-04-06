@@ -5,17 +5,17 @@ import { createPortal } from 'react-dom';
 
 const MOTIVOS = {
     incremento: [
-        { value: 'Ingreso mercancía', label: 'Ingreso de mercancía',   icon: '📦' },
-        { value: 'Devolución',        label: 'Devolución de cliente',  icon: '↩️' },
-        { value: 'Error conteo',      label: 'Error de conteo',        icon: '🔢' },
-        { value: 'Otro',              label: 'Otro',                   icon: '📝' },
+        { value: 'Ingreso mercancía', label: 'Ingreso de mercancía' },
+        { value: 'Devolución',        label: 'Devolución de cliente' },
+        { value: 'Error conteo',      label: 'Error de conteo' },
+        { value: 'Otro',              label: 'Otro' },
     ],
     decremento: [
-        { value: 'Daño',         label: 'Daño',                   icon: '💔' },
-        { value: 'Robo',         label: 'Robo',                   icon: '🚨' },
-        { value: 'Devolución',   label: 'Devolución a proveedor', icon: '↩️' },
-        { value: 'Error conteo', label: 'Error de conteo',        icon: '🔢' },
-        { value: 'Otro',         label: 'Otro',                   icon: '📝' },
+        { value: 'Daño',         label: 'Daño' },
+        { value: 'Robo',         label: 'Robo' },
+        { value: 'Devolución',   label: 'Devolución a proveedor' },
+        { value: 'Error conteo', label: 'Error de conteo' },
+        { value: 'Otro',         label: 'Otro' },
     ],
 };
 
@@ -116,6 +116,13 @@ const STYLES = `
         width:24px; height:24px; border-radius:7px; cursor:pointer;
         font-size:0.72rem; font-weight:600; border:none; font-family:'Inter',sans-serif; transition:all 0.12s;
     }
+    .aj-opt-dot{
+        width:8px; height:8px; border-radius:999px; flex-shrink:0;
+        background:rgba(150,80,20,0.35); border:1px solid rgba(200,140,80,0.35);
+    }
+    .aj-opt.active .aj-opt-dot{
+        background:rgba(185,28,28,0.75); border-color:rgba(220,38,38,0.45);
+    }
     .aj-textarea {
         width:100%; padding:0.8rem 1rem;
         background:rgba(255,255,255,0.06); border:1px solid rgba(200,140,80,0.4); border-radius:14px;
@@ -158,6 +165,18 @@ const STYLES = `
     .aj-a2 { animation:ajUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.12s both; }
     .aj-a3 { animation:ajUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.19s both; }
     .aj-a4 { animation:ajUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.26s both; }
+
+    .aj-shell{ max-width:780px; margin:0 auto; padding:2rem 1.5rem; }
+    .aj-stack{ display:flex; flex-direction:column; gap:1.25rem; }
+    .aj-grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    .aj-actions{ display:flex; gap:.85rem; }
+
+    @media (max-width: 768px){
+        .aj-shell{ padding:1.35rem 1rem 2rem; }
+        .aj-glass{ padding:1.15rem; border-radius:16px; }
+        .aj-grid-2{ grid-template-columns:1fr; }
+        .aj-actions{ flex-direction:column; }
+    }
 `;
 
 // ── Hook: mantiene la posición fixed sincronizada con el trigger en todo momento
@@ -211,7 +230,12 @@ function MotivoSelect({ value, onChange, options, placeholder, error }) {
                     onClick={() => setOpen(o => !o)}
                     className={`aj-trigger${open ? ' open' : ''}${error ? ' error' : ''}`}>
                 <span style={{ color: selected ? '#2d1a08' : 'rgba(180,100,30,0.38)', fontWeight: selected ? '500' : '400', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {selected ? <><span>{selected.icon}</span><span>{selected.label}</span></> : placeholder}
+                    {selected ? (
+                        <>
+                            <span className="aj-opt-dot" />
+                            <span>{selected.label}</span>
+                        </>
+                    ) : placeholder}
                 </span>
                 <svg style={{ width: '14px', height: '14px', color: 'rgba(150,80,20,0.45)', flexShrink: 0, transition: 'transform 0.18s', transform: open ? 'rotate(180deg)' : 'none' }}
                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,7 +253,7 @@ function MotivoSelect({ value, onChange, options, placeholder, error }) {
                                     className={`aj-opt${sel ? ' active' : ''}`}
                                     style={{ borderBottom: i < options.length - 1 ? '1px solid rgba(200,140,80,0.1)' : 'none' }}>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                    <span style={{ fontSize: '1.1rem' }}>{opt.icon}</span>
+                                    <span className="aj-opt-dot" />
                                     <span style={{ fontSize: '0.87rem', fontWeight: '500', color: sel ? 'rgba(185,28,28,0.9)' : 'rgba(80,40,8,0.82)' }}>{opt.label}</span>
                                 </span>
                                 {sel && (
@@ -468,9 +492,9 @@ export default function InventarioAjustar({ productos = [] }) {
                     </div>
                 </div>
 
-                <div style={{ maxWidth: '780px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+                <div className="aj-shell">
                     <form onSubmit={submit}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        <div className="aj-stack">
 
                             {/* Paso 1 */}
                             <div className="aj-glass aj-a1">
@@ -513,7 +537,7 @@ export default function InventarioAjustar({ productos = [] }) {
                                     <h2 className="aj-step-title">Tipo de Ajuste</h2>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '1.25rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '1.25rem' }} className="aj-grid-2">
                                     {[
                                         { tipo: 'incremento', label: 'Incremento', sub: 'Aumentar stock', icon: 'M12 4v16m8-8H4', color: { on: 'rgba(16,185,129,0.9)', border: 'rgba(16,185,129,0.4)', bg: 'rgba(16,185,129,0.07)', iconBg: 'rgba(16,185,129,0.15)' } },
                                         { tipo: 'decremento', label: 'Decremento', sub: 'Reducir stock',   icon: 'M20 12H4',         color: { on: 'rgba(220,38,38,0.9)',  border: 'rgba(220,38,38,0.4)',  bg: 'rgba(220,38,38,0.07)',  iconBg: 'rgba(220,38,38,0.12)' } },
@@ -545,7 +569,7 @@ export default function InventarioAjustar({ productos = [] }) {
                                     })}
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }} className="aj-grid-2">
                                     <div>
                                         <label className="aj-label">Cantidad <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span></label>
                                         <div style={{
@@ -640,7 +664,7 @@ export default function InventarioAjustar({ productos = [] }) {
                             </div>
 
                             {/* Botones */}
-                            <div className="aj-a4" style={{ display: 'flex', gap: '0.85rem' }}>
+                            <div className="aj-a4 aj-actions" style={{ display: 'flex', gap: '0.85rem' }}>
                                 <button type="submit" disabled={processing} className="aj-btn-submit">
                                     {processing ? 'Aplicando...' : 'Aplicar Ajuste'}
                                 </button>

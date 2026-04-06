@@ -236,6 +236,34 @@ const FORM_STYLES = `
     .foto-thumb-wrap:hover .foto-thumb-del { opacity:1; transform:scale(1); }
     .foto-add-btn { aspect-ratio:1/1; border-radius:11px; cursor:pointer; border:1.5px dashed rgba(200,140,80,0.38); background:rgba(255,255,255,0.04); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.35rem; transition:all 0.18s; color:rgba(150,80,20,0.5); }
     .foto-add-btn:hover { border-color:rgba(200,140,80,0.62); background:rgba(255,255,255,0.1); color:rgba(120,55,10,0.8); }
+
+    /* Ajustes sobrios globales */
+    .glass-panel { border-radius:18px; }
+    .btn-primary, .btn-ghost { border-radius:12px; }
+    .glass-input, .cat-trigger, .glass-input-readonly { border-radius:12px; }
+
+    /* Responsive unificado */
+    .create-grid { display:grid; grid-template-columns:1fr 300px; gap:1.5rem; align-items:start; }
+    .create-left, .create-right { display:flex; flex-direction:column; gap:1.25rem; }
+
+    @media (max-width: 1024px) {
+        .create-grid { grid-template-columns:1fr; }
+    }
+    @media (max-width: 768px) {
+        .pg-header > div, .pg-bg > div { padding-left:1rem !important; padding-right:1rem !important; }
+        .glass-panel { padding:1.1rem; border-radius:14px; }
+        .panel-title { font-size:0.9rem; margin-bottom:1rem; }
+        .fotos-grid { grid-template-columns:repeat(3,1fr); gap:0.45rem; }
+
+        /* extra responsive sobrio */
+        @media (max-width: 768px) {
+            .create-left .glass-panel > div[style*="gridTemplateColumns: '1fr 1fr'"] { grid-template-columns: 1fr !important; }
+        }
+    }
+    @media (max-width: 560px) {
+        .fotos-grid { grid-template-columns:repeat(2,1fr); }
+        .btn-primary, .btn-ghost { width:100%; }
+    }
 `;
 
 const OPCIONES_POR_PAG = 7;
@@ -545,11 +573,8 @@ export default function ProductosCreate({ categorias = [], proveedores = [] }) {
 
                 <div style={{ maxWidth: '1024px', margin: '0 auto', padding: '2rem 1.5rem' }}>
                     <form onSubmit={submit} encType="multipart/form-data">
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1.5rem', alignItems: 'start' }}>
-
-                            {/* ── Columna izquierda ── */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
+                        <div className="create-grid">
+                            <div className="create-left">
                                 {/* Info básica */}
                                 <div className="glass-panel">
                                     <p className="panel-title">Información Básica</p>
@@ -695,10 +720,7 @@ export default function ProductosCreate({ categorias = [], proveedores = [] }) {
                                     {errors.proveedores && <p className="error-text">{errors.proveedores}</p>}
                                 </div>
                             </div>
-
-                            {/* ── Columna derecha ── */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
+                            <div className="create-right">
                                 {/* Estado */}
                                 <div className="glass-panel">
                                     <p className="panel-title">Estado</p>

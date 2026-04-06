@@ -62,7 +62,6 @@ export default function Empleado() {
                         linear-gradient(145deg, #fdf6f0 0%, #fdf3ec 35%, #fef5ef 70%, #fef8f4 100%);
                 }
 
-                /* Header */
                 .e-header {
                     background: rgba(253,246,240,0.72);
                     backdrop-filter: blur(32px) saturate(160%);
@@ -76,7 +75,6 @@ export default function Empleado() {
                     flex-wrap: wrap; gap: 0.75rem;
                 }
 
-                /* Contenido */
                 .e-content {
                     max-width: 1280px; margin: 0 auto;
                     padding: 2rem 1.5rem 3rem;
@@ -89,14 +87,12 @@ export default function Empleado() {
                     margin-bottom: 1rem;
                 }
 
-                /* Grid módulos */
                 .e-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                    grid-template-columns: repeat(4, minmax(0, 1fr));
                     gap: 1rem;
                 }
 
-                /* Card */
                 .e-card {
                     background: rgba(255,255,255,0.45);
                     backdrop-filter: blur(20px) saturate(150%);
@@ -105,7 +101,7 @@ export default function Empleado() {
                     box-shadow: 0 4px 24px rgba(180,90,20,0.06), inset 0 1px 0 rgba(255,255,255,0.9);
                     padding: 1.5rem;
                     transition: all 0.22s cubic-bezier(0.16,1,0.3,1);
-                    text-decoration: none; display: block;
+                    text-decoration: none; display: block; height: 100%;
                 }
                 .e-card:hover {
                     transform: translateY(-2px);
@@ -114,7 +110,6 @@ export default function Empleado() {
                     box-shadow: 0 8px 32px rgba(180,90,20,0.1), inset 0 1px 0 rgba(255,255,255,0.95);
                 }
 
-                /* Botón acción */
                 .e-btn {
                     display: block; width: 100%; text-align: center;
                     padding: 0.6rem 1rem; border-radius: 9px;
@@ -132,7 +127,6 @@ export default function Empleado() {
                     color: rgba(90,40,5,0.95);
                 }
 
-                /* Empty state */
                 .e-empty {
                     background: rgba(255,255,255,0.45);
                     backdrop-filter: blur(20px);
@@ -143,7 +137,6 @@ export default function Empleado() {
                     box-shadow: 0 4px 24px rgba(180,90,20,0.06);
                 }
 
-                /* Role badge */
                 .e-role-badge {
                     padding: 0.32rem 0.85rem;
                     background: rgba(16,185,129,0.08);
@@ -154,7 +147,6 @@ export default function Empleado() {
                     white-space: nowrap;
                 }
 
-                /* Animaciones */
                 .en1  { animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.04s  both; }
                 .en2  { animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.08s  both; }
                 .en3  { animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.12s  both; }
@@ -169,22 +161,33 @@ export default function Empleado() {
                 .en12 { animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.48s  both; }
                 .en13 { animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.52s  both; }
 
-                /* Responsive */
-                @media (max-width: 640px) {
-                    .e-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-                    .e-content { padding: 1.25rem 0.875rem 2.5rem; }
-                    .e-header-inner { padding: 1.1rem 0.875rem; }
-                    .e-card { padding: 1.1rem; }
-                    .e-btn { margin-top: 0.875rem; }
+                @media (max-width: 1200px) {
+                    .e-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
                 }
-                @media (max-width: 380px) {
-                    .e-grid { grid-template-columns: 1fr; }
+                @media (max-width: 900px) {
+                    .e-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                    .e-content { padding: 1.5rem 1rem 2.5rem; }
+                    .e-header-inner { padding: 1.2rem 1rem; }
+                }
+                @media (max-width: 640px) {
+                    .e-header-inner {
+                        align-items: flex-start;
+                        justify-content: flex-start;
+                        flex-direction: column;
+                        gap: 0.5rem;
+                    }
+                    .e-content { padding: 1.25rem 0.875rem 2.25rem; }
+                    .e-card { padding: 1rem; border-radius: 14px; }
+                    .e-btn { margin-top: 0.8rem; padding: 0.56rem 0.9rem; font-size: 0.76rem; }
+                    .e-section-label { margin-bottom: 0.8rem; }
+                }
+                @media (max-width: 480px) {
+                    .e-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+                    .e-empty { padding: 2.25rem 1rem; }
                 }
             `}</style>
 
             <div className="e-root">
-
-                {/* Header */}
                 <div className="e-header">
                     <div className="e-header-inner">
                         <div>

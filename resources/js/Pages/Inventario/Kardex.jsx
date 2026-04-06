@@ -43,6 +43,24 @@ const STYLES = `
     .kx-a1 { animation:kxUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
     .kx-a2 { animation:kxUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.11s both; }
     .kx-a3 { animation:kxUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.18s both; }
+
+    .kx-head-row{ display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+    .kx-content-wrap{ max-width:1280px; margin:0 auto; padding:2rem 1.5rem; display:flex; flex-direction:column; gap:1.5rem; }
+    .kx-kpi-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; }
+    .kx-table-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .kx-table{ width:100%; min-width:980px; border-collapse:collapse; }
+
+    @media (max-width: 900px){
+        .kx-content-wrap{ padding:1.5rem 1rem; gap:1rem; }
+    }
+    @media (max-width: 768px){
+        .kx-hdr h1{ font-size:1.25rem !important; }
+        .kx-kpi-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width: 560px){
+        .kx-kpi-grid{ grid-template-columns:1fr; }
+        .kx-glass{ border-radius:16px; }
+    }
 `;
 
 const TIPO_BADGE = {
@@ -77,7 +95,7 @@ export default function Kardex({ producto, movimientos }) {
                 {/* ── Header ── */}
                 <div className="kx-hdr">
                     <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                        <div className="kx-head-row">
                             <Link href="/inventario" style={{
                                 width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.65)',
@@ -112,10 +130,9 @@ export default function Kardex({ producto, movimientos }) {
                     </div>
                 </div>
 
-                <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
+                <div className="kx-content-wrap">
                     {/* ── Resumen KPIs ── */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: '1rem' }} className="kx-a1">
+                    <div className="kx-kpi-grid kx-a1">
                         {RESUMEN.map(({ label, value, accent, bg }) => (
                             <div key={label} className="kx-glass" style={{ padding: '1.3rem' }}>
                                 <div style={{
@@ -155,8 +172,8 @@ export default function Kardex({ producto, movimientos }) {
                                 <p style={{ fontSize: '0.78rem', color: 'rgba(150,80,20,0.4)', marginTop: '0.3rem' }}>Los movimientos se registran al vender, anular o ajustar el inventario</p>
                             </div>
                         ) : (
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <div className="kx-table-scroll">
+                                <table className="kx-table">
                                     <thead>
                                     <tr style={{ borderBottom: '1px solid rgba(180,90,20,0.12)' }}>
                                         {['Fecha', 'Tipo', 'Motivo', 'Cantidad', 'Stock anterior', 'Stock nuevo', 'Usuario'].map((h, i) => (

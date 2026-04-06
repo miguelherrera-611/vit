@@ -245,6 +245,14 @@ const PAGE_STYLES = `
         font-size:0.74rem; font-weight:500; color:rgba(185,28,28,0.82);
         white-space:nowrap;
     }
+
+    @media (max-width: 900px) {
+        .pg-header > div, .pg-bg > div { padding-left: 1rem !important; padding-right: 1rem !important; }
+    }
+    @media (max-width: 760px) {
+        .glass-table th:nth-child(3), .glass-table td:nth-child(3) { display: none; } /* proveedor */
+        .glass-table th:nth-child(6), .glass-table td:nth-child(6) { display: none; } /* estado */
+    }
 `;
 
 // ─── Filter Dropdown ────────────────────────────────────────────────────────
@@ -400,12 +408,12 @@ export default function ProductosIndex({ productos = [] }) {
                             <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', marginTop: '1rem' }}>
                                 {stats.agotado > 0 && (
                                     <button onClick={() => setFiltroStock('agotado')} className="badge-red" style={{ cursor: 'pointer', border: 'none' }}>
-                                        ● {stats.agotado} agotado{stats.agotado > 1 ? 's' : ''} — ver
+                                        {stats.agotado} agotado{stats.agotado > 1 ? 's' : ''} — ver
                                     </button>
                                 )}
                                 {stats.bajo > 0 && (
                                     <button onClick={() => setFiltroStock('bajo')} className="badge-yellow" style={{ cursor: 'pointer', border: 'none' }}>
-                                        ● {stats.bajo} bajo stock — ver
+                                        {stats.bajo} bajo stock — ver
                                     </button>
                                 )}
                             </div>

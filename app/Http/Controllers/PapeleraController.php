@@ -102,6 +102,26 @@ class PapeleraController extends Controller
         return back()->with('success', "Papelera vaciada. {$total} elemento(s) eliminados permanentemente.");
     }
 
+    // ── SHOW ─────────────────────────────────────────────────────
+
+    public function show(string $id): Response
+    {
+        $item = Papelera::findOrFail($id);
+
+        return Inertia::render('Papelera/Show', [
+            'item' => [
+                'id'             => $item->id,
+                'tipo'           => $item->tipo,
+                'nombre_display' => $item->nombre_display,
+                'eliminado_por'  => $item->eliminado_por,
+                'eliminado_at'   => optional($item->eliminado_at)?->format('d/m/Y H:i'),
+                'purgar_at'      => optional($item->purgar_at)?->format('d/m/Y H:i'),
+                'dias_restantes' => $item->dias_restantes,
+                'datos'          => $item->datos,
+            ],
+        ]);
+    }
+
     // ── HELPERS PRIVADOS ─────────────────────────────────────────
 
     private function purgarVencidos(): void

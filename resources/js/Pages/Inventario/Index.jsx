@@ -126,6 +126,30 @@ const STYLES = `
     .inv-a1 { animation:invUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
     .inv-a2 { animation:invUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.11s both; }
     .inv-a3 { animation:invUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.17s both; }
+
+    /* Responsive estilo Cliente */
+    .inv-head-row{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; }
+    .inv-content-wrap{ max-width:1280px; margin:0 auto; padding:2rem 1.5rem; display:flex; flex-direction:column; gap:1.5rem; }
+    .inv-kpi-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; }
+    .inv-filters-row{ display:flex; flex-wrap:wrap; gap:.85rem; align-items:center; }
+    .inv-table-wrap{ overflow:hidden; }
+    .inv-table-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .inv-table{ width:100%; min-width:860px; border-collapse:collapse; }
+
+    @media (max-width: 900px){
+        .inv-content-wrap{ padding:1.5rem 1rem; gap:1rem; }
+        .inv-kpi-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width: 768px){
+        .inv-head-row{ align-items:flex-start; }
+        .inv-hdr h1{ font-size:1.35rem !important; }
+        .inv-filters-row > div{ flex:1 1 100% !important; }
+        .inv-btn-primary{ width:100%; justify-content:center; }
+    }
+    @media (max-width: 640px){
+        .inv-kpi-grid{ grid-template-columns:1fr; }
+        .inv-glass{ border-radius:16px; }
+    }
 `;
 
 // ── Hook: posición fixed que se recalcula en cada scroll/resize ───────────────
@@ -382,7 +406,7 @@ export default function InventarioIndex({ productos = [] }) {
                 {/* ── Header ── */}
                 <div className="inv-hdr">
                     <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div className="inv-head-row">
                             <div>
                                 <h1 style={{ fontSize: '1.65rem', fontWeight: '300', color: '#2d1a08', letterSpacing: '-0.03em', lineHeight: 1 }}>
                                     Control de Inventario
@@ -401,10 +425,9 @@ export default function InventarioIndex({ productos = [] }) {
                     </div>
                 </div>
 
-                <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
+                <div className="inv-content-wrap">
                     {/* ── KPIs ── */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '1rem' }} className="inv-a1">
+                    <div className="inv-kpi-grid inv-a1">
                         {STAT_CARDS.map(({ label, value, accent, bg, path }) => (
                             <div key={label} className="inv-glass" style={{ padding: '1.4rem' }}>
                                 <div style={{
@@ -424,8 +447,7 @@ export default function InventarioIndex({ productos = [] }) {
 
                     {/* ── Filtros ── */}
                     <div className="inv-glass inv-a2" style={{ padding: '1.25rem 1.5rem' }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem', alignItems: 'center' }}>
-
+                        <div className="inv-filters-row">
                             {/* Buscador */}
                             <div style={{ flex: '2 1 220px', position: 'relative' }}>
                                 <svg style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(180,100,30,0.4)', pointerEvents: 'none' }}
@@ -483,9 +505,9 @@ export default function InventarioIndex({ productos = [] }) {
 
                     {/* ── Tabla ── */}
                     {productosFiltrados.length > 0 ? (
-                        <div className="inv-glass inv-a3" style={{ overflow: 'hidden' }}>
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <div className="inv-glass inv-a3 inv-table-wrap">
+                            <div className="inv-table-scroll">
+                                <table className="inv-table">
                                     <thead>
                                     <tr style={{ borderBottom: '1px solid rgba(180,90,20,0.12)' }}>
                                         {['Producto', 'Categoría', 'Stock Actual', 'Stock Mínimo', 'Estado', ''].map(h => (

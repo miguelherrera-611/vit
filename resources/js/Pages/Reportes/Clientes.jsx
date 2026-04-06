@@ -20,10 +20,10 @@ function OrdenDropdown({ value, onChange }) {
     const ref             = useRef(null);
 
     const opciones = [
-        { value: 'total_compras',   label: 'Total comprado',   icon: '💰' },
-        { value: 'num_compras',     label: 'Nº de compras',    icon: '🛍️' },
-        { value: 'saldo_total',     label: 'Deuda activa',     icon: '⚠️' },
-        { value: 'ticket_promedio', label: 'Ticket promedio',  icon: '📊' },
+        { value: 'total_compras',   label: 'Total comprado',   short: 'TC' },
+        { value: 'num_compras',     label: 'Nº de compras',    short: 'NC' },
+        { value: 'saldo_total',     label: 'Deuda activa',     short: 'DA' },
+        { value: 'ticket_promedio', label: 'Ticket promedio',  short: 'TP' },
     ];
 
     useEffect(() => {
@@ -36,66 +36,26 @@ function OrdenDropdown({ value, onChange }) {
 
     return (
         <div ref={ref} className="relative">
-            <button type="button" onClick={() => setOpen(o => !o)}
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: '0.5rem',
-                        padding: '0.5rem 0.9rem',
-                        background: 'rgba(255,255,255,0.08)',
-                        border: open ? '1px solid rgba(220,38,38,0.45)' : '1px solid rgba(255,255,255,0.65)',
-                        borderRadius: '12px',
-                        fontSize: '0.82rem', fontWeight: '500',
-                        color: 'rgba(120,60,10,0.85)',
-                        cursor: 'pointer',
-                        backdropFilter: 'blur(12px)',
-                        WebkitBackdropFilter: 'blur(12px)',
-                        boxShadow: '0 2px 10px rgba(180,90,20,0.08), inset 0 1px 0 rgba(255,255,255,0.82)',
-                        transition: 'all 0.18s ease',
-                        whiteSpace: 'nowrap',
-                        fontFamily: 'Inter, sans-serif',
-                    }}>
-                <span>{selected?.icon}</span>
+            <button type="button" onClick={() => setOpen(o => !o)} className="rc-control-btn">
+                <span className="rc-control-chip">{selected?.short}</span>
                 <span>Ordenar: {selected?.label}</span>
-                <svg style={{ width: '13px', height: '13px', color: 'rgba(150,80,20,0.5)', transition: 'transform 0.18s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}
-                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="rc-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                     style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
 
             {open && (
-                <div style={{
-                    position: 'absolute', top: 'calc(100% + 6px)', right: 0,
-                    minWidth: '200px',
-                    background: 'rgba(255,250,245,0.96)',
-                    backdropFilter: 'blur(32px) saturate(180%)',
-                    WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-                    border: '1px solid rgba(255,255,255,0.72)',
-                    borderRadius: '16px',
-                    boxShadow: '0 16px 48px rgba(180,90,20,0.12), inset 0 1px 0 rgba(255,255,255,0.9)',
-                    overflow: 'hidden', zIndex: 50,
-                    animation: 'dropdownIn 0.18s cubic-bezier(0.16,1,0.3,1)',
-                }}>
+                <div className="rc-dropdown">
                     {opciones.map((opt, i) => {
                         const sel = opt.value === value;
                         return (
                             <button key={opt.value} type="button"
                                     onClick={() => { onChange(opt.value); setOpen(false); }}
-                                    style={{
-                                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                        gap: '0.75rem', padding: '0.65rem 1rem',
-                                        fontSize: '0.83rem', fontWeight: sel ? '600' : '500',
-                                        color: sel ? 'rgba(185,28,28,0.9)' : 'rgba(120,55,10,0.78)',
-                                        background: sel ? 'rgba(220,38,38,0.05)' : 'none',
-                                        border: 'none',
-                                        borderBottom: i < opciones.length - 1 ? '1px solid rgba(255,255,255,0.5)' : 'none',
-                                        cursor: 'pointer', textAlign: 'left',
-                                        fontFamily: 'Inter, sans-serif',
-                                        transition: 'background 0.12s',
-                                    }}
-                                    onMouseEnter={e => { if (!sel) e.currentTarget.style.background = 'rgba(255,255,255,0.55)'; }}
-                                    onMouseLeave={e => { if (!sel) e.currentTarget.style.background = 'none'; }}
-                            >
+                                    className={`rc-dropdown-item${sel ? ' is-selected' : ''}`}
+                                    style={{ borderBottom: i < opciones.length - 1 ? '1px solid rgba(255,255,255,0.45)' : 'none' }}>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <span style={{ fontSize: '14px' }}>{opt.icon}</span>
+                                    <span className="rc-control-chip" style={{ width: 24, height: 24, fontSize: '0.62rem' }}>{opt.short}</span>
                                     {opt.label}
                                 </span>
                                 {sel && (
@@ -276,9 +236,55 @@ export default function ReporteClientes({ clientes = [], kpis = {}, frecuencia =
                     position: relative; z-index: 2;
                 }
 
-                .rc-table-row:hover { background: rgba(255,255,255,0.12); }
-                .rc-table-row { transition: background 0.15s; border-bottom: 1px solid rgba(255,255,255,0.3); }
-                .rc-table-row:last-child { border-bottom: none; }
+                .rc-control-btn {
+                    display:flex; align-items:center; gap:0.5rem;
+                    padding:0.5rem 0.9rem;
+                    background:rgba(255,255,255,0.08);
+                    border:1px solid rgba(255,255,255,0.65);
+                    border-radius:12px;
+                    font-size:0.82rem; font-weight:500;
+                    color:rgba(120,60,10,0.85);
+                    cursor:pointer;
+                    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+                    box-shadow:0 2px 10px rgba(180,90,20,0.08), inset 0 1px 0 rgba(255,255,255,0.82);
+                    transition:all 0.18s ease;
+                    white-space:nowrap;
+                    font-family:'Inter',sans-serif;
+                }
+                .rc-control-btn:hover { background:rgba(255,255,255,0.13); border-color:rgba(255,255,255,0.78); }
+
+                .rc-control-chip {
+                    width:22px; height:22px; border-radius:7px;
+                    border:1px solid rgba(200,140,80,0.25);
+                    background:rgba(255,255,255,0.45);
+                    display:inline-flex; align-items:center; justify-content:center;
+                    font-size:0.64rem; font-weight:700; color:rgba(140,70,20,0.75);
+                    flex-shrink:0;
+                }
+
+                .rc-chevron { width:13px; height:13px; color:rgba(150,80,20,0.5); transition:transform 0.18s; flex-shrink:0; }
+
+                .rc-dropdown {
+                    position:absolute; top:calc(100% + 6px); right:0;
+                    min-width:210px;
+                    background:rgba(255,250,245,0.96);
+                    backdrop-filter:blur(28px) saturate(160%); -webkit-backdrop-filter:blur(28px) saturate(160%);
+                    border:1px solid rgba(255,255,255,0.72);
+                    border-radius:14px;
+                    box-shadow:0 14px 36px rgba(180,90,20,0.12), inset 0 1px 0 rgba(255,255,255,0.9);
+                    overflow:hidden; z-index:50;
+                    animation:dropdownIn 0.18s cubic-bezier(0.16,1,0.3,1);
+                }
+                .rc-dropdown-item {
+                    width:100%; display:flex; align-items:center; justify-content:space-between;
+                    gap:0.75rem; padding:0.62rem 0.9rem;
+                    font-size:0.82rem; font-weight:500;
+                    color:rgba(120,55,10,0.78);
+                    background:none; border:none; cursor:pointer; text-align:left;
+                    font-family:'Inter',sans-serif;
+                }
+                .rc-dropdown-item:hover { background:rgba(255,255,255,0.55); }
+                .rc-dropdown-item.is-selected { color:rgba(185,28,28,0.9); background:rgba(220,38,38,0.05); font-weight:600; }
 
                 .rc-search {
                     padding: 0.5rem 0.9rem 0.5rem 2.4rem;
@@ -303,13 +309,186 @@ export default function ReporteClientes({ clientes = [], kpis = {}, frecuencia =
                 .rc-badge-active   { background: rgba(16,185,129,0.1);  border: 1px solid rgba(16,185,129,0.25);  color: rgba(4,120,87,0.85);   padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
                 .rc-badge-inactive { background: rgba(180,90,20,0.07);  border: 1px solid rgba(180,90,20,0.15);  color: rgba(150,80,20,0.6);   padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
                 .rc-badge-debt     { background: rgba(220,38,38,0.08);  border: 1px solid rgba(220,38,38,0.2);   color: rgba(185,28,28,0.85);  padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+
+                .rc-header { /* ...existing code... */ }
+
+                .rc-control-btn {
+                    display:flex; align-items:center; gap:0.5rem;
+                    padding:0.5rem 0.9rem;
+                    background:rgba(255,255,255,0.08);
+                    border:1px solid rgba(255,255,255,0.65);
+                    border-radius:12px;
+                    font-size:0.82rem; font-weight:500;
+                    color:rgba(120,60,10,0.85);
+                    cursor:pointer;
+                    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+                    box-shadow:0 2px 10px rgba(180,90,20,0.08), inset 0 1px 0 rgba(255,255,255,0.82);
+                    transition:all 0.18s ease;
+                    white-space:nowrap;
+                    font-family:'Inter',sans-serif;
+                }
+                .rc-control-btn:hover { background:rgba(255,255,255,0.13); border-color:rgba(255,255,255,0.78); }
+
+                .rc-control-chip {
+                    width:22px; height:22px; border-radius:7px;
+                    border:1px solid rgba(200,140,80,0.25);
+                    background:rgba(255,255,255,0.45);
+                    display:inline-flex; align-items:center; justify-content:center;
+                    font-size:0.64rem; font-weight:700; color:rgba(140,70,20,0.75);
+                    flex-shrink:0;
+                }
+
+                .rc-chevron { width:13px; height:13px; color:rgba(150,80,20,0.5); transition:transform 0.18s; flex-shrink:0; }
+
+                .rc-dropdown {
+                    position:absolute; top:calc(100% + 6px); right:0;
+                    min-width:210px;
+                    background:rgba(255,250,245,0.96);
+                    backdrop-filter:blur(28px) saturate(160%); -webkit-backdrop-filter:blur(28px) saturate(160%);
+                    border:1px solid rgba(255,255,255,0.72);
+                    border-radius:14px;
+                    box-shadow:0 14px 36px rgba(180,90,20,0.12), inset 0 1px 0 rgba(255,255,255,0.9);
+                    overflow:hidden; z-index:50;
+                    animation:dropdownIn 0.18s cubic-bezier(0.16,1,0.3,1);
+                }
+                .rc-dropdown-item {
+                    width:100%; display:flex; align-items:center; justify-content:space-between;
+                    gap:0.75rem; padding:0.62rem 0.9rem;
+                    font-size:0.82rem; font-weight:500;
+                    color:rgba(120,55,10,0.78);
+                    background:none; border:none; cursor:pointer; text-align:left;
+                    font-family:'Inter',sans-serif;
+                }
+                .rc-dropdown-item:hover { background:rgba(255,255,255,0.55); }
+                .rc-dropdown-item.is-selected { color:rgba(185,28,28,0.9); background:rgba(220,38,38,0.05); font-weight:600; }
+
+                .rc-search {
+                    padding: 0.5rem 0.9rem 0.5rem 2.4rem;
+                    background: rgba(255,255,255,0.06);
+                    border: 1px solid rgba(255,255,255,0.55);
+                    border-radius: 12px;
+                    font-size: 0.82rem; color: #2d1a08;
+                    font-family: 'Inter', sans-serif; outline: none;
+                    backdrop-filter: blur(10px);
+                    -webkit-backdrop-filter: blur(10px);
+                    box-shadow: 0 2px 8px rgba(160,80,10,0.06), inset 0 1px 0 rgba(255,255,255,0.7);
+                    transition: all 0.18s;
+                    width: 200px;
+                }
+                .rc-search::placeholder { color: rgba(180,100,30,0.38); }
+                .rc-search:focus {
+                    border-color: rgba(220,38,38,0.4);
+                    box-shadow: 0 0 0 3px rgba(220,38,38,0.06), inset 0 1px 0 rgba(255,255,255,0.8);
+                    background: rgba(255,255,255,0.1);
+                }
+
+                .rc-badge-active   { background: rgba(16,185,129,0.1);  border: 1px solid rgba(16,185,129,0.25);  color: rgba(4,120,87,0.85);   padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+                .rc-badge-inactive { background: rgba(180,90,20,0.07);  border: 1px solid rgba(180,90,20,0.15);  color: rgba(150,80,20,0.6);   padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+                .rc-badge-debt     { background: rgba(220,38,38,0.08);  border: 1px solid rgba(220,38,38,0.2);   color: rgba(185,28,28,0.85);  padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+
+                .rc-header { /* ...existing code... */ }
+
+                .rc-control-btn {
+                    display:flex; align-items:center; gap:0.5rem;
+                    padding:0.5rem 0.9rem;
+                    background:rgba(255,255,255,0.08);
+                    border:1px solid rgba(255,255,255,0.65);
+                    border-radius:12px;
+                    font-size:0.82rem; font-weight:500;
+                    color:rgba(120,60,10,0.85);
+                    cursor:pointer;
+                    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+                    box-shadow:0 2px 10px rgba(180,90,20,0.08), inset 0 1px 0 rgba(255,255,255,0.82);
+                    transition:all 0.18s ease;
+                    white-space:nowrap;
+                    font-family:'Inter',sans-serif;
+                }
+                .rc-control-btn:hover { background:rgba(255,255,255,0.13); border-color:rgba(255,255,255,0.78); }
+
+                .rc-control-chip {
+                    width:22px; height:22px; border-radius:7px;
+                    border:1px solid rgba(200,140,80,0.25);
+                    background:rgba(255,255,255,0.45);
+                    display:inline-flex; align-items:center; justify-content:center;
+                    font-size:0.64rem; font-weight:700; color:rgba(140,70,20,0.75);
+                    flex-shrink:0;
+                }
+
+                .rc-chevron { width:13px; height:13px; color:rgba(150,80,20,0.5); transition:transform 0.18s; flex-shrink:0; }
+
+                .rc-dropdown {
+                    position:absolute; top:calc(100% + 6px); right:0;
+                    min-width:210px;
+                    background:rgba(255,250,245,0.96);
+                    backdrop-filter:blur(28px) saturate(160%); -webkit-backdrop-filter:blur(28px) saturate(160%);
+                    border:1px solid rgba(255,255,255,0.72);
+                    border-radius:14px;
+                    box-shadow:0 14px 36px rgba(180,90,20,0.12), inset 0 1px 0 rgba(255,255,255,0.9);
+                    overflow:hidden; z-index:50;
+                    animation:dropdownIn 0.18s cubic-bezier(0.16,1,0.3,1);
+                }
+                .rc-dropdown-item {
+                    width:100%; display:flex; align-items:center; justify-content:space-between;
+                    gap:0.75rem; padding:0.62rem 0.9rem;
+                    font-size:0.82rem; font-weight:500;
+                    color:rgba(120,55,10,0.78);
+                    background:none; border:none; cursor:pointer; text-align:left;
+                    font-family:'Inter',sans-serif;
+                }
+                .rc-dropdown-item:hover { background:rgba(255,255,255,0.55); }
+                .rc-dropdown-item.is-selected { color:rgba(185,28,28,0.9); background:rgba(220,38,38,0.05); font-weight:600; }
+
+                .rc-search {
+                    padding: 0.5rem 0.9rem 0.5rem 2.4rem;
+                    background: rgba(255,255,255,0.06);
+                    border: 1px solid rgba(255,255,255,0.55);
+                    border-radius: 12px;
+                    font-size: 0.82rem; color: #2d1a08;
+                    font-family: 'Inter', sans-serif; outline: none;
+                    backdrop-filter: blur(10px);
+                    -webkit-backdrop-filter: blur(10px);
+                    box-shadow: 0 2px 8px rgba(160,80,10,0.06), inset 0 1px 0 rgba(255,255,255,0.7);
+                    transition: all 0.18s;
+                    width: 200px;
+                }
+                .rc-search::placeholder { color: rgba(180,100,30,0.38); }
+                .rc-search:focus {
+                    border-color: rgba(220,38,38,0.4);
+                    box-shadow: 0 0 0 3px rgba(220,38,38,0.06), inset 0 1px 0 rgba(255,255,255,0.8);
+                    background: rgba(255,255,255,0.1);
+                }
+
+                .rc-badge-active   { background: rgba(16,185,129,0.1);  border: 1px solid rgba(16,185,129,0.25);  color: rgba(4,120,87,0.85);   padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+                .rc-badge-inactive { background: rgba(180,90,20,0.07);  border: 1px solid rgba(180,90,20,0.15);  color: rgba(150,80,20,0.6);   padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+                .rc-badge-debt     { background: rgba(220,38,38,0.08);  border: 1px solid rgba(220,38,38,0.2);   color: rgba(185,28,28,0.85);  padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+
+                @media (max-width: 1024px) {
+                    .rc-kpis { grid-template-columns: repeat(3, minmax(0,1fr)) !important; }
+                    .rc-mid-grid { grid-template-columns: 1fr !important; }
+                }
+
+                @media (max-width: 768px) {
+                    .rc-page-pad { padding:1.25rem 0.9rem !important; }
+                    .rc-head-pad { padding:1rem 0.9rem !important; }
+                    .rc-title { font-size:1.3rem !important; }
+                    .rc-sub { font-size:0.78rem !important; }
+                    .rc-kpis { grid-template-columns: repeat(2, minmax(0,1fr)) !important; gap:0.75rem !important; }
+                    .rc-toolbar { padding:1rem !important; }
+                    .rc-search { width:100%; min-width:0; }
+                    .rc-filter-row { width:100%; display:grid !important; grid-template-columns:1fr; gap:0.55rem !important; }
+                    .rc-control-btn { width:100%; justify-content:space-between; }
+                    .rc-table-wrap table { min-width:900px; }
+                }
+
+                @media (max-width: 480px) {
+                    .rc-kpis { grid-template-columns: 1fr !important; }
+                }
             `}</style>
 
             <div className="rc-bg">
-
                 {/* ── Header ── */}
                 <div className="rc-header">
-                    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem' }}>
+                    <div className="rc-head-pad" style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                             <Link href="/reportes"
                                   style={{
@@ -324,10 +503,10 @@ export default function ReporteClientes({ clientes = [], kpis = {}, frecuencia =
                                 </svg>
                             </Link>
                             <div>
-                                <h1 style={{ fontSize: '1.65rem', fontWeight: '300', color: '#2d1a08', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                                <h1 className="rc-title" style={{ fontSize: '1.65rem', fontWeight: '300', color: '#2d1a08', letterSpacing: '-0.03em', lineHeight: 1 }}>
                                     Reporte de Clientes
                                 </h1>
-                                <p style={{ marginTop: '0.3rem', fontSize: '0.85rem', color: 'rgba(150,80,20,0.6)' }}>
+                                <p className="rc-sub" style={{ marginTop: '0.3rem', fontSize: '0.85rem', color: 'rgba(150,80,20,0.6)' }}>
                                     Análisis de comportamiento y valor de clientes · {clientes.length} registros
                                 </p>
                             </div>
@@ -335,10 +514,9 @@ export default function ReporteClientes({ clientes = [], kpis = {}, frecuencia =
                     </div>
                 </div>
 
-                <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-
+                <div className="rc-page-pad" style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1.5rem' }}>
                     {/* ── KPIs ── */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '1.1rem', marginBottom: '2rem' }}>
+                    <div className="rc-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '1.1rem', marginBottom: '2rem' }}>
                         {[
                             { label: 'Total clientes',   value: kpis.total_clientes,    color: '#2d1a08',            accent: 'rgba(100,60,10,0.8)',    accentBg: 'rgba(100,60,10,0.07)',    anim: 'rc-anim-1' },
                             { label: 'Activos',          value: kpis.clientes_activos,  color: 'rgba(4,120,87,0.9)', accent: 'rgba(16,185,129,0.8)',   accentBg: 'rgba(16,185,129,0.07)',   anim: 'rc-anim-2' },
@@ -368,9 +546,7 @@ export default function ReporteClientes({ clientes = [], kpis = {}, frecuencia =
                     </div>
 
                     {/* ── Frecuencia + Top 5 ── */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.25rem', marginBottom: '2rem' }}
-                         className="rc-anim-1">
-
+                    <div className="rc-mid-grid rc-anim-1" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.25rem', marginBottom: '2rem' }}>
                         {/* Frecuencia de compra */}
                         <div className="rc-glass-card" style={{ padding: '1.5rem' }}>
                             <h2 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2d1a08', marginBottom: '0.3rem' }}>
@@ -481,7 +657,7 @@ export default function ReporteClientes({ clientes = [], kpis = {}, frecuencia =
                                     </p>
                                 )}
                             </div>
-                            <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div className="rc-filter-row" style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                 {/* Buscador */}
                                 <div style={{ position: 'relative' }}>
                                     <svg style={{ position: 'absolute', left: '0.7rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(180,100,30,0.4)', pointerEvents: 'none' }}
@@ -507,7 +683,7 @@ export default function ReporteClientes({ clientes = [], kpis = {}, frecuencia =
                         </div>
 
                         {/* Tabla */}
-                        <div style={{ overflowX: 'auto' }}>
+                        <div className="rc-table-wrap">
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
                                 <tr style={{ borderBottom: '1px solid rgba(180,90,20,0.12)' }}>

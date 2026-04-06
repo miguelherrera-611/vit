@@ -5,11 +5,11 @@ import Pagination from '@/Components/Pagination';
 import PasswordConfirmModal from '@/Components/PasswordConfirmModal';
 
 const TIPOS = {
-    producto:  { label: 'Productos',   emoji: '📦', accent: 'rgba(59,130,246,0.8)',  accentBg: 'rgba(59,130,246,0.08)'  },
-    cliente:   { label: 'Clientes',    emoji: '👤', accent: 'rgba(236,72,153,0.8)',  accentBg: 'rgba(236,72,153,0.08)'  },
-    proveedor: { label: 'Proveedores', emoji: '🏭', accent: 'rgba(99,102,241,0.8)',  accentBg: 'rgba(99,102,241,0.08)'  },
-    venta:     { label: 'Ventas',      emoji: '🧾', accent: 'rgba(16,185,129,0.8)',  accentBg: 'rgba(16,185,129,0.08)'  },
-    categoria: { label: 'Categorías',  emoji: '🏷️', accent: 'rgba(139,92,246,0.8)', accentBg: 'rgba(139,92,246,0.08)' },
+    producto:  { label: 'Productos',   accent: 'rgba(59,130,246,0.8)',  accentBg: 'rgba(59,130,246,0.08)'  },
+    cliente:   { label: 'Clientes',    accent: 'rgba(236,72,153,0.8)',  accentBg: 'rgba(236,72,153,0.08)'  },
+    proveedor: { label: 'Proveedores', accent: 'rgba(99,102,241,0.8)',  accentBg: 'rgba(99,102,241,0.08)'  },
+    venta:     { label: 'Ventas',      accent: 'rgba(16,185,129,0.8)',  accentBg: 'rgba(16,185,129,0.08)'  },
+    categoria: { label: 'Categorías',  accent: 'rgba(139,92,246,0.8)',  accentBg: 'rgba(139,92,246,0.08)' },
 };
 
 const URGENCIA = (dias) => {
@@ -212,6 +212,71 @@ const STYLES = `
     .anim-3 { animation: staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.15s both; }
     .anim-4 { animation: staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.20s both; }
     .anim-5 { animation: staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.25s both; }
+
+    .tabla-wrap{
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.62);
+        border-radius: 16px;
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(180,90,20,0.06);
+    }
+    .tabla-scroll{
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+    .pap-table{
+        width: 100%;
+        min-width: 920px;
+        border-collapse: collapse;
+    }
+    .pap-table thead th{
+        text-align: left;
+        font-size: .72rem;
+        font-weight: 600;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        color: rgba(120,60,10,0.55);
+        padding: .9rem 1rem;
+        background: rgba(255,255,255,0.22);
+        border-bottom: 1px solid rgba(255,255,255,0.55);
+        white-space: nowrap;
+    }
+    .pap-table tbody td{
+        padding: .85rem 1rem;
+        border-bottom: 1px solid rgba(255,255,255,0.45);
+        vertical-align: middle;
+    }
+    .pap-table tbody tr:last-child td{ border-bottom: none; }
+    .pap-table tbody tr:hover{ background: rgba(255,255,255,0.14); }
+    .pap-table tbody tr{ cursor:pointer; transition:background .15s ease; }
+
+    .tipo-dot{
+        width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+        display:flex; align-items:center; justify-content:center;
+        position: relative;
+    }
+    .tipo-dot::after{
+        content:'';
+        width:10px; height:10px; border-radius:50%;
+        background: currentColor;
+        box-shadow: 0 0 0 3px rgba(255,255,255,0.45);
+    }
+
+    .cell-main{
+        display:flex; align-items:center; gap:.75rem; min-width: 280px;
+    }
+    .cell-actions{
+        display:flex; align-items:center; gap:.55rem; justify-content:flex-end;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 768px){
+        .pap-table thead th, .pap-table tbody td{ padding: .78rem .85rem; }
+    }
 `;
 
 export default function PapeleraIndex({ items, conteos, filtro }) {
@@ -323,7 +388,6 @@ export default function PapeleraIndex({ items, conteos, filtro }) {
                                             className={`filter-tab${filtro === key ? ' active' : ''}`}
                                             onClick={() => setFiltro(key)}
                                         >
-                                            <span>{cfg.emoji}</span>
                                             <span>{cfg.label} ({conteos[key]})</span>
                                         </button>
                                     )
@@ -356,61 +420,84 @@ export default function PapeleraIndex({ items, conteos, filtro }) {
                         </div>
                     ) : (
                         <>
-                            <div style={{display:'flex', flexDirection:'column', gap:'0.65rem'}}>
-                                {datosPaginados.map((item, i) => {
-                                    const cfg      = TIPOS[item.tipo] || { label: item.tipo, emoji: '📄', accent: 'rgba(150,80,20,0.7)', accentBg: 'rgba(150,80,20,0.07)' };
-                                    const urgencia = URGENCIA(item.dias_restantes);
-                                    const animClass = `anim-${Math.min(i + 1, 5)}`;
+                            <div className="tabla-wrap anim-1">
+                                <div className="tabla-scroll">
+                                    <table className="pap-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Elemento</th>
+                                                <th>Tipo</th>
+                                                <th>Eliminado</th>
+                                                <th>Vencimiento</th>
+                                                <th style={{textAlign:'right'}}>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {datosPaginados.map((item) => {
+                                                const cfg = TIPOS[item.tipo] || { emoji: '🗂️', label: item.tipo, accent: 'rgba(150,80,20,0.7)', accentBg: 'rgba(150,80,20,0.07)' };
+                                                const urgencia = URGENCIA(item.dias_restantes);
 
-                                    return (
-                                        <div key={item.id} className={`item-card ${animClass}`}>
-                                            {/* Tipo + nombre */}
-                                            <div style={{display:'flex', alignItems:'center', gap:'1rem', minWidth:0}}>
-                                                <div style={{
-                                                    width:'42px', height:'42px', borderRadius:'13px', flexShrink:0,
-                                                    background: cfg.accentBg,
-                                                    border:`1px solid ${cfg.accent.replace(/[\d.]+\)$/, '0.2)')}`,
-                                                    display:'flex', alignItems:'center', justifyContent:'center',
-                                                    fontSize:'1.15rem',
-                                                }}>
-                                                    {cfg.emoji}
-                                                </div>
-                                                <div style={{minWidth:0}}>
-                                                    <p style={{fontWeight:'600', color:'#2d1a08', fontSize:'0.9rem', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
-                                                        {item.nombre_display}
-                                                    </p>
-                                                    <p style={{fontSize:'0.72rem', color:'rgba(150,80,20,0.5)', marginTop:'0.2rem'}}>
-                                                        {cfg.label} · Eliminado el {item.eliminado_at}
-                                                        {item.eliminado_por && ` por ${item.eliminado_por}`}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            {/* Urgencia + acciones */}
-                                            <div style={{display:'flex', alignItems:'center', gap:'0.65rem', flexShrink:0}}>
-                                                <span
-                                                    className="urgencia-badge"
-                                                    style={{background:urgencia.bg, borderColor:urgencia.border, color:urgencia.color}}
-                                                >
-                                                    {urgencia.label}
-                                                </span>
-
-                                                <button className="btn-restore" onClick={() => openModal('restore', item)}>
-                                                    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                                        <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                                                    </svg>
-                                                    Restaurar
-                                                </button>
-
-                                                <button className="btn-delete-perm" onClick={() => openModal('delete', item)} title="Eliminar permanentemente">
-                                                    <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                                return (
+                                                    <tr key={item.id} onClick={() => router.visit(`/papelera/${item.id}`)}>
+                                                        <td>
+                                                            <div className="cell-main">
+                                                                <div
+                                                                    className="tipo-dot"
+                                                                    style={{
+                                                                        background: cfg.accentBg,
+                                                                        border:`1px solid ${cfg.accent.replace(/[\d.]+\)$/, '0.2)')}`,
+                                                                        color: cfg.accent,
+                                                                        fontSize:'0.95rem',
+                                                                    }}
+                                                                >
+                                                                    <span role="img" aria-label={cfg.label}>{cfg.emoji}</span>
+                                                                </div>
+                                                                <div style={{minWidth:0}}>
+                                                                    <p style={{fontWeight:'600', color:'#2d1a08', fontSize:'0.88rem', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+                                                                        {item.nombre_display}
+                                                                    </p>
+                                                                    <p style={{fontSize:'0.72rem', color:'rgba(150,80,20,0.5)', marginTop:'0.15rem'}}>
+                                                                        {item.eliminado_por ? `por ${item.eliminado_por}` : 'sin usuario'}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <span style={{fontSize:'0.78rem', color:'rgba(120,60,10,0.72)'}}>{cfg.label}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span style={{fontSize:'0.78rem', color:'rgba(120,60,10,0.72)'}}>{item.eliminado_at}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span className="urgencia-badge" style={{background:urgencia.bg, borderColor:urgencia.border, color:urgencia.color}}>
+                                                                {urgencia.label}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <div className="cell-actions">
+                                                                <button
+                                                                    className="btn-restore"
+                                                                    onClick={(e) => { e.stopPropagation(); openModal('restore', item); }}
+                                                                >
+                                                                    Restaurar
+                                                                </button>
+                                                                <button
+                                                                    className="btn-delete-perm"
+                                                                    onClick={(e) => { e.stopPropagation(); openModal('delete', item); }}
+                                                                    title="Eliminar permanentemente"
+                                                                >
+                                                                    <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                                                                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
 
                             <Pagination

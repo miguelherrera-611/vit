@@ -509,11 +509,32 @@ export default function ReporteInventario({ productos = [], porCategoria = [], c
                     gap: 0.65rem;
                     align-items: center;
                 }
+
+                .inv-filtros-actions {
+                    display: flex;
+                    gap: 0.5rem;
+                    flex-shrink: 0;
+                    align-items: center;
+                }
+
                 /* En móvil el buscador ocupa toda la fila, dropdowns en fila */
                 @media (max-width: 600px) {
                     .inv-filtros-row { gap: 0.5rem; }
                     .inv-search-wrap { width: 100%; }
                     .inv-search { width: 100%; box-sizing: border-box; }
+
+                    .inv-filtros-actions {
+                        width: 100%;
+                        flex-wrap: wrap;
+                        justify-content: flex-start;
+                    }
+
+                    .inv-btn-limpiar {
+                        order: 2;
+                        width: 100%;
+                        justify-content: center;
+                        margin-top: 0.15rem;
+                    }
                 }
 
                 /* Responsive KPIs */
@@ -714,20 +735,22 @@ export default function ReporteInventario({ productos = [], porCategoria = [], c
                                     </div>
 
                                     {/* Dropdowns en fila */}
-                                    <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                                    <div className="inv-filtros-actions">
                                         <CategoriaDropdown value={filtroCat} onChange={cambiarCat} categorias={categorias} />
                                         <EstadoDropdown value={filtroEstado} onChange={cambiarEstado} />
                                         {hayFiltros && (
-                                            <button onClick={() => { cambiarBusqueda(''); cambiarCat(''); cambiarEstado(''); }}
-                                                    style={{
-                                                        display: 'flex', alignItems: 'center', gap: '0.4rem',
-                                                        padding: '0.5rem 0.75rem',
-                                                        fontSize: '0.78rem', fontWeight: '500',
-                                                        background: 'none', border: '1px solid rgba(220,38,38,0.2)',
-                                                        borderRadius: '10px', cursor: 'pointer',
-                                                        color: 'rgba(185,28,28,0.7)', fontFamily: 'Inter, sans-serif',
-                                                        transition: 'all 0.15s', whiteSpace: 'nowrap',
-                                                    }}>
+                                            <button
+                                                onClick={() => { cambiarBusqueda(''); cambiarCat(''); cambiarEstado(''); }}
+                                                className="inv-btn-limpiar"
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: '0.4rem',
+                                                    padding: '0.5rem 0.75rem',
+                                                    fontSize: '0.78rem', fontWeight: '500',
+                                                    background: 'none', border: '1px solid rgba(220,38,38,0.2)',
+                                                    borderRadius: '10px', cursor: 'pointer',
+                                                    color: 'rgba(185,28,28,0.7)', fontFamily: 'Inter, sans-serif',
+                                                    transition: 'all 0.15s', whiteSpace: 'nowrap',
+                                                }}>
                                                 <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                                                 </svg>

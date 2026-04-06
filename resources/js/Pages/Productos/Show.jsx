@@ -106,25 +106,30 @@ const STYLES = `
         font-size: 0.68rem; font-weight: 600; color: rgba(255,255,255,0.9);
         pointer-events: none; z-index: 3;
     }
-    .gallery-thumbs {
-        display: flex; gap: 0.45rem; overflow-x: auto; padding-bottom: 2px; margin-top: 0.6rem;
+    .gallery-thumbs-pager {
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:0.4rem;
+        margin-top:0.6rem;
+        width:100%;
     }
-    .gallery-thumbs::-webkit-scrollbar { height: 3px; }
-    .gallery-thumbs::-webkit-scrollbar-thumb { background: rgba(200,140,80,0.3); border-radius: 3px; }
-    .gallery-thumb {
-        width: 54px; height: 54px; border-radius: 9px; overflow: hidden; flex-shrink: 0;
-        border: 2px solid transparent; cursor: pointer; transition: all 0.18s;
-        box-shadow: 0 2px 8px rgba(180,90,20,0.08);
+    .gallery-thumbs-window {
+        display:flex;
+        gap:0.45rem;
+        justify-content:center;
+        flex:0 1 auto;
+        min-width:0;
+        overflow:hidden;
     }
-    .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .gallery-thumb.active { border-color: rgba(220,38,38,0.6); box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
-    .gallery-thumb:hover:not(.active) { border-color: rgba(200,140,80,0.5); }
-    .gallery-zoom-hint {
-        position: absolute; top: 10px; right: 10px;
-        background: rgba(0,0,0,0.4); backdrop-filter: blur(6px);
-        border-radius: 8px; padding: 3px 8px;
-        font-size: 0.62rem; color: rgba(255,255,255,0.8); pointer-events: none; z-index: 3;
+    .gallery-page-btn {
+        width:28px; height:28px; border-radius:8px; border:1px solid rgba(200,140,80,0.25);
+        background:rgba(255,255,255,0.7); color:rgba(120,60,10,0.75); cursor:pointer;
+        display:flex; align-items:center; justify-content:center; transition:all .15s;
+        flex-shrink:0;
     }
+    .gallery-page-btn:hover:not(:disabled) { background:#fff; border-color:rgba(200,140,80,0.45); }
+    .gallery-page-btn:disabled { opacity:.35; cursor:not-allowed; }
 
     /* ── NUEVO: Lightbox ── */
     .lightbox-overlay {
@@ -331,8 +336,24 @@ const STYLES = `
     .a3 { animation: fadeUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.21s both; }
     .a4 { animation: fadeUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.29s both; }
 
+    @media (max-width: 992px) { .show-grid { grid-template-columns:1fr !important; gap:1.2rem !important; } }
     @media (max-width: 768px) {
-        .show-grid { grid-template-columns: 1fr !important; }
+        .pg-header > div, .pg-bg > div { padding-left:1rem !important; padding-right:1rem !important; }
+        .price-hero { padding:1rem 1.1rem; border-radius:14px; }
+        .gallery-thumb { width:48px; height:48px; }
+
+        .gallery-thumbs-pager {
+            justify-content:center;
+            margin-left:auto;
+            margin-right:auto;
+        }
+        .gallery-thumbs-window {
+            justify-content:center;
+        }
+    }
+    @media (max-width: 560px) {
+        .btn-edit { width:100%; justify-content:center; }
+        .show-grid .glass-panel[style*="padding: 1.5rem"] { padding:1.1rem !important; }
     }
 `;
 
@@ -366,6 +387,12 @@ export default function ProductosShow({ producto }) {
 
     const [fotoActiva, setFotoActiva] = useState(0);
     const [lightbox, setLightbox]     = useState(false);
+
+    const THUMBS_POR_VISTA = 3;
+    const thumbPage = Math.floor(fotoActiva / THUMBS_POR_VISTA);
+    const totalThumbPages = Math.ceil(todasLasFotos.length / THUMBS_POR_VISTA);
+    const thumbStart = thumbPage * THUMBS_POR_VISTA;
+    const thumbsVisibles = todasLasFotos.slice(thumbStart, thumbStart + THUMBS_POR_VISTA);
 
     const fotoAnterior  = () => setFotoActiva(f => (f - 1 + todasLasFotos.length) % todasLasFotos.length);
     const fotoSiguiente = () => setFotoActiva(f => (f + 1) % todasLasFotos.length);
@@ -459,9 +486,6 @@ export default function ProductosShow({ producto }) {
                                                     <span className="gallery-counter">{fotoActiva + 1} / {todasLasFotos.length}</span>
                                                 </>
                                             )}
-                                            {todasLasFotos.length > 0 && (
-                                                <span className="gallery-zoom-hint">🔍 ampliar</span>
-                                            )}
                                         </>
                                     ) : (
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.7rem', padding: '3rem 2rem', opacity: 0.55 }}>
@@ -476,12 +500,43 @@ export default function ProductosShow({ producto }) {
 
                                 {/* ── NUEVO: Thumbnails si hay más de 1 foto ── */}
                                 {todasLasFotos.length > 1 && (
-                                    <div className="gallery-thumbs">
-                                        {todasLasFotos.map((foto, idx) => (
-                                            <div key={idx} className={`gallery-thumb${fotoActiva === idx ? ' active' : ''}`} onClick={() => setFotoActiva(idx)}>
-                                                <img src={foto} alt={`Foto ${idx + 1}`} />
-                                            </div>
-                                        ))}
+                                    <div className="gallery-thumbs-pager">
+                                        <button
+                                            type="button"
+                                            className="gallery-page-btn"
+                                            onClick={() => setFotoActiva(Math.max(0, fotoActiva - THUMBS_POR_VISTA))}
+                                            disabled={thumbPage === 0}
+                                        >
+                                            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
+                                            </svg>
+                                        </button>
+
+                                        <div className="gallery-thumbs-window">
+                                            {thumbsVisibles.map((foto, idx) => {
+                                                const realIdx = thumbStart + idx;
+                                                return (
+                                                    <div
+                                                        key={realIdx}
+                                                        className={`gallery-thumb${fotoActiva === realIdx ? ' active' : ''}`}
+                                                        onClick={() => setFotoActiva(realIdx)}
+                                                    >
+                                                        <img src={foto} alt={`Foto ${realIdx + 1}`} />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            className="gallery-page-btn"
+                                            onClick={() => setFotoActiva(Math.min(todasLasFotos.length - 1, fotoActiva + THUMBS_POR_VISTA))}
+                                            disabled={thumbPage >= totalThumbPages - 1}
+                                        >
+                                            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                                            </svg>
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -498,7 +553,7 @@ export default function ProductosShow({ producto }) {
                                 {/* ── NUEVO: badge fotos ── */}
                                 {todasLasFotos.length > 1 && (
                                     <span className="badge" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.22)', color: 'rgba(29,78,216,0.8)' }}>
-                                        🖼 {todasLasFotos.length} fotos
+                                        {todasLasFotos.length} fotos
                                     </span>
                                 )}
                             </div>

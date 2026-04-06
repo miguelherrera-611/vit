@@ -1,7 +1,21 @@
-import { Fragment } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 
 export default function ClienteDetalleModal({ cliente, open, onClose }) {
+    const [mobileTopPad, setMobileTopPad] = useState(12);
+
+    useEffect(() => {
+        if (!open) return;
+        const recalcTop = () => {
+            const nav = document.querySelector('.app-nav');
+            const navH = nav ? nav.getBoundingClientRect().height : 56;
+            setMobileTopPad(navH + 8);
+        };
+        recalcTop();
+        window.addEventListener('resize', recalcTop);
+        return () => window.removeEventListener('resize', recalcTop);
+    }, [open]);
+
     if (!cliente) return null;
 
     // Formatear moneda
@@ -57,101 +71,106 @@ export default function ClienteDetalleModal({ cliente, open, onClose }) {
     return (
         <Transition appear show={open} as={Fragment}>
             <Dialog as="div" className="relative z-50" onClose={onClose}>
-                <Transition.Child
-                    as={Fragment}
-                    enter="ease-out duration-300"
-                    enterFrom="opacity-0"
-                    enterTo="opacity-100"
-                    leave="ease-in duration-200"
-                    leaveFrom="opacity-100"
-                    leaveTo="opacity-0"
-                >
-                    <div className="fixed inset-0 bg-black bg-opacity-25" />
+                <style>{`
+                    .cdm-panel{
+                        width:100%;
+                        max-width:980px;
+                        max-height:90vh;
+                        overflow:hidden;
+                        border-radius:22px;
+                        background:rgba(255,255,255,.92);
+                        border:1px solid rgba(255,255,255,.72);
+                        box-shadow:0 24px 64px rgba(180,90,20,.16),0 8px 24px rgba(180,90,20,.08);
+                        display:flex;
+                        flex-direction:column;
+                    }
+                    .cdm-head{padding:1.1rem 1.2rem;border-bottom:1px solid rgba(200,140,80,.12);display:flex;justify-content:space-between;gap:.8rem}
+                    .cdm-body{padding:1rem 1.2rem;overflow:auto}
+                    .cdm-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7rem;margin-bottom:1rem}
+                    .cdm-stat{background:rgba(255,255,255,.65);border:1px solid rgba(200,140,80,.14);border-radius:12px;padding:.75rem}
+                    .cdm-list{display:flex;flex-direction:column;gap:.55rem}
+                    .cdm-item{background:rgba(255,255,255,.66);border:1px solid rgba(200,140,80,.12);border-radius:12px;padding:.8rem}
+                    .cdm-sale-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-bottom:.65rem;flex-wrap:wrap}
+                    .cdm-sale-meta{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
+                    .cdm-sale-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.65rem}
+                    .cdm-footer{padding:.9rem 1.2rem;border-top:1px solid rgba(200,140,80,.12);display:flex;justify-content:flex-end}
+
+                    @media (max-width:900px){
+                        .cdm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+                        .cdm-sale-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+                    }
+
+                    @media (max-width:640px){
+                        .cdm-panel{
+                            width:calc(100vw - 1rem);
+                            max-width:calc(100vw - 1rem);
+                            max-height:78vh; /* más compacto verticalmente */
+                            border-radius:16px;
+                        }
+                        .cdm-head,.cdm-body,.cdm-footer{padding:.82rem}
+                        .cdm-grid{grid-template-columns:1fr}
+                        .cdm-sale-grid{grid-template-columns:1fr}
+                        .cdm-item{padding:.68rem}
+                    }
+                `}</style>
+
+                <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
+                    <div className="fixed inset-0 bg-black/35 backdrop-blur-[2px]" />
                 </Transition.Child>
 
                 <div className="fixed inset-0 overflow-y-auto">
-                    <div className="flex min-h-full items-center justify-center p-4">
-                        <Transition.Child
-                            as={Fragment}
-                            enter="ease-out duration-300"
-                            enterFrom="opacity-0 scale-95"
-                            enterTo="opacity-100 scale-100"
-                            leave="ease-in duration-200"
-                            leaveFrom="opacity-100 scale-100"
-                            leaveTo="opacity-0 scale-95"
-                        >
-                            <Dialog.Panel className="w-full max-w-5xl transform overflow-hidden rounded-2xl bg-white p-8 text-left align-middle shadow-xl transition-all">
-                                {/* Header */}
-                                <div className="flex items-start justify-between mb-6">
-                                    <div className="flex items-center">
-                                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mr-4">
-                                            <span className="text-white font-bold text-2xl">
+                    <div
+                        className="flex min-h-full items-start sm:items-center justify-center p-2 sm:p-4"
+                        style={{ paddingTop: `max(${mobileTopPad}px, 0.75rem)` }}
+                    >
+                        <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+                            <Dialog.Panel className="cdm-panel">
+                                <div className="cdm-head">
+                                    <div className="flex items-center min-w-0">
+                                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center mr-3"
+                                             style={{background:'rgba(220,38,38,.09)',border:'1px solid rgba(220,38,38,.2)'}}>
+                                            <span className="font-bold text-xl" style={{color:'rgba(185,28,28,.85)'}}>
                                                 {cliente.nombre.charAt(0).toUpperCase()}
                                             </span>
                                         </div>
-                                        <div>
-                                            <Dialog.Title className="text-2xl font-semibold text-gray-900">
-                                                {cliente.nombre}
-                                            </Dialog.Title>
-                                            <p className="text-sm text-gray-500 mt-1">
-                                                {cliente.documento} • {cliente.telefono}
-                                            </p>
+                                        <div className="min-w-0">
+                                            <Dialog.Title className="text-xl font-semibold text-gray-900 truncate">{cliente.nombre}</Dialog.Title>
+                                            <p className="text-xs text-gray-500 truncate">{cliente.documento || 'Sin documento'} · {cliente.telefono || 'Sin teléfono'}</p>
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={onClose}
-                                        className="text-gray-400 hover:text-gray-600 transition"
-                                    >
+                                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
                                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
                                     </button>
                                 </div>
 
-                                {/* Estadísticas */}
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4">
-                                        <p className="text-sm text-blue-600 font-medium">Total Compras</p>
-                                        <p className="text-2xl font-bold text-blue-900 mt-1">{totalCompras}</p>
+                                <div className="cdm-body">
+                                    <div className="cdm-grid">
+                                        <div className="cdm-stat">
+                                            <p className="text-sm text-gray-500 font-medium">Total Compras</p>
+                                            <p className="text-2xl font-bold text-gray-900 mt-1">{totalCompras}</p>
+                                        </div>
+                                        <div className="cdm-stat">
+                                            <p className="text-sm text-gray-500 font-medium">Total Gastado</p>
+                                            <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totalGastado)}</p>
+                                        </div>
+                                        <div className="cdm-stat">
+                                            <p className="text-sm text-gray-500 font-medium">Separados</p>
+                                            <p className="text-2xl font-bold text-gray-900 mt-1">{comprasSeparado}</p>
+                                        </div>
+                                        <div className="cdm-stat">
+                                            <p className="text-sm text-gray-500 font-medium">Saldo Pendiente</p>
+                                            <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(saldoPendiente)}</p>
+                                        </div>
                                     </div>
-                                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4">
-                                        <p className="text-sm text-green-600 font-medium">Total Gastado</p>
-                                        <p className="text-2xl font-bold text-green-900 mt-1">{formatCurrency(totalGastado)}</p>
-                                    </div>
-                                    <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-4">
-                                        <p className="text-sm text-yellow-600 font-medium">Separados</p>
-                                        <p className="text-2xl font-bold text-yellow-900 mt-1">{comprasSeparado}</p>
-                                    </div>
-                                    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-4">
-                                        <p className="text-sm text-red-600 font-medium">Saldo Pendiente</p>
-                                        <p className="text-2xl font-bold text-red-900 mt-1">{formatCurrency(saldoPendiente)}</p>
-                                    </div>
-                                </div>
 
-                                {/* Tabs de tipo de compra */}
-                                <div className="flex space-x-4 mb-6 border-b border-gray-200">
-                                    <div className="pb-3 border-b-2 border-blue-600">
-                                        <span className="text-sm font-medium text-blue-600">Todas ({totalCompras})</span>
-                                    </div>
-                                    <div className="pb-3">
-                                        <span className="text-sm text-gray-500">Contado ({comprasContado})</span>
-                                    </div>
-                                    <div className="pb-3">
-                                        <span className="text-sm text-gray-500">Separado ({comprasSeparado})</span>
-                                    </div>
-                                    <div className="pb-3">
-                                        <span className="text-sm text-gray-500">Crédito ({comprasCredito})</span>
-                                    </div>
-                                </div>
-
-                                {/* Historial de compras */}
-                                <div className="max-h-96 overflow-y-auto">
-                                    {cliente.ventas && cliente.ventas.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {cliente.ventas.map((venta) => (
-                                                <div key={venta.id} className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition">
-                                                    <div className="flex items-center justify-between mb-3">
-                                                        <div className="flex items-center space-x-3">
+                                    <div className="cdm-list">
+                                        {cliente.ventas && cliente.ventas.length > 0 ? (
+                                            cliente.ventas.map((venta) => (
+                                                <div key={venta.id} className="cdm-item">
+                                                    <div className="cdm-sale-head">
+                                                        <div className="cdm-sale-meta">
                                                             <span className="text-sm font-medium text-gray-900">
                                                                 Venta #{venta.numero_venta}
                                                             </span>
@@ -162,12 +181,12 @@ export default function ClienteDetalleModal({ cliente, open, onClose }) {
                                                                 {venta.estado}
                                                             </span>
                                                         </div>
-                                                        <span className="text-sm text-gray-500">
+                                                        <span className="text-xs sm:text-sm text-gray-500">
                                                             {formatDate(venta.created_at)}
                                                         </span>
                                                     </div>
 
-                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                                    <div className="cdm-sale-grid text-sm">
                                                         <div>
                                                             <p className="text-gray-500">Total</p>
                                                             <p className="font-semibold text-gray-900">{formatCurrency(venta.total)}</p>
@@ -215,27 +234,24 @@ export default function ClienteDetalleModal({ cliente, open, onClose }) {
                                                         </div>
                                                     )}
                                                 </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-12">
-                                            <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-                                                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                                </svg>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-10">
+                                                <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                                                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                                    </svg>
+                                                </div>
+                                                <h3 className="text-lg font-semibold text-gray-900 mb-1">Sin historial de compras</h3>
+                                                <p className="text-gray-500">Este cliente aún no ha realizado ninguna compra</p>
                                             </div>
-                                            <h3 className="text-lg font-semibold text-gray-900 mb-1">Sin historial de compras</h3>
-                                            <p className="text-gray-500">Este cliente aún no ha realizado ninguna compra</p>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
 
-                                {/* Footer */}
-                                <div className="mt-8 flex justify-end space-x-3">
-                                    <button
-                                        onClick={onClose}
-                                        className="px-6 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition"
-                                    >
+                                <div className="cdm-footer">
+                                    <button onClick={onClose}
+                                            style={{padding:'.6rem 1rem',borderRadius:'10px',background:'rgba(255,255,255,.7)',border:'1px solid rgba(200,140,80,.18)',color:'rgba(120,60,10,.78)'}}>
                                         Cerrar
                                     </button>
                                 </div>

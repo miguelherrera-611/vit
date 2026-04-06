@@ -383,6 +383,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [PapeleraController::class, 'index'])
             ->middleware('role_or_permission:admin|gestionar_papelera')
             ->name('index');
+
+        Route::get('/{item}', [PapeleraController::class, 'show'])
+            ->middleware('role_or_permission:admin|gestionar_papelera')
+            ->name('show');
+
         Route::post('/vaciar', [PapeleraController::class, 'vaciar'])
             ->middleware('role:admin')
             ->name('vaciar');
