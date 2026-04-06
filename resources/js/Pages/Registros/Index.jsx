@@ -242,6 +242,44 @@ function ModuloIcon({ modulo }) {
     );
 }
 
+function GlassCheck({ checked, onChange, indeterminate = false }) {
+    return (
+        <span
+            onClick={(e) => { e.stopPropagation(); onChange(); }}
+            style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: '16px', height: '16px', flexShrink: 0,
+                borderRadius: '5px', cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                background: checked
+                    ? 'rgba(185,28,28,0.12)'
+                    : 'rgba(255,255,255,0.7)',
+                border: checked
+                    ? '1.5px solid rgba(185,28,28,0.45)'
+                    : '1.5px solid rgba(200,130,60,0.35)',
+                boxShadow: checked
+                    ? '0 0 0 3px rgba(185,28,28,0.07), inset 0 1px 0 rgba(255,255,255,0.5)'
+                    : 'inset 0 1px 0 rgba(255,255,255,0.8)',
+            }}
+        >
+            {checked && !indeterminate && (
+                <svg width="9" height="9" fill="none" viewBox="0 0 10 10">
+                    <path d="M1.5 5l2.5 2.5 4.5-4.5"
+                          stroke="rgba(185,28,28,0.85)" strokeWidth="1.8"
+                          strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+            )}
+            {indeterminate && (
+                <svg width="8" height="8" fill="none" viewBox="0 0 10 10">
+                    <path d="M2 5h6"
+                          stroke="rgba(185,28,28,0.85)" strokeWidth="1.8"
+                          strokeLinecap="round"/>
+                </svg>
+            )}
+        </span>
+    );
+}
+
 export default function RegistrosIndex({ registros, modulos, acciones, filtros, esperando2FA, delete_count }) {
     const { props } = usePage();
     const flash = props.flash ?? {};
@@ -256,6 +294,16 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
     const [errorPassword, setErrorPassword] = useState('');
 
     const form2FA = useForm({ code: '' });
+    const [usuarioInput, setUsuarioInput] = useState(filtros.usuario ?? '');
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (usuarioInput !== filtros.usuario) {
+                aplicarFiltro('usuario', usuarioInput);
+            }
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [usuarioInput]);
 
     useEffect(() => {
         if (esperando2FA) {
@@ -716,8 +764,8 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                         <label className="rg-label">Usuario</label>
                         <input
                             type="text"
-                            value={filtros.usuario}
-                            onChange={(e) => aplicarFiltro('usuario', e.target.value)}
+                            value={usuarioInput}
+                            onChange={(e) => setUsuarioInput(e.target.value)}
                             placeholder="Buscar usuario..."
                             className="rg-input"
                         />
@@ -786,8 +834,11 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                                     <thead>
                                     <tr>
                                         <th className="rg-th" style={{ width: '36px' }}>
-                                            <input type="checkbox" checked={todosSeleccionados} onChange={toggleTodos}
-                                                   style={{ width: '14px', height: '14px', cursor: 'pointer', accentColor: 'rgba(185,28,28,0.8)' }}/>
+                                            <GlassCheck
+                                                checked={todosSeleccionados}
+                                                indeterminate={algunoSeleccionado && !todosSeleccionados}
+                                                onChange={toggleTodos}
+                                            />
                                         </th>
                                         <th className="rg-th">Fecha / Hora</th>
                                         <th className="rg-th">Usuario</th>
@@ -802,8 +853,10 @@ export default function RegistrosIndex({ registros, modulos, acciones, filtros, 
                                     {registros.data.map((r) => (
                                         <tr key={r.id} className={`rg-tr${seleccionados.includes(r.id) ? ' selected' : ''}`}>
                                             <td className="rg-td" onClick={(e) => e.stopPropagation()}>
-                                                <input type="checkbox" checked={seleccionados.includes(r.id)} onChange={() => toggleSeleccion(r.id)}
-                                                       style={{ width: '14px', height: '14px', cursor: 'pointer', accentColor: 'rgba(185,28,28,0.8)' }}/>
+                                                <GlassCheck
+                                                    checked={seleccionados.includes(r.id)}
+                                                    onChange={() => toggleSeleccion(r.id)}
+                                                />
                                             </td>
                                             <td className="rg-td rg-tr-link" style={{ whiteSpace: 'nowrap', color: 'rgba(120,60,10,0.65)', fontSize: '0.76rem' }}
                                                 onClick={() => setDetalle(r)}>

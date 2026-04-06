@@ -18,6 +18,18 @@ class ProveedorController extends Controller
         ]);
     }
 
+    public function show(string $id): Response
+    {
+        $proveedor = Proveedor::findOrFail($id);
+
+        $totalProductos = $proveedor->productos()->count();
+
+        return Inertia::render('Proveedores/Show', [
+            'proveedor'      => $proveedor,
+            'totalProductos' => $totalProductos,
+        ]);
+    }
+
     public function create(): Response
     {
         return Inertia::render('Proveedores/Create');

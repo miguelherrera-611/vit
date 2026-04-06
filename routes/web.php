@@ -205,6 +205,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('role_or_permission:admin|editar_proveedores')
             ->name('update');
 
+        Route::get('/{proveedor}', [ProveedorController::class, 'show'])
+            ->middleware('role_or_permission:admin|ver_proveedores')
+            ->name('show');
+
         Route::delete('/{proveedor}', [ProveedorController::class, 'destroy'])
             ->middleware('role:admin')
             ->name('destroy');

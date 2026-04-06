@@ -161,13 +161,23 @@ export default function ProveedoresIndex({ proveedores = [] }) {
                                         <tr key={proveedor.id} className="hover:bg-gray-50 transition">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center">
-                                                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mr-3 flex-shrink-0">
+                                                    {/* Avatar clickeable */}
+                                                    <Link
+                                                        href={`/proveedores/${proveedor.id}`}
+                                                        className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mr-3 flex-shrink-0 hover:opacity-80 transition"
+                                                    >
                                                         <span className="text-white font-semibold text-sm">
                                                             {proveedor.nombre.charAt(0).toUpperCase()}
                                                         </span>
-                                                    </div>
+                                                    </Link>
                                                     <div>
-                                                        <div className="text-sm font-medium text-gray-900">{proveedor.nombre}</div>
+                                                        {/* Nombre clickeable */}
+                                                        <Link
+                                                            href={`/proveedores/${proveedor.id}`}
+                                                            className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition"
+                                                        >
+                                                            {proveedor.nombre}
+                                                        </Link>
                                                         <div className="text-sm text-gray-500">{proveedor.documento || 'Sin documento'}</div>
                                                     </div>
                                                 </div>
@@ -196,6 +206,12 @@ export default function ProveedoresIndex({ proveedores = [] }) {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right">
                                                 <div className="flex items-center justify-end gap-3">
+                                                    <Link
+                                                        href={`/proveedores/${proveedor.id}`}
+                                                        className="text-gray-500 hover:text-indigo-600 transition font-medium text-sm"
+                                                    >
+                                                        Ver
+                                                    </Link>
                                                     <Link
                                                         href={`/proveedores/${proveedor.id}/edit`}
                                                         className="text-indigo-600 hover:text-indigo-900 transition font-medium text-sm"

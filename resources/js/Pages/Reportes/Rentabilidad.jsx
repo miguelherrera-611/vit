@@ -20,6 +20,7 @@ export default function Rentabilidad({ productos = [], porCategoria = [], kpis =
     const [busqueda, setBusqueda] = useState('');
     const [orden, setOrden]   = useState('ganancia_bruta');
     const [currentPage, setCurrentPage] = useState(1);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
     const PER_PAGE = 20;
 
     const aplicar = () => { setCurrentPage(1); router.get('/reportes/rentabilidad', { desde, hasta }, { preserveState: true }); };
@@ -32,6 +33,15 @@ export default function Rentabilidad({ productos = [], porCategoria = [], kpis =
     }, [productos, busqueda, orden]);
 
     useEffect(() => setCurrentPage(1), [busqueda, orden]);
+
+    useEffect(() => {
+        if (!dropdownOpen) return;
+        const handler = (e) => {
+            if (!e.target.closest('.ren-dropdown-wrapper')) setDropdownOpen(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [dropdownOpen]);
 
     const productosPaginados = useMemo(
         () => productosFiltrados.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE),
@@ -131,6 +141,31 @@ export default function Rentabilidad({ productos = [], porCategoria = [], kpis =
                 input[type="date"]::-webkit-calendar-picker-indicator {
                     opacity:0; width:100%; height:100%; position:absolute; top:0; left:0; cursor:pointer;
                 }
+                /* ── DROPDOWN CUSTOM ── */
+                .ren-dropdown-wrapper { position:relative; }
+                .ren-dropdown-trigger {
+                display:flex; align-items:center; gap:0.5rem;
+                padding:0.6rem 0.9rem;
+                background:rgba(255,255,255,0.55); border:1px solid rgba(200,140,80,0.22);
+                border-radius:12px; font-size:0.82rem; font-weight:500; color:#2d1a08;
+                font-family:'Inter',sans-serif; cursor:pointer; white-space:nowrap;
+                box-shadow:0 2px 8px rgba(180,90,20,0.06),inset 0 1px 0 rgba(255,255,255,0.75);
+                transition:all .18s; user-select:none;
+                box-shadow:0 12px 36px rgba(180,90,20,0.12),0 4px 12px rgba(180,90,20,0.06),inset 0 1px 0 rgba(255,255,255,0.9);
+                overflow:hidden;
+                z-index:50; /* menor que el navbar (1000), así no lo tapa */
+                animation:dropIn 0.18s cubic-bezier(0.16,1,0.3,1);
+                }
+                .ren-dropdown-item {
+                display:block; width:100%; padding:0.65rem 1rem;
+                font-size:0.82rem; font-weight:500; color:rgba(120,55,10,0.82);
+                text-align:left; cursor:pointer; background:none; border:none;
+                font-family:'Inter',sans-serif; transition:background .15s,color .15s; white-space:nowrap;
+                box-sizing:border-box;
+                }
+                .ren-dropdown-item:hover { background:rgba(255,255,255,0.6); color:rgba(90,35,5,0.95); }
+                .ren-dropdown-item.active { color:rgba(185,28,28,0.9); font-weight:600; background:rgba(185,28,28,0.05); }
+
             `}</style>
 
             <div className="ren-bg">
@@ -225,17 +260,38 @@ export default function Rentabilidad({ productos = [], porCategoria = [], kpis =
                                 <input type="text" placeholder="Buscar producto..." value={busqueda}
                                        onChange={e => setBusqueda(e.target.value)}
                                        className="ren-search" style={{ width:'160px' }} />
-                                <div style={{ position:'relative' }}>
-                                    <select value={orden} onChange={e => setOrden(e.target.value)} className="ren-select">
-                                        <option value="ganancia_bruta">Ordenar: Ganancia</option>
-                                        <option value="ingreso_total">Ordenar: Ingresos</option>
-                                        <option value="margen">Ordenar: Margen %</option>
-                                        <option value="unidades_vendidas">Ordenar: Unidades</option>
-                                    </select>
-                                    <svg style={{ position:'absolute', right:'0.6rem', top:'50%', transform:'translateY(-50%)', pointerEvents:'none', color:'rgba(150,80,20,0.45)' }}
-                                         width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                    </svg>
+                                <div className="ren-dropdown-wrapper">
+                                    <div className="ren-dropdown-trigger" onClick={() => setDropdownOpen(o => !o)}>
+                                        {{
+                                            ganancia_bruta:    'Ordenar: Ganancia',
+                                            ingreso_total:     'Ordenar: Ingresos',
+                                            margen:            'Ordenar: Margen %',
+                                            unidades_vendidas: 'Ordenar: Unidades',
+                                        }[orden]}
+                                        <svg width="11" height="11" fill="none" stroke="rgba(150,80,20,0.55)" strokeWidth="2" viewBox="0 0 24 24"
+                                             style={{ transition:'transform .2s', transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink:0 }}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+
+                                    {dropdownOpen && (
+                                        <div className="ren-dropdown-menu">
+                                            {[
+                                                { value:'ganancia_bruta',    label:'Ordenar: Ganancia'  },
+                                                { value:'ingreso_total',     label:'Ordenar: Ingresos'  },
+                                                { value:'margen',            label:'Ordenar: Margen %'  },
+                                                { value:'unidades_vendidas', label:'Ordenar: Unidades'  },
+                                            ].map(op => (
+                                                <button
+                                                    key={op.value}
+                                                    className={`ren-dropdown-item${orden === op.value ? ' active' : ''}`}
+                                                    onClick={() => { setOrden(op.value); setDropdownOpen(false); }}
+                                                >
+                                                    {op.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

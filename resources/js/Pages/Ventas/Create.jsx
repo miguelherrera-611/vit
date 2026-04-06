@@ -394,6 +394,136 @@ function ClienteSelect({ clientes, value, onChange, error }) {
     );
 }
 
+
+const METODOS_PAGO = [
+    { value: 'Efectivo',       icon: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z' },
+    { value: 'Tarjeta',        icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
+    { value: 'Transferencia',  icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' },
+    { value: 'Mixto',          icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+];
+
+function MetodoPagoSelect({ value, onChange }) {
+    const [open, setOpen] = useState(false);
+    const triggerRef      = useRef(null);
+
+    useEffect(() => {
+        const h = (e) => {
+            if (triggerRef.current?.contains(e.target)) return;
+            const panel = document.querySelector('[data-metodo-panel="true"]');
+            if (panel?.contains(e.target)) return;
+            setOpen(false);
+        };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, []);
+
+    const seleccionado = METODOS_PAGO.find(m => m.value === value) ?? METODOS_PAGO[0];
+
+    return (
+        <div ref={triggerRef} style={{ position: 'relative' }}>
+            {/* Trigger */}
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '0.72rem 0.875rem',
+                    background: open ? 'rgba(255,248,242,0.98)' : 'rgba(255,252,248,0.82)',
+                    border: open ? '1.5px solid rgba(185,28,28,0.45)' : '1.5px solid rgba(200,130,60,0.32)',
+                    borderRadius: '12px',
+                    boxShadow: open
+                        ? '0 0 0 3px rgba(185,28,28,0.09), 0 2px 8px rgba(180,80,10,0.1)'
+                        : '0 1px 3px rgba(180,90,20,0.1), inset 0 1px 0 rgba(255,255,255,0.9)',
+                    fontSize: '0.84rem', color: '#2d1a08',
+                    fontFamily: 'Inter,sans-serif', cursor: 'pointer',
+                    transition: 'all 0.15s', outline: 'none', gap: '0.4rem',
+                    userSelect: 'none',
+                }}
+            >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
+                    <svg width="13" height="13" fill="none"
+                         stroke={open ? 'rgba(185,28,28,0.7)' : 'rgba(160,80,20,0.5)'}
+                         strokeWidth="1.8" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d={seleccionado.icon}/>
+                    </svg>
+                    <span style={{ fontWeight: '500', letterSpacing: '-0.01em' }}>
+                        {seleccionado.value}
+                    </span>
+                </span>
+                <svg width="11" height="11" fill="none" viewBox="0 0 24 24"
+                     stroke="rgba(150,70,15,0.45)"
+                     style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+
+            {/* Dropdown portal */}
+            <DropdownPortal triggerRef={triggerRef} open={open}>
+                <div
+                    data-metodo-panel="true"
+                    style={{
+                        background: '#fef6ee',
+                        border: '1.5px solid rgba(210,150,80,0.3)',
+                        borderRadius: '16px',
+                        boxShadow: [
+                            '0 32px 80px rgba(100,45,5,0.22)',
+                            '0 12px 32px rgba(130,60,10,0.14)',
+                            '0 4px 10px rgba(130,60,10,0.08)',
+                            'inset 0 1px 0 rgba(255,255,255,0.95)',
+                        ].join(', '),
+                        overflow: 'hidden',
+                        animation: 'dropIn 0.18s cubic-bezier(0.16,1,0.3,1)',
+                    }}
+                >
+                    {METODOS_PAGO.map((m, i) => {
+                        const sel = m.value === value;
+                        return (
+                            <button
+                                key={m.value}
+                                type="button"
+                                onClick={() => { onChange(m.value); setOpen(false); }}
+                                style={{
+                                    width: '100%', padding: '0.75rem 0.875rem', textAlign: 'left',
+                                    background: sel ? 'rgba(16,185,129,0.05)' : 'transparent',
+                                    border: 'none',
+                                    borderBottom: i < METODOS_PAGO.length - 1 ? '1px solid rgba(210,150,70,0.1)' : 'none',
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                    transition: 'background 0.12s', fontFamily: 'Inter,sans-serif',
+                                }}
+                            >
+                                <div style={{
+                                    width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
+                                    background: sel ? 'rgba(16,185,129,0.1)' : 'rgba(180,100,30,0.07)',
+                                    border: `1px solid ${sel ? 'rgba(16,185,129,0.25)' : 'rgba(200,140,80,0.18)'}`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                    <svg width="14" height="14" fill="none"
+                                         stroke={sel ? 'rgba(4,120,87,0.8)' : 'rgba(120,60,10,0.55)'}
+                                         strokeWidth="1.8" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d={m.icon}/>
+                                    </svg>
+                                </div>
+                                <span style={{
+                                    fontSize: '0.84rem', fontWeight: '500',
+                                    color: sel ? 'rgba(4,120,87,0.85)' : '#2d1a08',
+                                    letterSpacing: '-0.01em', flex: 1,
+                                }}>
+                                    {m.value}
+                                </span>
+                                {sel && (
+                                    <svg width="13" height="13" fill="none" stroke="rgba(4,120,87,0.8)"
+                                         strokeWidth="2.2" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            </DropdownPortal>
+        </div>
+    );
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function VentasCreate({ productos = [], clientes = [] }) {
@@ -964,14 +1094,10 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                     <hr className="vc-divider"/>
 
                                     <label style={labelStyle}>Método de pago</label>
-                                    <select value={data.metodo_pago}
-                                            onChange={(e) => setData('metodo_pago', e.target.value)}
-                                            style={{ ...inputStyle, cursor: 'pointer' }}>
-                                        <option value="Efectivo">Efectivo</option>
-                                        <option value="Tarjeta">Tarjeta</option>
-                                        <option value="Transferencia">Transferencia</option>
-                                        <option value="Mixto">Mixto</option>
-                                    </select>
+                                    <MetodoPagoSelect
+                                        value={data.metodo_pago}
+                                        onChange={(val) => setData('metodo_pago', val)}
+                                    />
                                 </div>
 
                                 {/* Resumen financiero */}
