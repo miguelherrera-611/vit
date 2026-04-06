@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link } from '@inertiajs/react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 
 const fmt = (v) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v ?? 0);
@@ -9,6 +9,20 @@ export default function Cartera({ ventas = [], kpis = {} }) {
     const [filtroTipo, setFiltroTipo]     = useState('');
     const [filtroEstado, setFiltroEstado] = useState('');
     const [busqueda, setBusqueda]         = useState('');
+
+    const [openTipo, setOpenTipo] = useState(false);
+    const [openEstado, setOpenEstado] = useState(false);
+    const tipoRef = useRef(null);
+    const estadoRef = useRef(null);
+
+    useEffect(() => {
+        const onClick = (e) => {
+            if (tipoRef.current && !tipoRef.current.contains(e.target)) setOpenTipo(false);
+            if (estadoRef.current && !estadoRef.current.contains(e.target)) setOpenEstado(false);
+        };
+        document.addEventListener('mousedown', onClick);
+        return () => document.removeEventListener('mousedown', onClick);
+    }, []);
 
     const ventasFiltradas = useMemo(() => {
         const q = busqueda.toLowerCase();
@@ -72,23 +86,101 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                 }
 
                 /* Filters */
-                .ca-filters { padding:1rem 1.25rem; margin-bottom:1rem; animation:fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.1s both; }
-                .ca-filters-grid { display:grid;grid-template-columns:1fr 140px 140px;gap:0.75rem;align-items:center; }
-                .ca-input {
-                    width:100%;padding:0.65rem 0.875rem;
-                    background:rgba(255,255,255,0.55);border:1px solid rgba(200,140,80,0.18);
-                    border-radius:9px;font-size:0.82rem;color:#2d1a08;
-                    font-family:'Inter',sans-serif;outline:none;transition:all 0.15s;
-                    letter-spacing:-0.01em;
+                .ca-filters {
+                    padding:1rem 1.25rem;
+                    margin-bottom:1rem;
+                    animation:fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.1s both;
+                    position: relative;
+                    z-index: 120;
+                    overflow: visible;
                 }
-                .ca-input::placeholder { color:rgba(180,100,30,0.35); }
-                .ca-input:focus { background:rgba(255,255,255,0.8);border-color:rgba(200,140,80,0.35);box-shadow:0 0 0 3px rgba(200,140,80,0.06); }
-                .ca-input-icon { position:relative; }
-                .ca-input-icon svg { position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);pointer-events:none; }
-                .ca-input-icon .ca-input { padding-left:2.1rem; }
+
+                .ca-filters-grid {
+                    display:grid;
+                    grid-template-columns:minmax(0,1fr) minmax(140px,180px) minmax(140px,180px);
+                    gap:0.75rem;
+                    align-items:start;
+                }
+
+                .ca-select-wrap{
+                    position:relative;
+                    z-index: 140;
+                    min-width: 0;
+                    margin-bottom: 0; /* <- limpio */
+                }
+                .ca-select-wrap.open{
+                    z-index: 260;
+                    margin-bottom: 0; /* <- quitar hueco feo */
+                }
+
+                .ca-select-btn{
+                    width:100%;
+                    min-height:40px;
+                    padding:0.65rem 0.875rem;
+                    background:rgba(255,255,255,0.92);
+                    border:1px solid rgba(200,140,80,0.24);
+                    border-radius:9px;
+                    font-size:0.82rem;
+                    color:#2d1a08;
+                    font-family:'Inter',sans-serif;
+                    outline:none;
+                    transition:all 0.15s;
+                    letter-spacing:-0.01em;
+                    cursor:pointer;
+                    display:flex;
+                    align-items:center;
+                    justify-content:space-between;
+                    gap:.5rem;
+                    text-align:left;
+                    white-space:nowrap;
+                }
+
+                .ca-select-menu{
+                    position:absolute;
+                    left:0;
+                    right:0;
+                    top:calc(100% + .35rem);
+                    z-index: 300;
+                    background:rgba(255,255,255,0.99);
+                    border:1px solid rgba(200,140,80,0.24);
+                    border-radius:10px;
+                    box-shadow:0 10px 30px rgba(180,90,20,0.12);
+                    overflow:auto;
+                    max-height:220px;
+                    -webkit-overflow-scrolling:touch;
+                }
+                .ca-select-opt{
+                    width:100%;
+                    text-align:left;
+                    padding:.65rem .78rem;
+                    font-size:.8rem;
+                    color:rgba(120,60,10,0.78);
+                    background:transparent;
+                    border:none;
+                    cursor:pointer;
+                    font-family:'Inter',sans-serif;
+                    white-space:nowrap;
+                }
+                .ca-select-opt:hover{ background:rgba(200,140,80,0.08); }
+                .ca-select-opt.active{
+                    background:rgba(185,28,28,0.08);
+                    color:rgba(185,28,28,0.9);
+                    font-weight:500;
+                }
+                .ca-caret{
+                    width:14px;height:14px;flex-shrink:0;
+                    transition:transform .16s ease;
+                    color:rgba(150,80,20,0.5);
+                }
+                .ca-caret.up{ transform:rotate(180deg); }
 
                 /* Table */
-                .ca-table-wrap { overflow-x:auto; animation:fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.12s both; }
+                .ca-table-wrap {
+                    overflow-x:auto;
+                    animation:fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.12s both;
+                    position: relative;
+                    z-index: 10; /* por debajo del bloque filtros */
+                }
                 .ca-table { width:100%;border-collapse:collapse; }
                 .ca-table thead tr { border-bottom:1px solid rgba(200,140,80,0.1); }
                 .ca-table th {
@@ -156,14 +248,81 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                     .ca-header-inner { padding:1rem; }
                     .ca-stats { grid-template-columns:1fr 1fr;gap:0.65rem; }
                     .ca-stat { padding:1rem 1.1rem; }
-                    .ca-filters-grid { grid-template-columns:1fr;gap:0.5rem; }
-                    .ca-filters { padding:0.875rem 1rem; }
+
+                    .ca-filters {
+                        padding:0.85rem;
+                        border-radius:14px;
+                        z-index: 160;
+                        overflow: visible;
+                    }
+
+                    .ca-filters-grid {
+                        grid-template-columns:1fr;
+                        gap:0.55rem; /* casillas más juntas y limpias */
+                    }
+
+                    .ca-select-wrap{
+                        width:100%;
+                        z-index: 180;
+                        margin-bottom: 0;
+                    }
+                    .ca-select-wrap.open{
+                        z-index: 320;
+                        margin-bottom: 0; /* <- no deformar layout */
+                    }
+
+                    .ca-select-menu{
+                        max-height:180px;
+                    }
+
                     .ca-table-wrap table { display:none; }
                     .ca-mobile-list { display:flex;flex-direction:column; }
                 }
                 @media (max-width:400px) {
                     .ca-stats { grid-template-columns:1fr; }
                 }
+
+                /* Input búsqueda (faltaba estilo) */
+                .ca-input-icon{
+                    position:relative;
+                    display:flex;
+                    align-items:center;
+                    width:100%;
+                }
+                .ca-input-icon svg{
+                    position:absolute;
+                    left:0.78rem;
+                    top:50%;
+                    transform:translateY(-50%);
+                    pointer-events:none;
+                    z-index:1;
+                }
+                .ca-input{
+                    width:100%;
+                    padding:0.65rem 0.875rem 0.65rem 2.15rem;
+                    background:rgba(255,255,255,0.55);
+                    border:1px solid rgba(200,140,80,0.18);
+                    border-radius:9px;
+                    font-size:0.82rem;
+                    color:#2d1a08;
+                    font-family:'Inter',sans-serif;
+                    outline:none;
+                    transition:all 0.15s;
+                    letter-spacing:-0.01em;
+                }
+                .ca-input::placeholder{
+                    color:rgba(150,80,20,0.4);
+                }
+                .ca-input:hover{
+                    background:rgba(255,255,255,0.75);
+                    border-color:rgba(200,140,80,0.3);
+                }
+                .ca-input:focus{
+                    background:rgba(255,255,255,0.88);
+                    border-color:rgba(200,140,80,0.4);
+                    box-shadow:0 0 0 3px rgba(200,140,80,0.06);
+                }
+
             `}</style>
 
             <div className="ca-root">
@@ -230,16 +389,68 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                                        onChange={(e) => setBusqueda(e.target.value)}
                                        placeholder="Buscar cliente o N.º venta..."/>
                             </div>
-                            <select className="ca-input" value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
-                                <option value="">Todos los tipos</option>
-                                <option value="Crédito">Crédito</option>
-                                <option value="Separado">Separado</option>
-                            </select>
-                            <select className="ca-input" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
-                                <option value="">Todas</option>
-                                <option value="al_dia">Al día</option>
-                                <option value="vencida">Vencidas</option>
-                            </select>
+
+                            <div className={`ca-select-wrap${openTipo ? ' open' : ''}`} ref={tipoRef}>
+                                <button type="button" className={`ca-select-btn${openTipo ? ' open' : ''}`} onClick={() => setOpenTipo(v => !v)}>
+                                    <span>
+                                        {filtroTipo === '' ? 'Todos'
+                                            : filtroTipo === 'Crédito' ? 'Crédito'
+                                                : 'Separado'}
+                                    </span>
+                                    <svg className={`ca-caret${openTipo ? ' up' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                                {openTipo && (
+                                    <div className="ca-select-menu">
+                                        {[
+                                            { label:'Todos', value:'' },
+                                            { label:'Crédito', value:'Crédito' },
+                                            { label:'Separado', value:'Separado' },
+                                        ].map((opt) => (
+                                            <button
+                                                key={opt.label}
+                                                type="button"
+                                                className={`ca-select-opt${filtroTipo === opt.value ? ' active' : ''}`}
+                                                onClick={() => { setFiltroTipo(opt.value); setOpenTipo(false); }}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className={`ca-select-wrap${openEstado ? ' open' : ''}`} ref={estadoRef}>
+                                <button type="button" className={`ca-select-btn${openEstado ? ' open' : ''}`} onClick={() => setOpenEstado(v => !v)}>
+                                    <span>
+                                        {filtroEstado === '' ? 'Todas'
+                                            : filtroEstado === 'al_dia' ? 'Al día'
+                                                : 'Vencidas'}
+                                    </span>
+                                    <svg className={`ca-caret${openEstado ? ' up' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                                {openEstado && (
+                                    <div className="ca-select-menu">
+                                        {[
+                                            { label:'Todas', value:'' },
+                                            { label:'Al día', value:'al_dia' },
+                                            { label:'Vencidas', value:'vencida' },
+                                        ].map((opt) => (
+                                            <button
+                                                key={opt.label}
+                                                type="button"
+                                                className={`ca-select-opt${filtroEstado === opt.value ? ' active' : ''}`}
+                                                onClick={() => { setFiltroEstado(opt.value); setOpenEstado(false); }}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         {hayFiltros && (
                             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:'0.6rem',paddingTop:'0.6rem',borderTop:'1px solid rgba(200,140,80,0.08)'}}>

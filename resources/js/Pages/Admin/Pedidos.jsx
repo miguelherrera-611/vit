@@ -193,26 +193,62 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                 .pedido-row:hover { background:rgba(255,255,255,0.05); }
                 .pedido-row:last-child { border-bottom:none; }
 
-                .modal-overlay { position:fixed; inset:0; z-index:200; background:rgba(30,10,0,0.3);
+                .modal-overlay {
+                    position:fixed; inset:0; z-index:200; background:rgba(30,10,0,0.3);
                     backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
-                    display:flex; align-items:flex-start; justify-content:flex-end; animation:fadeIn 0.2s both; }
-                .detalle-panel { width:min(500px,100vw); height:100vh; overflow-y:auto;
-                    background:rgba(255,250,245,0.97);backdrop-filter:blur(40px);
-                    -webkit-backdrop-filter:blur(40px);border-left:1px solid rgba(255,255,255,0.75);
+                    display:flex; align-items:flex-start; justify-content:flex-end; animation:fadeIn 0.2s both;
+                }
+                .detalle-panel {
+                    width:min(500px,100vw); height:100%; overflow-y:auto;
+                    background:rgba(255,250,245,0.97); backdrop-filter:blur(40px);
+                    -webkit-backdrop-filter:blur(40px); border-left:1px solid rgba(255,255,255,0.75);
                     box-shadow:-16px 0 48px rgba(180,90,20,0.12);
                     animation:slideInRight 0.3s cubic-bezier(0.16,1,0.3,1) both;
-                    font-family:'Inter',sans-serif; }
-                .detalle-panel::-webkit-scrollbar { width:4px; }
-                .detalle-panel::-webkit-scrollbar-thumb { background:rgba(200,140,80,0.3);border-radius:4px; }
+                    font-family:'Inter',sans-serif;
+                }
 
-                .modal-center-overlay { position:fixed;inset:0;z-index:300;background:rgba(30,10,0,0.35);
-                    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-                    display:flex;align-items:center;justify-content:center;padding:1rem;animation:fadeIn 0.2s both; }
-                .modal-card { width:100%;max-width:440px;background:rgba(255,250,245,0.97);
-                    backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.8);
-                    border-radius:28px;padding:2rem;
+                .modal-center-overlay {
+                    position:fixed; inset:0; z-index:300; background:rgba(30,10,0,0.35);
+                    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+                    display:flex; align-items:center; justify-content:center; padding:1rem; animation:fadeIn 0.2s both;
+                }
+                .modal-card {
+                    width:100%; max-width:440px; max-height:calc(100vh - 2rem); overflow-y:auto;
+                    background:rgba(255,250,245,0.97); backdrop-filter:blur(40px);
+                    border:1px solid rgba(255,255,255,0.8); border-radius:28px; padding:2rem;
                     box-shadow:0 24px 64px rgba(180,90,20,0.18);
-                    animation:staggerUp 0.25s cubic-bezier(0.16,1,0.3,1) both; }
+                    animation:staggerUp 0.25s cubic-bezier(0.16,1,0.3,1) both;
+                }
+
+                /* Nuevo: variante compacta para el modal de pago */
+                .modal-card.pago-compacto{
+                    max-height: min(64vh, 560px);
+                    overflow-y: auto;
+                    padding: 1.2rem;
+                    border-radius: 18px;
+                }
+
+                @media (max-width: 768px){
+                    .modal-card{
+                        max-width:100%;
+                        border-radius:18px;
+                        padding:1.1rem;
+                        max-height:calc(100vh - 1rem);
+                    }
+
+                    /* Compacto aún más en móvil */
+                    .modal-card.pago-compacto{
+                        max-height: min(58vh, 460px);
+                        padding: .95rem;
+                        border-radius: 14px;
+                    }
+
+                    .detalle-panel{
+                        width:100vw;
+                        border-left:none;
+                        box-shadow:none;
+                    }
+                }
 
                 .ck-input { width:100%;padding:0.75rem 0.875rem;
                     background:rgba(255,255,255,0.06);border:1px solid rgba(200,140,80,0.35);
@@ -267,9 +303,102 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                 }
 
                 @media (max-width: 768px){
-                    .detalle-panel { width:100vw; max-width:100vw; }
                     .tabla-inner { min-width: 980px; }
                     .pedido-row { grid-template-columns:1fr 1.2fr 1fr auto auto auto; } /* mantener tabla */
+                }
+
+                .pager-wrap{
+                    display:flex;justify-content:center;gap:0.4rem;margin-top:1.5rem;flex-wrap:wrap;
+                }
+                .pager-btn{
+                    padding:0.4rem 0.75rem;border-radius:10px;
+                    font-family:'Inter',sans-serif;font-size:0.8rem;font-weight:600;
+                    border:1px solid rgba(200,140,80,0.2);
+                    background:rgba(255,255,255,0.05);
+                    color:rgba(120,60,10,0.65);
+                    cursor:pointer;
+                }
+                .pager-btn.active{
+                    background:rgba(220,38,38,0.12);
+                    color:rgba(185,28,28,0.9);
+                    border:1px solid rgba(220,38,38,0.35);
+                }
+                .pager-btn:disabled{ opacity:0.4; cursor:default; }
+
+                .pager-placeholder{
+                    display:flex;justify-content:center;gap:0.4rem;margin-top:1.5rem;flex-wrap:wrap;
+                }
+                .pager-ph-btn{
+                    min-width:34px;height:32px;padding:0 0.6rem;border-radius:10px;
+                    border:1px solid rgba(180,180,180,0.28);
+                    background:rgba(220,220,220,0.22);
+                    color:rgba(130,130,130,0.75);
+                    font-family:'Inter',sans-serif;font-size:0.78rem;font-weight:600;
+                    display:flex;align-items:center;justify-content:center;
+                    user-select:none;
+                }
+
+                .qr-upload-row{
+                    display:flex; align-items:center; gap:.55rem; flex-wrap:wrap;
+                }
+                .qr-upload-btn{
+                    display:inline-flex; align-items:center; gap:.45rem;
+                    padding:.55rem .8rem; border-radius:10px;
+                    border:1px solid rgba(200,140,80,0.3);
+                    background:rgba(255,255,255,0.08);
+                    color:rgba(120,60,10,0.78);
+                    font-family:'Inter',sans-serif; font-size:.78rem; font-weight:500;
+                    cursor:pointer; transition:all .15s;
+                    white-space:nowrap;
+                }
+                .qr-upload-btn:hover{
+                    background:rgba(255,255,255,0.16);
+                    border-color:rgba(200,140,80,0.45);
+                }
+                .qr-file-name{
+                    flex:1 1 220px;
+                    min-width:0;
+                    max-width:100%;
+                    padding:.52rem .68rem;
+                    border-radius:9px;
+                    border:1px solid rgba(200,140,80,0.2);
+                    background:rgba(255,255,255,0.06);
+                    color:rgba(120,60,10,0.68);
+                    font-size:.74rem;
+                    overflow:hidden;
+                    text-overflow:ellipsis;
+                    white-space:nowrap;
+                }
+
+                .glass-check{
+                    display:inline-flex; align-items:center; justify-content:center;
+                    width:16px; height:16px; flex-shrink:0; border-radius:5px; cursor:'pointer';
+                    transition:all .15s ease;
+                    background:rgba(255,255,255,0.7);
+                    border:1.5px solid rgba(200,130,60,0.35);
+                    box-shadow:inset 0 1px 0 rgba(255,255,255,0.8);
+                }
+                .glass-check.checked{
+                    background:rgba(185,28,28,0.12);
+                    border-color:rgba(185,28,28,0.45);
+                    box-shadow:0 0 0 3px rgba(185,28,28,0.07), inset 0 1px 0 rgba(255,255,255,0.5);
+                }
+                .glass-check-mark{
+                    width:9px; height:9px; display:block;
+                }
+
+                .qr-remove-row{
+                    display:flex; align-items:center; gap:.45rem;
+                    margin-top:.45rem;
+                    color:rgba(185,28,28,0.82);
+                    font-size:.78rem;
+                    user-select:none;
+                    cursor:pointer;
+                }
+
+                @media (max-width: 768px){
+                    .qr-upload-row{ gap:.45rem; }
+                    .qr-file-name{ flex:1 1 100%; }
                 }
             `}</style>
 
@@ -391,9 +520,24 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                     </div>
 
                     {/* Paginación */}
-                    {pedidos.links && (
-                        <div>
-                            {/* render de paginación */}
+                    {Array.isArray(pedidos.links) && pedidos.links.length > 3 ? (
+                        <div className="pager-wrap">
+                            {pedidos.links.map((link, i) => (
+                                <button
+                                    key={i}
+                                    className={`pager-btn${link.active ? ' active' : ''}`}
+                                    disabled={!link.url || link.active}
+                                    onClick={() => link.url && router.get(link.url, {}, { preserveState: true })}
+                                    dangerouslySetInnerHTML={{ __html: link.label }}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="pager-placeholder" aria-hidden="true">
+                            <span className="pager-ph-btn">«</span>
+                            <span className="pager-ph-btn">1</span>
+                            <span className="pager-ph-btn">2</span>
+                            <span className="pager-ph-btn">»</span>
                         </div>
                     )}
                 </div>
@@ -409,7 +553,6 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                     <div
                         className="detalle-panel"
                         onClick={e => e.stopPropagation()}
-                        style={{ height: `calc(100vh - ${navOffset}px)` }}
                     >
                         <div style={{padding:'1.5rem',borderBottom:'1px solid rgba(200,140,80,0.12)',
                             display:'flex',alignItems:'center',justifyContent:'space-between',
@@ -524,7 +667,11 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
 
             {/* Modal cambio de estado */}
             {modalEstado && (
-                <div className="modal-center-overlay" onClick={() => setModalEstado(null)}>
+                <div
+                    className="modal-center-overlay"
+                    onClick={() => setModalEstado(null)}
+                    style={{ top: `${navOffset}px`, height: `calc(100vh - ${navOffset}px)` }}
+                >
                     <div className="modal-card" onClick={e => e.stopPropagation()}>
                         <h3 style={{fontSize:'1rem',fontWeight:'600',color:'#2d1a08',margin:'0 0 0.3rem'}}>
                             {ACCIONES[modalEstado.nuevoEstado]?.label || 'Cambiar estado'}
@@ -596,8 +743,20 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
 
             {/* Modal datos de pago */}
             {modalPago && (
-                <div className="modal-center-overlay" onClick={() => { setModalPago(false); setPagoEditing(null); }}>
-                    <div className="modal-card" style={{maxWidth:'520px'}} onClick={e => e.stopPropagation()}>
+                <div
+                    className="modal-center-overlay"
+                    onClick={() => { setModalPago(false); setPagoEditing(null); }}
+                    style={{
+                        top: `${Math.max(navOffset - 10, 48)}px`,
+                        height: `calc(100vh - ${Math.max(navOffset - 10, 48)}px)`,
+                        padding: '0.45rem',
+                    }}
+                >
+                    <div
+                        className="modal-card pago-compacto"
+                        style={{ maxWidth:'520px' }}
+                        onClick={e => e.stopPropagation()}
+                    >
                         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
                             <h3 style={{fontSize:'1rem',fontWeight:'600',color:'#2d1a08',margin:0}}>💳 Datos de pago</h3>
                             <button onClick={() => { setModalPago(false); setPagoEditing(null); }}
@@ -632,29 +791,79 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
 
                                         <label className="ck-label">Imagen QR</label>
                                         {m.qr_url && (
-                                            <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginBottom:'0.5rem'}}>
-                                                <img src={m.qr_url} alt="QR actual" style={{width:'50px',height:'50px',borderRadius:'8px',objectFit:'cover'}} />
-                                                <label style={{display:'flex',alignItems:'center',gap:'0.4rem',cursor:'pointer',fontSize:'0.78rem',color:'rgba(185,28,28,0.8)'}}>
-                                                    <input type="checkbox" checked={pagoEliminarQr} onChange={e => setPagoEliminarQr(e.target.checked)} />
-                                                    Eliminar QR actual
-                                                </label>
+                                            <div style={{display:'flex',alignItems:'flex-start',gap:'0.55rem',marginBottom:'0.55rem'}}>
+                                                <img src={m.qr_url} alt="QR actual" style={{width:'50px',height:'50px',borderRadius:'8px',objectFit:'cover',flexShrink:0}} />
+                                                <div style={{minWidth:0,flex:1}}>
+                                                    <div
+                                                        className="qr-remove-row"
+                                                        onClick={() => setPagoEliminarQr((v) => !v)}
+                                                    >
+                                                        <span className={`glass-check${pagoEliminarQr ? ' checked' : ''}`}>
+                                                            {pagoEliminarQr && (
+                                                                <svg className="glass-check-mark" fill="none" viewBox="0 0 10 10">
+                                                                    <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="rgba(185,28,28,0.85)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                                                </svg>
+                                                            )}
+                                                        </span>
+                                                        <span>Eliminar QR actual</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
-                                        <input type="file" accept="image/*" onChange={e => setPagoQrFile(e.target.files[0])}
-                                               style={{fontSize:'0.78rem',color:'rgba(120,60,10,0.8)',marginBottom:'0.75rem'}} />
 
-                                        <div style={{display:'flex',gap:'0.5rem'}}>
-                                            <button onClick={() => setPagoEditing(null)}
-                                                    style={{flex:1,padding:'0.6rem',borderRadius:'10px',border:'1px solid rgba(200,140,80,0.28)',
-                                                        background:'rgba(255,255,255,0.04)',color:'rgba(120,60,10,0.7)',
-                                                        fontFamily:'Inter,sans-serif',fontSize:'0.8rem',cursor:'pointer'}}>
+                                        <div className="qr-upload-row">
+                                            <label htmlFor={`qr-input-${m.id}`} className="qr-upload-btn">
+                                                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
+                                                </svg>
+                                                Seleccionar archivo
+                                            </label>
+                                            <input
+                                                id={`qr-input-${m.id}`}
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={e => setPagoQrFile(e.target.files?.[0] || null)}
+                                                style={{display:'none'}}
+                                            />
+                                            <div className="qr-file-name" title={pagoQrFile?.name || 'Sin archivo seleccionado'}>
+                                                {pagoQrFile?.name || 'Sin archivo seleccionado'}
+                                            </div>
+                                        </div>
+
+                                        {/* ✅ Botones de acción visibles nuevamente */}
+                                        <div style={{display:'flex',gap:'0.55rem',marginTop:'0.85rem'}}>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setPagoEditing(null);
+                                                    setPagoNumero('');
+                                                    setPagoQrFile(null);
+                                                    setPagoEliminarQr(false);
+                                                }}
+                                                style={{
+                                                    flex:1,padding:'0.68rem',borderRadius:'10px',
+                                                    border:'1px solid rgba(200,140,80,0.26)',
+                                                    background:'rgba(255,255,255,0.06)',
+                                                    color:'rgba(120,60,10,0.75)',
+                                                    fontFamily:'Inter,sans-serif',fontSize:'0.8rem',fontWeight:'500',cursor:'pointer'
+                                                }}
+                                            >
                                                 Cancelar
                                             </button>
-                                            <button onClick={guardarPago} disabled={pagoProcessing}
-                                                    style={{flex:1,padding:'0.6rem',borderRadius:'10px',border:'none',
-                                                        background:'rgba(16,185,129,0.12)',color:'rgba(4,120,87,0.9)',
-                                                        fontFamily:'Inter,sans-serif',fontSize:'0.8rem',fontWeight:'600',cursor:'pointer',opacity:pagoProcessing?0.5:1}}>
-                                                {pagoProcessing?'Guardando...':'Guardar cambios'}
+                                            <button
+                                                type="button"
+                                                onClick={guardarPago}
+                                                disabled={pagoProcessing}
+                                                style={{
+                                                    flex:1,padding:'0.68rem',borderRadius:'10px',
+                                                    border:'1px solid rgba(16,185,129,0.30)',
+                                                    background:'rgba(16,185,129,0.10)',
+                                                    color:'rgba(4,120,87,0.92)',
+                                                    fontFamily:'Inter,sans-serif',fontSize:'0.8rem',fontWeight:'600',cursor:'pointer',
+                                                    opacity:pagoProcessing?0.5:1
+                                                }}
+                                            >
+                                                {pagoProcessing ? 'Guardando...' : 'Guardar cambios'}
                                             </button>
                                         </div>
                                     </div>
@@ -667,7 +876,11 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
 
             {/* Modal datos de contacto */}
             {modalContacto && (
-                <div className="modal-center-overlay" onClick={() => setModalContacto(false)}>
+                <div
+                    className="modal-center-overlay"
+                    onClick={() => setModalContacto(false)}
+                    style={{ top: `${navOffset}px`, height: `calc(100vh - ${navOffset}px)` }}
+                >
                     <div className="modal-card" onClick={e => e.stopPropagation()}>
                         <h3 style={{fontSize:'1rem',fontWeight:'600',color:'#2d1a08',margin:'0 0 0.3rem'}}>📞 Datos de contacto</h3>
                         <p style={{fontSize:'0.78rem',color:'rgba(150,80,20,0.6)',margin:'0 0 1.25rem',lineHeight:'1.5'}}>
@@ -706,7 +919,11 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
 
             {/* Modal limpiar historial */}
             {modalHistorial && (
-                <div className="modal-center-overlay" onClick={() => setModalHistorial(false)}>
+                <div
+                    className="modal-center-overlay"
+                    onClick={() => setModalHistorial(false)}
+                    style={{ top: `${navOffset}px`, height: `calc(100vh - ${navOffset}px)` }}
+                >
                     <div className="modal-card" onClick={e => e.stopPropagation()}>
                         <div style={{textAlign:'center',marginBottom:'1.25rem'}}>
                             <div style={{width:'56px',height:'56px',borderRadius:'50%',margin:'0 auto 0.875rem',

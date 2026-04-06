@@ -1,8 +1,20 @@
 // resources/js/Pages/Catalogo/Grupo.jsx
 import { Head, Link } from '@inertiajs/react';
 import ClienteLayout from '@/Layouts/ClienteLayout';
+import { useMemo, useState } from 'react';
 
 export default function CatalogoGrupo({ grupo, subcategorias }) {
+    const [currentPage, setCurrentPage] = useState(1);
+    const PER_PAGE = 8;
+
+    const totalPages = Math.max(1, Math.ceil((subcategorias?.length || 0) / PER_PAGE));
+    const subcategoriasPaginadas = useMemo(() => {
+        const start = (currentPage - 1) * PER_PAGE;
+        return (subcategorias || []).slice(start, start + PER_PAGE);
+    }, [subcategorias, currentPage]);
+
+    const goTo = (p) => setCurrentPage(Math.min(Math.max(1, p), totalPages));
+
     return (
         <ClienteLayout>
             <Head title={`${grupo.nombre} — VitaliStore`}/>
@@ -52,6 +64,34 @@ export default function CatalogoGrupo({ grupo, subcategorias }) {
                 .anim-4 { animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.20s both; }
                 .anim-5 { animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.25s both; }
                 .anim-6 { animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.30s both; }
+
+                .pager-wrap{
+                    margin-top:1.2rem;
+                    display:flex; justify-content:center; gap:.35rem; flex-wrap:wrap;
+                }
+                .pager-btn{
+                    min-width:34px; height:32px; padding:0 .6rem;
+                    border-radius:9px; cursor:pointer;
+                    border:1px solid rgba(200,140,80,0.2);
+                    background:rgba(255,255,255,0.55);
+                    color:rgba(120,60,10,0.72);
+                    font-size:.75rem; font-weight:600;
+                }
+                .pager-btn.active{
+                    background:rgba(185,28,28,0.1);
+                    border-color:rgba(185,28,28,0.34);
+                    color:rgba(185,28,28,0.9);
+                }
+                .pager-btn:disabled{ opacity:.45; cursor:not-allowed; }
+                .pager-ph-btn{
+                    min-width:34px; height:32px; padding:0 .6rem;
+                    border-radius:9px;
+                    border:1px solid rgba(180,180,180,0.25);
+                    background:rgba(220,220,220,0.2);
+                    color:rgba(130,130,130,0.75);
+                    font-size:.75rem; font-weight:600;
+                    display:flex; align-items:center; justify-content:center;
+                }
 
                 @media (max-width: 640px) {
                     .subcat-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
@@ -105,53 +145,81 @@ export default function CatalogoGrupo({ grupo, subcategorias }) {
                         </Link>
                     </div>
                 ) : (
-                    <div className="subcat-grid">
-                        {subcategorias.map((subcat, idx) => (
-                            <div key={subcat.id} className={`anim-${Math.min(idx + 1, 6)}`}>
-                                <Link href={`/catalogo/${grupo.id}/${subcat.id}`} className="subcat-card">
-                                    <div style={{overflow:'hidden',position:'relative'}}>
-                                        {subcat.imagen ? (
-                                            <img src={subcat.imagen} alt={subcat.nombre} className="subcat-img"/>
-                                        ) : (
-                                            <div className="subcat-placeholder">
-                                                <svg width="28" height="28" fill="none" stroke="rgba(150,80,20,0.2)" strokeWidth="1.5" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    <>
+                        <div className="subcat-grid">
+                            {subcategoriasPaginadas.map((subcat, idx) => (
+                                <div key={subcat.id} className={`anim-${Math.min(idx + 1, 6)}`}>
+                                    <Link href={`/catalogo/${grupo.id}/${subcat.id}`} className="subcat-card">
+                                        <div style={{overflow:'hidden',position:'relative'}}>
+                                            {subcat.imagen ? (
+                                                <img src={subcat.imagen} alt={subcat.nombre} className="subcat-img"/>
+                                            ) : (
+                                                <div className="subcat-placeholder">
+                                                    <svg width="28" height="28" fill="none" stroke="rgba(150,80,20,0.2)" strokeWidth="1.5" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                                    </svg>
+                                                </div>
+                                            )}
+                                            <div style={{
+                                                position:'absolute',top:'0.6rem',right:'0.6rem',
+                                                padding:'0.18rem 0.5rem',
+                                                background:'rgba(253,248,244,0.88)',
+                                                backdropFilter:'blur(8px)',borderRadius:'20px',
+                                                fontSize:'0.68rem',fontWeight:'500',color:'rgba(120,55,10,0.7)',
+                                            }}>
+                                                {subcat.total_productos} prendas
+                                            </div>
+                                        </div>
+                                        <div style={{padding:'1rem'}}>
+                                            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                                                <div style={{flex:1,minWidth:0,marginRight:'0.5rem'}}>
+                                                    <h3 style={{fontSize:'0.9rem',fontWeight:'500',color:'#2d1a08',
+                                                        letterSpacing:'-0.01em',marginBottom:subcat.descripcion?'0.18rem':0}}>
+                                                        {subcat.nombre}
+                                                    </h3>
+                                                    {subcat.descripcion && (
+                                                        <p style={{fontSize:'0.74rem',color:'rgba(150,80,20,0.55)',lineHeight:'1.4',margin:0,
+                                                            overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                                            {subcat.descripcion}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <svg width="14" height="14" fill="none" stroke="rgba(150,80,20,0.35)" strokeWidth="1.8" viewBox="0 0 24 24" style={{flexShrink:0}}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
                                                 </svg>
                                             </div>
-                                        )}
-                                        <div style={{
-                                            position:'absolute',top:'0.6rem',right:'0.6rem',
-                                            padding:'0.18rem 0.5rem',
-                                            background:'rgba(253,248,244,0.88)',
-                                            backdropFilter:'blur(8px)',borderRadius:'20px',
-                                            fontSize:'0.68rem',fontWeight:'500',color:'rgba(120,55,10,0.7)',
-                                        }}>
-                                            {subcat.total_productos} prendas
                                         </div>
-                                    </div>
-                                    <div style={{padding:'1rem'}}>
-                                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                                            <div style={{flex:1,minWidth:0,marginRight:'0.5rem'}}>
-                                                <h3 style={{fontSize:'0.9rem',fontWeight:'500',color:'#2d1a08',
-                                                    letterSpacing:'-0.01em',marginBottom:subcat.descripcion?'0.18rem':0}}>
-                                                    {subcat.nombre}
-                                                </h3>
-                                                {subcat.descripcion && (
-                                                    <p style={{fontSize:'0.74rem',color:'rgba(150,80,20,0.55)',lineHeight:'1.4',margin:0,
-                                                        overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                                                        {subcat.descripcion}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <svg width="14" height="14" fill="none" stroke="rgba(150,80,20,0.35)" strokeWidth="1.8" viewBox="0 0 24 24" style={{flexShrink:0}}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </Link>
+                                    </Link>
+                                </div>
+                            ))}
+                        </div>
+
+                        {totalPages > 1 ? (
+                            <div className="pager-wrap">
+                                <button className="pager-btn" onClick={() => goTo(currentPage - 1)} disabled={currentPage === 1}>«</button>
+                                {Array.from({ length: totalPages }).map((_, i) => {
+                                    const p = i + 1;
+                                    return (
+                                        <button
+                                            key={p}
+                                            className={`pager-btn${p === currentPage ? ' active' : ''}`}
+                                            onClick={() => goTo(p)}
+                                        >
+                                            {p}
+                                        </button>
+                                    );
+                                })}
+                                <button className="pager-btn" onClick={() => goTo(currentPage + 1)} disabled={currentPage === totalPages}>»</button>
                             </div>
-                        ))}
-                    </div>
+                        ) : (
+                            <div className="pager-wrap" aria-hidden="true">
+                                <span className="pager-ph-btn">«</span>
+                                <span className="pager-ph-btn">1</span>
+                                <span className="pager-ph-btn">2</span>
+                                <span className="pager-ph-btn">»</span>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </ClienteLayout>

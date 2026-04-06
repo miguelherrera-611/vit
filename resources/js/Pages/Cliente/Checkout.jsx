@@ -21,6 +21,7 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
     const [errors, setErrors]         = useState({});
     const [preview, setPreview]       = useState(null);
     const [isMobile, setIsMobile]     = useState(false);
+    const [qrFullscreen, setQrFullscreen] = useState(null);
 
     const [form, setForm] = useState({
         nombre_receptor:   auth.user?.name ?? '',
@@ -49,6 +50,13 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
         window.addEventListener('resize', check);
         return () => window.removeEventListener('resize', check);
     }, []);
+
+    useEffect(() => {
+        if (!qrFullscreen) return;
+        const onKey = (e) => { if (e.key === 'Escape') setQrFullscreen(null); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [qrFullscreen]);
 
     const total              = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
     const metodoSeleccionado = metodosPago.find((m) => m.id === form.metodo_pago);
@@ -122,6 +130,7 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
                 @keyframes slideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+                @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
 
                 .ck-label {
                     display:block; font-size:0.68rem; font-weight:500;
@@ -197,27 +206,77 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                     background:rgba(255,255,255,0.35); border:1px solid rgba(200,140,80,0.12);
                 }
 
-                /* ── RESPONSIVE MOBILE ── */
-                .ck-layout {
-                    display: grid;
-                    grid-template-columns: 1fr 320px;
-                    gap: 1.25rem;
-                    align-items: start;
+                /* QR pequeño en card de método */
+                .qr-thumb-img{
+                    width: 52px;
+                    height: 52px;
+                    border-radius: 8px;
+                    object-fit: contain;
+                    border: 1px solid rgba(200,140,80,0.15);
+                    background: rgba(255,255,255,0.55);
+                    flex-shrink: 0;
                 }
-                .ck-resumen {
-                    background:rgba(255,255,255,0.45);
-                    border:1px solid rgba(200,140,80,0.12);
-                    border-radius:16px;
-                    padding:1.35rem;
-                    position:sticky;
-                    top:76px;
-                    animation:slideUp 0.4s cubic-bezier(0.16,1,0.3,1) 0.05s both;
+
+                /* QR grande en bloque inferior seleccionado */
+                .qr-preview-img{
+                    width: min(92vw, 460px);
+                    height: auto;
+                    aspect-ratio: 1 / 1;
+                    display: block;
+                    margin: 0 auto;
+                    border-radius: 14px;
+                    object-fit: contain;
+                    border: 1px solid rgba(200,140,80,0.15);
+                    background: rgba(255,255,255,0.55);
+                    cursor: zoom-in;
+                    transition: transform .16s ease, box-shadow .16s ease;
                 }
-                .ck-form-grid-2 {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 0.875rem;
-                    margin-bottom: 0.875rem;
+                .qr-preview-img:hover{
+                    transform: scale(1.01);
+                    box-shadow: 0 10px 28px rgba(180,90,20,0.16);
+                }
+
+                @media (max-width: 767px) {
+                    .qr-preview-img{
+                        width: min(94vw, 420px);
+                    }
+                }
+
+                .qr-fullscreen-overlay{
+                    position: fixed;
+                    inset: 0;
+                    z-index: 400;
+                    background: rgba(0,0,0,0.88);
+                    backdrop-filter: blur(6px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 1rem;
+                    animation: fadeIn .18s ease both;
+                }
+                .qr-fullscreen-img{
+                    max-width: 92vw;
+                    max-height: 88vh;
+                    object-fit: contain;
+                    border-radius: 12px;
+                    border: 1px solid rgba(255,255,255,0.22);
+                    background: rgba(255,255,255,0.04);
+                }
+                .qr-close-btn{
+                    position: fixed;
+                    top: 14px;
+                    right: 14px;
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 50%;
+                    border: 1px solid rgba(255,255,255,0.35);
+                    background: rgba(255,255,255,0.12);
+                    color: #fff;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1rem;
                 }
 
                 @media (max-width: 767px) {
@@ -254,6 +313,15 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
 
                 @media (max-width: 400px) {
                     .paso-line { width: 28px; }
+                }
+
+                .qr-info-box{
+                    margin-top:0.75rem;
+                    padding:0.9rem;
+                    text-align:center;
+                    background:rgba(255,255,255,0.42);
+                    border:1px solid rgba(200,140,80,0.15);
+                    border-radius:0;
                 }
             `}</style>
 
@@ -398,8 +466,11 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                                                     </p>
                                                 </div>
                                                 {m.qr_url && (
-                                                    <img src={m.qr_url} alt="QR"
-                                                         style={{width:'36px',height:'36px',borderRadius:'7px',objectFit:'cover',flexShrink:0}}/>
+                                                    <img
+                                                        src={m.qr_url}
+                                                        alt="QR"
+                                                        className="qr-thumb-img"
+                                                    />
                                                 )}
                                             </div>
                                         );
@@ -419,10 +490,17 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                                             {metodoSeleccionado.numero}
                                         </p>
                                         {metodoSeleccionado.qr_url && (
-                                            <div style={{marginTop:'0.75rem'}}>
-                                                <p style={{fontSize:'0.7rem',color:'rgba(150,80,20,0.5)',marginBottom:'0.35rem'}}>Código QR de pago</p>
-                                                <img src={metodoSeleccionado.qr_url} alt="QR"
-                                                     style={{width:'100px',height:'100px',borderRadius:'9px',objectFit:'contain',border:'1px solid rgba(200,140,80,0.15)'}}/>
+                                            <div className="qr-info-box">
+                                                <p style={{fontSize:'0.7rem',color:'rgba(150,80,20,0.5)',marginBottom:'0.45rem'}}>
+                                                    Código QR de pago
+                                                </p>
+                                                <img
+                                                    src={metodoSeleccionado.qr_url}
+                                                    alt="QR"
+                                                    className="qr-preview-img"
+                                                    onClick={() => setQrFullscreen(metodoSeleccionado.qr_url)}
+                                                    title="Clic para ampliar"
+                                                />
                                             </div>
                                         )}
                                         <p style={{fontSize:'0.78rem',color:'rgba(120,60,10,0.65)',margin:metodoSeleccionado.qr_url?'0.75rem 0 0':'0'}}>
@@ -575,6 +653,25 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                         </div>
                     </div>
                 </div>
+
+                {qrFullscreen && (
+                    <div className="qr-fullscreen-overlay" onClick={() => setQrFullscreen(null)}>
+                        <button
+                            type="button"
+                            className="qr-close-btn"
+                            onClick={(e) => { e.stopPropagation(); setQrFullscreen(null); }}
+                            aria-label="Cerrar"
+                        >
+                            ✕
+                        </button>
+                        <img
+                            src={qrFullscreen}
+                            alt="QR ampliado"
+                            className="qr-fullscreen-img"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </div>
+                )}
             </div>
         </ClienteLayout>
     );

@@ -20,29 +20,59 @@ export default function AbonosHistorial({ venta }) {
 
     return (
         <AppLayout>
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+                .ah-bg{
+                    min-height:100vh;font-family:'Inter',sans-serif;
+                    background:
+                        radial-gradient(ellipse 75% 60% at 0% 0%, rgba(255,210,170,0.18) 0%, transparent 55%),
+                        radial-gradient(ellipse 60% 55% at 100% 100%, rgba(255,195,145,0.14) 0%, transparent 55%),
+                        linear-gradient(145deg,#fdf7f2 0%,#fdf5ef 35%,#fef7f2 70%,#fef9f6 100%);
+                }
+                .ah-header{
+                    background:rgba(255,255,255,.08);
+                    backdrop-filter:blur(40px) saturate(180%);
+                    border-bottom:1px solid rgba(255,255,255,.68);
+                }
+                .ah-shell{max-width:980px;margin:0 auto;padding:1.25rem .9rem 2.2rem}
+                .ah-card{
+                    background:rgba(255,255,255,.04);
+                    backdrop-filter:blur(22px) saturate(150%);
+                    border:1px solid rgba(255,255,255,.65);
+                    border-radius:18px;
+                    box-shadow:0 12px 40px rgba(180,90,20,.07), inset 0 1.5px 0 rgba(255,255,255,.88);
+                }
+                @media (min-width:768px){ .ah-shell{padding:1.8rem 1.3rem 2.8rem} }
+                @media (max-width:640px){
+                    .ah-head-row{flex-direction:column;align-items:flex-start !important;gap:.6rem}
+                    .ah-grid-3{grid-template-columns:1fr !important}
+                    .ah-prod-row{padding:.7rem .9rem !important}
+                    .ah-mov-row{padding:.75rem .9rem !important}
+                    .ah-mov-top{flex-direction:column;align-items:flex-start !important;gap:.45rem}
+                }
+            `}</style>
 
-                <div className="bg-white border-b border-gray-200">
-                    <div className="max-w-4xl mx-auto px-6 py-6">
-                        <div className="flex items-center gap-4">
-                            <Link href="/abonos" className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
+            <div className="ah-bg">
+                <div className="ah-header">
+                    <div className="ah-shell" style={{paddingBottom:'1rem'}}>
+                        <div className="flex items-center gap-3 sm:gap-4">
+                            <Link href="/abonos" className="p-2 rounded-lg transition" style={{color:'rgba(120,60,10,.65)',background:'rgba(255,255,255,.18)',border:'1px solid rgba(200,140,80,.18)'}}>
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                                 </svg>
                             </Link>
                             <div>
-                                <h1 className="text-2xl font-light text-gray-900">Historial de Abonos</h1>
-                                <p className="text-sm text-gray-500">Venta {venta.numero_venta} — {venta.cliente}</p>
+                                <h1 style={{fontSize:'clamp(1.35rem,3vw,1.9rem)',fontWeight:300,color:'#2d1a08'}}>Historial de Abonos</h1>
+                                <p style={{fontSize:'.82rem',color:'rgba(150,80,20,.55)'}}>Venta {venta.numero_venta} — {venta.cliente}</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+                <div className="ah-shell space-y-4 sm:space-y-6">
 
-                    {/* Resumen de la venta */}
-                    <div className="bg-white rounded-2xl shadow-sm p-6">
-                        <div className="flex items-start justify-between mb-4">
+                    <div className="ah-card p-4 sm:p-6">
+                        <div className="flex items-start justify-between mb-4 ah-head-row">
                             <div>
                                 <p className="text-sm text-gray-500 mb-1">Venta</p>
                                 <p className="text-xl font-semibold text-gray-900">{venta.numero_venta}</p>
@@ -58,7 +88,7 @@ export default function AbonosHistorial({ venta }) {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4 mb-4">
+                        <div className="grid grid-cols-3 gap-3 mb-4 ah-grid-3">
                             <div className="bg-gray-50 rounded-xl p-4">
                                 <p className="text-xs text-gray-400 mb-1">Total venta</p>
                                 <p className="text-lg font-semibold text-gray-800">{fmt(venta.total)}</p>
@@ -93,15 +123,14 @@ export default function AbonosHistorial({ venta }) {
                         )}
                     </div>
 
-                    {/* Productos */}
                     {venta.detalles && venta.detalles.length > 0 && (
-                        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                            <div className="px-6 py-4 border-b border-gray-100">
+                        <div className="ah-card overflow-hidden">
+                            <div className="px-4 sm:px-6 py-4 border-b" style={{borderColor:'rgba(200,140,80,.12)'}}>
                                 <h2 className="text-lg font-semibold text-gray-900">Productos</h2>
                             </div>
-                            <div className="divide-y divide-gray-50">
+                            <div className="divide-y" style={{borderColor:'rgba(200,140,80,.08)'}}>
                                 {venta.detalles.map((d, i) => (
-                                    <div key={i} className="px-6 py-3 flex items-center justify-between">
+                                    <div key={i} className="px-4 sm:px-6 py-3 flex items-center justify-between ah-prod-row">
                                         <div>
                                             <p className="text-sm font-medium text-gray-800">{d.nombre}</p>
                                             <p className="text-xs text-gray-400">{d.cantidad} x {fmt(d.precio_unitario)}</p>
@@ -113,9 +142,8 @@ export default function AbonosHistorial({ venta }) {
                         </div>
                     )}
 
-                    {/* Abonos */}
-                    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <div className="ah-card overflow-hidden">
+                        <div className="px-4 sm:px-6 py-4 border-b flex items-center justify-between flex-wrap gap-2" style={{borderColor:'rgba(200,140,80,.12)'}}>
                             <h2 className="text-lg font-semibold text-gray-900">Abonos registrados</h2>
                             <span className="text-sm text-gray-500">{venta.abonos.length} movimiento{venta.abonos.length !== 1 ? 's' : ''}</span>
                         </div>
@@ -130,10 +158,10 @@ export default function AbonosHistorial({ venta }) {
                                 <p className="text-gray-400 text-sm">No hay abonos registrados</p>
                             </div>
                         ) : (
-                            <div className="divide-y divide-gray-50">
+                            <div className="divide-y" style={{borderColor:'rgba(200,140,80,.08)'}}>
                                 {venta.abonos.map((abono, i) => (
-                                    <div key={abono.id} className={'px-6 py-4 ' + (abono.es_ajuste ? 'bg-orange-50/40' : '')}>
-                                        <div className="flex items-start justify-between">
+                                    <div key={abono.id} className={'px-4 sm:px-6 py-4 ah-mov-row ' + (abono.es_ajuste ? 'bg-orange-50/40' : '')}>
+                                        <div className="flex items-start justify-between ah-mov-top">
                                             <div className="flex items-center gap-3">
                                                 {/* Número con color según tipo */}
                                                 <div className={'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ' + (abono.es_ajuste ? 'bg-orange-100' : 'bg-green-50')}>
@@ -156,7 +184,7 @@ export default function AbonosHistorial({ venta }) {
                                             </div>
                                         </div>
                                         {abono.observaciones && (
-                                            <p className="mt-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 ml-11">
+                                            <p className="mt-2 text-xs text-gray-500 rounded-lg px-3 py-2 ml-0 sm:ml-11" style={{background:'rgba(255,255,255,.55)'}}>
                                                 {abono.observaciones}
                                             </p>
                                         )}
@@ -168,7 +196,8 @@ export default function AbonosHistorial({ venta }) {
 
                     {venta.estado === 'Pendiente' && (
                         <div className="flex justify-end">
-                            <Link href="/abonos" className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition text-sm">
+                            <Link href="/abonos" className="px-6 py-3 rounded-xl font-medium transition text-sm"
+                                  style={{background:'rgba(220,38,38,.1)',border:'1px solid rgba(220,38,38,.35)',color:'rgba(185,28,28,.92)'}}>
                                 Registrar nuevo abono
                             </Link>
                         </div>

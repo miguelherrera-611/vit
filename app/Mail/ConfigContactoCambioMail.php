@@ -32,12 +32,27 @@ class ConfigContactoCambioMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.config-contacto-cambio',
+            view: 'emails.config-contacto-cambio-mail',
+            with: [
+                'cambios' => $this->cambios,
+                'usuario' => $this->usuario,
+            ],
         );
     }
 
     public function attachments(): array
     {
         return [];
+    }
+
+    // Opcional: puedes eliminar este método para no duplicar definición de vista.
+    public function build()
+    {
+        return $this->subject('Datos de contacto modificados')
+            ->view('emails.config-contacto-cambio-mail')
+            ->with([
+                'cambios' => $this->cambios,
+                'usuario' => $this->usuario,
+            ]);
     }
 }

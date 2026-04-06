@@ -53,24 +53,130 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
 
     return (
         <AppLayout>
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-                <div className="bg-white border-b border-gray-200">
-                    <div className="max-w-7xl mx-auto px-6 py-8">
-                        <h1 className="text-3xl font-light text-gray-900">Gestión de Abonos</h1>
-                        <p className="mt-1 text-sm text-gray-500">Registra abonos en ventas a crédito o separado</p>
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+                .ab-bg{
+                    min-height:100vh;font-family:'Inter',sans-serif;
+                    background:
+                        radial-gradient(ellipse 75% 60% at 0% 0%, rgba(255,210,170,0.18) 0%, transparent 55%),
+                        radial-gradient(ellipse 60% 55% at 100% 100%, rgba(255,195,145,0.14) 0%, transparent 55%),
+                        linear-gradient(145deg,#fdf7f2 0%,#fdf5ef 35%,#fef7f2 70%,#fef9f6 100%);
+                }
+                .ab-header{
+                    background:rgba(255,255,255,.08);
+                    backdrop-filter:blur(40px) saturate(180%);
+                    border-bottom:1px solid rgba(255,255,255,.68);
+                }
+                .ab-shell{max-width:1280px;margin:0 auto;padding:1.5rem 1rem 2.5rem}
+                .ab-grid{display:grid;grid-template-columns:1fr;gap:1rem}
+                .ab-glass{
+                    background:rgba(255,255,255,.04);
+                    backdrop-filter:blur(22px) saturate(150%);
+                    border:1px solid rgba(255,255,255,.65);
+                    border-radius:18px;
+                    box-shadow:0 12px 40px rgba(180,90,20,.07), inset 0 1.5px 0 rgba(255,255,255,.88);
+                }
+                .ab-btn-main{
+                    padding:.75rem 1rem;border-radius:11px;border:1px solid rgba(220,38,38,.38);
+                    background:rgba(220,38,38,.1);color:rgba(185,28,28,.92);
+                    font-size:.83rem;font-weight:600;cursor:pointer;
+                    text-align:center;display:inline-flex;align-items:center;justify-content:center;
+                    min-height:42px;
+                }
+                .ab-btn-main:hover{background:rgba(220,38,38,.16)}
+
+                .ab-btn-soft{
+                    padding:.75rem 1rem;border-radius:11px;border:1px solid rgba(200,140,80,.22);
+                    background:rgba(255,255,255,.08);color:rgba(120,60,10,.78);
+                    font-size:.82rem;font-weight:500;cursor:pointer;
+                    text-decoration:none;
+                    text-align:center;display:inline-flex;align-items:center;justify-content:center;
+                    min-height:42px;
+                    transition:all .15s ease;
+                }
+                .ab-btn-soft:hover{
+                    background:rgba(255,255,255,.2);
+                    border-color:rgba(200,140,80,.35);
+                    color:rgba(120,60,10,.9);
+                }
+
+                .ab-input{
+                    width:100%;padding:.76rem .95rem;border-radius:11px;
+                    border:1px solid rgba(200,140,80,.28);background:rgba(255,255,255,.55);
+                    color:#2d1a08;outline:none;
+                }
+                .ab-input:focus{border-color:rgba(200,140,80,.45);box-shadow:0 0 0 3px rgba(200,140,80,.08)}
+                .ab-input.has-icon{
+                    padding-left:3rem !important; /* más espacio para que no quede pegado a la lupa */
+                }
+                .ab-search-icon{
+                    left:1rem !important;
+                    opacity:.78;
+                    pointer-events:none;
+                }
+                .ab-sticky{position:sticky;top:1rem}
+                @media (min-width:1024px){
+                    .ab-grid{grid-template-columns:3fr 2fr;gap:1.25rem}
+                    .ab-shell{padding:2rem 1.5rem 3rem}
+                }
+                @media (max-width:768px){
+                    .ab-sticky{position:static}
+                    .ab-actions{display:grid;grid-template-columns:1fr;gap:.55rem}
+                    .ab-actions > *{width:100%}
+                    .ab-sale-grid{grid-template-columns:1fr !important}
+                    .ab-form-grid-2{grid-template-columns:1fr !important}
+                }
+
+                .ab-money-wrap { position: relative; }
+                .ab-money-symbol{
+                    position:absolute;
+                    left:0.95rem;
+                    top:50%;
+                    transform:translateY(-50%);
+                    font-weight:600;
+                    font-size:0.95rem;
+                    color:rgba(120,60,10,0.62);
+                    pointer-events:none;
+                    line-height:1;
+                }
+                .ab-money-input{
+                    padding-left:2.1rem !important;
+                    letter-spacing:0;
+                    line-height:1.2;
+                    -moz-appearance:textfield;
+                }
+                .ab-money-input::-webkit-outer-spin-button,
+                .ab-money-input::-webkit-inner-spin-button{
+                    -webkit-appearance:none;
+                    margin:0;
+                }
+
+                @media (max-width:768px){
+                    .ab-money-symbol{ left:0.9rem; font-size:0.9rem; }
+                    .ab-money-input{
+                        font-size:1rem !important;
+                        padding-left:2rem !important;
+                    }
+                }
+            `}</style>
+
+            <div className="ab-bg">
+                <div className="ab-header">
+                    <div className="ab-shell" style={{paddingBottom:'1rem'}}>
+                        <h1 style={{fontSize:'clamp(1.45rem,3.3vw,2rem)',fontWeight:300,color:'#2d1a08',letterSpacing:'-0.03em'}}>Gestión de Abonos</h1>
+                        <p style={{marginTop:'.25rem',fontSize:'.82rem',color:'rgba(150,80,20,.56)'}}>Registra abonos en ventas a crédito o separado</p>
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-6 py-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <div className="ab-shell">
+                    <div className="ab-grid">
 
-                        {/* ── Panel izquierdo: búsqueda y lista ── */}
-                        <div className="lg:col-span-3 space-y-6">
-                            <div className="bg-white rounded-2xl shadow-sm p-6">
+                        <div className="space-y-4">
+                            <div className="ab-glass p-4 sm:p-5">
                                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Buscar Cliente</h2>
-                                <form onSubmit={buscar} className="flex gap-3">
+                                <form onSubmit={buscar} className="flex flex-col sm:flex-row gap-3">
                                     <div className="relative flex-1">
-                                        <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 ab-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                         </svg>
                                         <input
@@ -78,17 +184,15 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                                             value={busquedaLocal}
                                             onChange={(e) => setBusquedaLocal(e.target.value)}
                                             placeholder="Nombre, teléfono o documento..."
-                                            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition bg-gray-50"
+                                            className="ab-input has-icon"
                                         />
                                     </div>
-                                    <button type="submit" className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition">
-                                        Buscar
-                                    </button>
+                                    <button type="submit" className="ab-btn-main">Buscar</button>
                                 </form>
                             </div>
 
                             {!busqueda && (
-                                <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+                                <div className="ab-glass p-8 text-center">
                                     <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
                                         <svg className="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -99,14 +203,14 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                             )}
 
                             {busqueda && clientes.length === 0 && (
-                                <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+                                <div className="ab-glass p-8 text-center">
                                     <p className="text-gray-500 text-sm">No se encontraron clientes con deudas activas para <strong>"{busqueda}"</strong></p>
                                 </div>
                             )}
 
                             {clientes.map((cliente) => (
-                                <div key={cliente.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                                    <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                                <div key={cliente.id} className="ab-glass overflow-hidden">
+                                    <div className="px-4 sm:px-6 py-4 flex items-center justify-between flex-wrap gap-2" style={{background:'rgba(255,255,255,.18)',borderBottom:'1px solid rgba(200,140,80,.12)'}}>
                                         <div>
                                             <p className="font-semibold text-gray-900">{cliente.nombre}</p>
                                             <p className="text-sm text-gray-500">{cliente.telefono}</p>
@@ -117,9 +221,9 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                                     {cliente.ventas.length === 0 ? (
                                         <div className="px-6 py-4 text-sm text-gray-400">Sin deudas activas</div>
                                     ) : (
-                                        <div className="divide-y divide-gray-50">
+                                        <div className="divide-y" style={{borderColor:'rgba(200,140,80,.08)'}}>
                                             {cliente.ventas.map((venta) => (
-                                                <div key={venta.id} className={'px-6 py-4 transition ' + (ventaSeleccionada?.id === venta.id ? 'bg-blue-50 border-l-4 border-blue-500' : 'hover:bg-gray-50')}>
+                                                <div key={venta.id} className={'px-4 sm:px-6 py-4 transition ' + (ventaSeleccionada?.id === venta.id ? 'bg-blue-50/60 border-l-4 border-blue-500' : 'hover:bg-white/30')}>
                                                     <div className="flex items-center justify-between mb-2">
                                                         <div className="flex items-center gap-3">
                                                             <span className="font-medium text-gray-800">{venta.numero_venta}</span>
@@ -129,7 +233,7 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                                                         <span className="text-xs text-gray-400">{venta.created_at}</span>
                                                     </div>
 
-                                                    <div className="grid grid-cols-3 gap-4 mb-3">
+                                                    <div className="grid grid-cols-3 gap-3 mb-3 ab-sale-grid">
                                                         <div>
                                                             <p className="text-xs text-gray-400">Total</p>
                                                             <p className="text-sm font-medium text-gray-700">{fmt(venta.total)}</p>
@@ -166,9 +270,9 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                                                         </div>
                                                     )}
 
-                                                    <div className="flex gap-2">
-                                                        <button type="button" onClick={() => seleccionarVenta(venta, cliente)} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-xl hover:bg-blue-700 transition font-medium">Registrar abono</button>
-                                                        <a href={'/abonos/' + venta.id + '/historial'} className="px-4 py-2 border border-gray-200 text-gray-600 text-sm rounded-xl hover:bg-gray-50 transition">Ver historial</a>
+                                                    <div className="flex flex-col sm:flex-row gap-2 ab-actions">
+                                                        <button type="button" onClick={() => seleccionarVenta(venta, cliente)} className="ab-btn-main">Registrar abono</button>
+                                                        <a href={'/abonos/' + venta.id + '/historial'} className="ab-btn-soft text-center">Ver historial</a>
                                                     </div>
                                                 </div>
                                             ))}
@@ -178,10 +282,9 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                             ))}
                         </div>
 
-                        {/* ── Panel derecho: formulario ── */}
-                        <div className="lg:col-span-2">
+                        <div>
                             {!ventaSeleccionada ? (
-                                <div className="bg-white rounded-2xl shadow-sm p-8 text-center sticky top-6">
+                                <div className="ab-glass p-6 sm:p-8 text-center ab-sticky">
                                     <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
                                         <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -190,7 +293,7 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                                     <p className="text-gray-500 text-sm">Selecciona una deuda para registrar un abono</p>
                                 </div>
                             ) : (
-                                <form onSubmit={registrarAbono} className="bg-white rounded-2xl shadow-sm p-6 sticky top-6">
+                                <form onSubmit={registrarAbono} className="ab-glass p-4 sm:p-6 ab-sticky">
                                     <h2 className="text-lg font-semibold text-gray-900 mb-1">Registrar Abono</h2>
                                     <p className="text-sm text-gray-500 mb-5">{clienteSeleccionado?.nombre} — {ventaSeleccionada.numero_venta}</p>
 
@@ -217,14 +320,14 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                                                 <button
                                                     type="button"
                                                     onClick={() => setData('tipo_movimiento', 'abono_normal')}
-                                                    className={'py-2 rounded-xl text-sm font-medium transition ' + (data.tipo_movimiento === 'abono_normal' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
+                                                    className={`ab-choice ${data.tipo_movimiento === 'abono_normal' ? 'active' : ''}`}
                                                 >
                                                     Abono normal
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => setData('tipo_movimiento', 'ajuste')}
-                                                    className={'py-2 rounded-xl text-sm font-medium transition ' + (data.tipo_movimiento === 'ajuste' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
+                                                    className={`ab-choice ${data.tipo_movimiento === 'ajuste' ? 'active' : ''}`}
                                                 >
                                                     Ajuste
                                                 </button>
@@ -239,13 +342,13 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
 
                                     <div className="mb-4">
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Monto del abono <span className="text-red-500">*</span></label>
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                                        <div className="ab-money-wrap">
+                                            <span className="ab-money-symbol">$</span>
                                             <input
                                                 type="number"
                                                 value={data.monto}
                                                 onChange={(e) => setData('monto', e.target.value)}
-                                                className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition bg-gray-50 text-lg font-semibold"
+                                                className="ab-input ab-money-input text-lg font-semibold"
                                                 placeholder="0"
                                                 min="0.01"
                                                 step="0.01"
@@ -263,7 +366,12 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Forma de pago</label>
                                         <div className="grid grid-cols-2 gap-2">
                                             {['Efectivo', 'Tarjeta', 'Transferencia', 'Mixto'].map((fp) => (
-                                                <button key={fp} type="button" onClick={() => setData('forma_pago', fp)} className={'py-2 rounded-xl text-sm font-medium transition ' + (data.forma_pago === fp ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>
+                                                <button
+                                                    key={fp}
+                                                    type="button"
+                                                    onClick={() => setData('forma_pago', fp)}
+                                                    className={`ab-choice ${data.forma_pago === fp ? 'active' : ''}`}
+                                                >
                                                     {fp}
                                                 </button>
                                             ))}
@@ -278,21 +386,19 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                                             value={data.observaciones}
                                             onChange={(e) => setData('observaciones', e.target.value)}
                                             rows={2}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition bg-gray-50 resize-none text-sm"
+                                            className="ab-input resize-none text-sm"
                                             placeholder={data.tipo_movimiento === 'ajuste' ? 'Describe el motivo del ajuste...' : 'Nota sobre el abono...'}
                                         />
                                     </div>
 
                                     {errors.error && <p className="mb-3 text-sm text-red-600 bg-red-50 p-3 rounded-xl">{errors.error}</p>}
 
-                                    <div className="flex gap-3">
-                                        <button type="button" onClick={() => { setVentaSeleccionada(null); reset(); }} className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 transition text-sm">
-                                            Cancelar
-                                        </button>
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <button type="button" onClick={() => { setVentaSeleccionada(null); reset(); }} className="ab-btn-soft flex-1">Cancelar</button>
                                         <button
                                             type="submit"
                                             disabled={processing || !data.monto}
-                                            className={'flex-1 py-3 text-white rounded-xl font-medium transition text-sm disabled:opacity-50 disabled:cursor-not-allowed ' + (data.tipo_movimiento === 'ajuste' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-600 hover:bg-blue-700')}
+                                            className="flex-1 py-3 rounded-xl font-medium transition text-sm disabled:opacity-50 disabled:cursor-not-allowed ab-btn-confirm"
                                         >
                                             {processing ? 'Guardando...' : data.tipo_movimiento === 'ajuste' ? 'Confirmar Ajuste' : 'Confirmar Abono'}
                                         </button>

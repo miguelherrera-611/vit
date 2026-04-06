@@ -285,7 +285,7 @@ class PedidoController extends Controller
             'id'     => $m->id,
             'metodo' => $m->metodo,
             'numero' => $m->numero,
-            'qr_url' => $m->qr_url,
+            'qr_url' => $this->storageUrl($m->qr_imagen), // <- consistente para Admin
             'activo' => $m->activo,
         ]);
 

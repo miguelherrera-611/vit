@@ -14,12 +14,6 @@ export default function CatalogoProducto({ producto }) {
 
     const fotos = [...(producto.imagen ? [producto.imagen] : []), ...(producto.fotos || [])];
     const [fotoIdx, setFotoIdx] = useState(0);
-    const [thumbPage, setThumbPage] = useState(0);
-
-    const THUMBS_POR_VISTA = 3;
-    const totalThumbPages = Math.ceil(fotos.length / THUMBS_POR_VISTA);
-    const thumbStart = thumbPage * THUMBS_POR_VISTA;
-    const thumbsVisibles = fotos.slice(thumbStart, thumbStart + THUMBS_POR_VISTA);
 
     /* Detectar ancho real */
     useEffect(() => {
@@ -71,11 +65,6 @@ export default function CatalogoProducto({ producto }) {
     const prev = () => setFotoIdx(i => (i - 1 + fotos.length) % fotos.length);
     const next = () => setFotoIdx(i => (i + 1) % fotos.length);
 
-    // Sincroniza página de miniaturas con foto activa
-    useEffect(() => {
-        setThumbPage(Math.floor(fotoIdx / THUMBS_POR_VISTA));
-    }, [fotoIdx]);
-
     /* ── Estilos base compartidos ── */
     const navBtn = {
         position: 'absolute', top: '50%', transform: 'translateY(-50%)',
@@ -109,20 +98,6 @@ export default function CatalogoProducto({ producto }) {
                 .pv-thumb { width:46px;height:46px;border-radius:7px;object-fit:cover;cursor:pointer;border:1.5px solid transparent;transition:border-color 0.13s;flex-shrink:0; }
                 .pv-thumb:hover { border-color: rgba(200,140,80,0.45); }
                 .pv-thumb.on   { border-color: rgba(185,28,28,0.5); }
-                .pv-thumbs-pager{
-                    display:flex;align-items:center;justify-content:center;gap:.35rem;
-                    padding:.5rem;background:rgba(255,255,255,0.2);
-                    border-top:1px solid rgba(200,140,80,0.08);
-                }
-                .pv-thumbs-window{
-                    display:flex;justify-content:center;gap:.32rem;min-width:0;
-                }
-                .pv-page-btn{
-                    width:26px;height:26px;border-radius:8px;border:1px solid rgba(200,140,80,0.2);
-                    background:rgba(255,255,255,0.65);color:rgba(120,60,10,0.75);cursor:pointer;
-                    display:flex;align-items:center;justify-content:center;flex-shrink:0;
-                }
-                .pv-page-btn:disabled{opacity:.35;cursor:not-allowed}
             `}</style>
 
             {/* ── PÁGINA COMPLETA: padding simétrico y max-width centrado ── */}
@@ -238,43 +213,14 @@ export default function CatalogoProducto({ producto }) {
 
                             {/* Thumbnails */}
                             {fotos.length > 1 && (
-                                <div className="pv-thumbs-pager">
-                                    <button
-                                        type="button"
-                                        className="pv-page-btn"
-                                        onClick={() => setThumbPage(p => Math.max(0, p - 1))}
-                                        disabled={thumbPage === 0}
-                                    >
-                                        <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
-                                        </svg>
-                                    </button>
-
-                                    <div className="pv-thumbs-window">
-                                        {thumbsVisibles.map((f, i) => {
-                                            const realIdx = thumbStart + i;
-                                            return (
-                                                <img
-                                                    key={realIdx}
-                                                    src={f}
-                                                    alt={`foto ${realIdx + 1}`}
-                                                    className={`pv-thumb${realIdx === fotoIdx ? ' on' : ''}`}
-                                                    onClick={() => setFotoIdx(realIdx)}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        className="pv-page-btn"
-                                        onClick={() => setThumbPage(p => Math.min(totalThumbPages - 1, p + 1))}
-                                        disabled={thumbPage >= totalThumbPages - 1}
-                                    >
-                                        <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                                        </svg>
-                                    </button>
+                                <div style={{ display:'flex', gap:'0.32rem', padding:'0.5rem',
+                                    overflowX:'auto', background:'rgba(255,255,255,0.2)',
+                                    borderTop:'1px solid rgba(200,140,80,0.08)' }}>
+                                    {fotos.map((f, i) => (
+                                        <img key={i} src={f} alt={`foto ${i+1}`}
+                                             className={`pv-thumb${i === fotoIdx ? ' on' : ''}`}
+                                             onClick={() => setFotoIdx(i)}/>
+                                    ))}
                                 </div>
                             )}
                         </div>
