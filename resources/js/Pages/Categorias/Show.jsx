@@ -1,7 +1,8 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import PasswordConfirmModal from '@/Components/PasswordConfirmModal';
+import Pagination from '@/Components/Pagination';
 
 const GRADIENTS = {
     pink:   'linear-gradient(135deg, #ec4899 0%, #f43f5e 50%, #f87171 100%)',
@@ -33,22 +34,11 @@ const GLASS_BG = `
 const PAGE_STYLES = `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;900&display=swap');
     .pg-bg { min-height:100vh; font-family:'Inter',-apple-system,sans-serif; background:${GLASS_BG}; }
-
-    /* Banner */
-    .cat-banner {
-        position:relative; overflow:hidden; min-height:220px;
-    }
-    .cat-banner::after {
-        content:''; position:absolute; inset:0;
-        background:rgba(0,0,0,0.28); pointer-events:none;
-    }
-    .banner-dot-pattern {
-        position:absolute; inset:0; opacity:0.09;
-        background-image:radial-gradient(circle, white 1px, transparent 1px);
-        background-size:32px 32px; pointer-events:none; z-index:1;
-    }
-
-    /* Banner glass btns */
+    .cat-banner { position:relative; overflow:hidden; min-height:220px; }
+    .cat-banner::after { content:''; position:absolute; inset:0; background:rgba(0,0,0,0.28); pointer-events:none; }
+    .banner-dot-pattern { position:absolute; inset:0; opacity:0.09; background-image:radial-gradient(circle, white 1px, transparent 1px); background-size:32px 32px; pointer-events:none; z-index:1; }
+    .show-actions{display:flex;gap:.6rem;flex-wrap:wrap}
+    .subcat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.25rem}
     .banner-btn-ghost {
         display:inline-flex; align-items:center; gap:0.5rem;
         padding:0.55rem 1.1rem;
@@ -122,12 +112,61 @@ const PAGE_STYLES = `
     .anim-6 { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.24s both; }
     .anim-7 { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.28s both; }
     .anim-8 { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.32s both; }
+
+    @media (max-width:900px){
+        .subcat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+    }
+    @media (max-width:640px){
+        .cat-banner{min-height:190px}
+        .show-actions{width:100%}
+        .banner-btn-white{width:100%;justify-content:center}
+        .subcat-grid{grid-template-columns:1fr}
+    }
+
+    .pager-placeholder{
+        margin-top:1.25rem;
+        display:flex;
+        justify-content:center;
+    }
+    .pager-placeholder-inner{
+        display:inline-flex;
+        align-items:center;
+        gap:.45rem;
+        padding:.55rem .7rem;
+        border-radius:12px;
+        background:rgba(255,255,255,0.42);
+        border:1px solid rgba(200,140,80,0.14);
+        backdrop-filter:blur(8px);
+    }
+    .pager-ph-btn{
+        min-width:34px;
+        height:30px;
+        padding:0 .6rem;
+        border-radius:8px;
+        border:1px solid rgba(180,180,180,0.28);
+        background:rgba(210,210,210,0.28);
+        color:rgba(120,120,120,0.75);
+        font-size:.74rem;
+        font-weight:600;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        user-select:none;
+    }
 `;
 
 export default function CategoriasShow({ grupo, subcategorias = [] }) {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [processing,   setProcessing]   = useState(false);
     const [pwdError,     setPwdError]     = useState(null);
+    const [currentPage,  setCurrentPage]  = useState(1);
+    const PER_PAGE = 8;
+
+    const subcategoriasPaginadas = useMemo(
+        () => subcategorias.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE),
+        [subcategorias, currentPage]
+    );
+    const paginacionActiva = subcategorias.length > PER_PAGE;
 
     const gradient = GRADIENTS[grupo.color] || GRADIENTS.violet;
     const soft     = SOFT[grupo.color]     || SOFT.violet;
@@ -223,79 +262,103 @@ export default function CategoriasShow({ grupo, subcategorias = [] }) {
                             </Link>
                         </div>
                     ) : (
-                        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:'1.25rem' }}>
-                            {subcategorias.map((sub, i) => (
-                                <div key={sub.id}
-                                     className={`subcat-card ${ANIM[i % 8]}`}
-                                     style={{
-                                         border:`1px solid ${soft.border}`,
-                                         boxShadow:`0 8px 28px ${soft.bg}, 0 2px 8px rgba(180,90,20,0.05), inset 0 -1px 0 rgba(180,90,20,0.03)`,
-                                     }}
-                                >
-                                    {/* Image area */}
-                                    <div style={{ height:'120px', overflow:'hidden', position:'relative' }}>
-                                        {sub.imagen ? (
-                                            <img src={`/storage/${sub.imagen}`} alt={sub.nombre}
-                                                 style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s ease' }}
-                                                 onMouseOver={e => e.currentTarget.style.transform='scale(1.05)'}
-                                                 onMouseOut={e => e.currentTarget.style.transform='scale(1)'}
-                                            />
-                                        ) : (
-                                            <div style={{ width:'100%', height:'100%', background:`${soft.bg}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                                                <svg width="32" height="32" fill="none" stroke={soft.text} style={{ opacity:0.5 }} viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                                                </svg>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Body */}
-                                    <div style={{ padding:'1rem' }}>
-                                        <h3 style={{ fontWeight:'600', color:'#2d1a08', fontSize:'0.92rem', marginBottom:'0.5rem' }}>{sub.nombre}</h3>
-                                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.35rem' }}>
-                                            <span style={{
-                                                fontSize:'0.72rem', fontWeight:'600', padding:'0.2rem 0.65rem', borderRadius:'20px',
-                                                background: soft.badge, color: soft.badgeText,
-                                                border:`1px solid ${soft.border}`,
-                                            }}>
-                                                {sub.total_productos} prod.
-                                            </span>
+                        <>
+                            <div className="subcat-grid">
+                                {subcategoriasPaginadas.map((sub, i) => (
+                                    <div
+                                        key={sub.id}
+                                        className={`subcat-card ${ANIM[i % 8]}`}
+                                        style={{
+                                            border:`1px solid ${soft.border}`,
+                                            boxShadow:`0 8px 28px ${soft.bg}, 0 2px 8px rgba(180,90,20,0.05), inset 0 -1px 0 rgba(180,90,20,0.03)`,
+                                        }}
+                                    >
+                                        {/* Image area */}
+                                        <div style={{ height:'120px', overflow:'hidden', position:'relative' }}>
+                                            {sub.imagen ? (
+                                                <img src={`/storage/${sub.imagen}`} alt={sub.nombre}
+                                                     style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s ease' }}
+                                                     onMouseOver={e => e.currentTarget.style.transform='scale(1.05)'}
+                                                     onMouseOut={e => e.currentTarget.style.transform='scale(1)'}
+                                                />
+                                            ) : (
+                                                <div style={{ width:'100%', height:'100%', background:`${soft.bg}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                                    <svg width="32" height="32" fill="none" stroke={soft.text} style={{ opacity:0.5 }} viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                                    </svg>
+                                                </div>
+                                            )}
                                         </div>
-                                        {sub.descripcion && (
-                                            <p style={{ fontSize:'0.74rem', color:'rgba(150,80,20,0.5)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                                                {sub.descripcion}
-                                            </p>
-                                        )}
 
-                                        {/* Actions */}
-                                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:'0.85rem', paddingTop:'0.75rem', borderTop:`1px solid rgba(200,140,80,0.12)` }}>
-                                            <Link
-                                                href={`/categorias/${grupo.id}/subcategorias/${sub.id}/edit`}
-                                                style={{
-                                                    flex:1, textAlign:'center', fontSize:'0.78rem', fontWeight:'500',
-                                                    padding:'0.4rem 0', borderRadius:'10px',
-                                                    background: soft.bg, color: soft.text,
-                                                    textDecoration:'none', transition:'all 0.15s',
+                                        {/* Body */}
+                                        <div style={{ padding:'1rem' }}>
+                                            <h3 style={{ fontWeight:'600', color:'#2d1a08', fontSize:'0.92rem', marginBottom:'0.5rem' }}>{sub.nombre}</h3>
+                                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.35rem' }}>
+                                                <span style={{
+                                                    fontSize:'0.72rem', fontWeight:'600', padding:'0.2rem 0.65rem', borderRadius:'20px',
+                                                    background: soft.badge, color: soft.badgeText,
                                                     border:`1px solid ${soft.border}`,
-                                                }}
-                                            >
-                                                Editar
-                                            </Link>
-                                            <button
-                                                className="icon-btn danger"
-                                                onClick={() => { setDeleteTarget(sub); setPwdError(null); }}
-                                                style={{ marginLeft:'0.5rem', flexShrink:0 }}
-                                                title="Eliminar"
-                                            >
-                                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
+                                                }}>
+                                                    {sub.total_productos} prod.
+                                                </span>
+                                            </div>
+                                            {sub.descripcion && (
+                                                <p style={{ fontSize:'0.74rem', color:'rgba(150,80,20,0.5)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                                                    {sub.descripcion}
+                                                </p>
+                                            )}
+
+                                            {/* Actions */}
+                                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:'0.85rem', paddingTop:'0.75rem', borderTop:`1px solid rgba(200,140,80,0.12)` }}>
+                                                <Link
+                                                    href={`/categorias/${grupo.id}/subcategorias/${sub.id}/edit`}
+                                                    style={{
+                                                        flex:1, textAlign:'center', fontSize:'0.78rem', fontWeight:'500',
+                                                        padding:'0.4rem 0', borderRadius:'10px',
+                                                        background: soft.bg, color: soft.text,
+                                                        textDecoration:'none', transition:'all 0.15s',
+                                                        border:`1px solid ${soft.border}`,
+                                                    }}
+                                                >
+                                                    Editar
+                                                </Link>
+                                                <button
+                                                    className="icon-btn danger"
+                                                    onClick={() => { setDeleteTarget(sub); setPwdError(null); }}
+                                                    style={{ marginLeft:'0.5rem', flexShrink:0 }}
+                                                    title="Eliminar"
+                                                >
+                                                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {paginacionActiva ? (
+                                <div style={{ marginTop:'1.25rem' }}>
+                                    <Pagination
+                                        currentPage={currentPage}
+                                        totalItems={subcategorias.length}
+                                        perPage={PER_PAGE}
+                                        onPageChange={setCurrentPage}
+                                        accentColor="violet"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="pager-placeholder" aria-hidden="true">
+                                    <div className="pager-placeholder-inner">
+                                        <span className="pager-ph-btn">«</span>
+                                        <span className="pager-ph-btn">1</span>
+                                        <span className="pager-ph-btn">2</span>
+                                        <span className="pager-ph-btn">»</span>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>

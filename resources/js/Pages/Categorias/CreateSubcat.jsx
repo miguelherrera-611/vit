@@ -35,6 +35,14 @@ const STYLES = `
     .btn-back:hover { background:rgba(255,255,255,0.2); color:rgba(120,50,10,0.9); }
     /* label pill */
     .label-pill { background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.22); border-radius:14px; padding:0.75rem 1rem; }
+
+    .cs-shell{max-width:680px;margin:0 auto;padding:2rem 1.5rem}
+    .cs-actions{display:flex;gap:.65rem}
+    @media (max-width:640px){
+        .cs-shell{padding:1rem .85rem 1.8rem}
+        .glass-panel{padding:1.2rem;border-radius:16px}
+        .cs-actions{flex-direction:column}
+    }
 `;
 
 export default function CreateSubcat({ grupo }) {
@@ -78,7 +86,7 @@ export default function CreateSubcat({ grupo }) {
                     </div>
                 </div>
 
-                <div style={{ maxWidth:'680px', margin:'0 auto', padding:'2rem 1.5rem' }}>
+                <div className="cs-shell">
                     <form onSubmit={submit} encType="multipart/form-data" style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
 
                         <div className="glass-panel">
@@ -136,7 +144,7 @@ export default function CreateSubcat({ grupo }) {
                             </div>
                         )}
 
-                        <div style={{ display:'flex', gap:'0.65rem' }}>
+                        <div className="cs-actions">
                             <Link href={`/categorias/${grupo.id}`} className="btn-ghost">Cancelar</Link>
                             <button type="submit" disabled={processing} className="btn-primary-violet">
                                 {processing ? 'Guardando...' : 'Crear Subcategoría'}

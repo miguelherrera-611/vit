@@ -34,6 +34,15 @@ const STYLES = `
     .btn-back { width:34px; height:34px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.65); border-radius:10px; cursor:pointer; text-decoration:none; color:rgba(150,80,20,0.6); transition:all 0.18s; flex-shrink:0; box-shadow:inset 0 1px 0 rgba(255,255,255,0.72); }
     .btn-back:hover { background:rgba(255,255,255,0.2); color:rgba(120,50,10,0.9); }
     .label-pill { background:rgba(180,90,20,0.05); border:1px solid rgba(200,140,80,0.2); border-radius:14px; padding:0.75rem 1rem; }
+
+    .es-shell{max-width:680px;margin:0 auto;padding:2rem 1.5rem}
+    .es-actions{display:flex;gap:.65rem}
+    @media (max-width:640px){
+        .es-shell{padding:1rem .85rem 1.8rem}
+        .glass-panel{padding:1.2rem;border-radius:16px}
+        .es-actions{flex-direction:column}
+        .btn-delete{padding:.5rem .8rem;font-size:.75rem}
+    }
 `;
 
 export default function EditSubcat({ grupo, subcat }) {
@@ -100,7 +109,7 @@ export default function EditSubcat({ grupo, subcat }) {
                     </div>
                 </div>
 
-                <div style={{ maxWidth:'680px', margin:'0 auto', padding:'2rem 1.5rem' }}>
+                <div className="es-shell">
                     <form onSubmit={submit} encType="multipart/form-data" style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
 
                         <div className="glass-panel">
@@ -153,7 +162,7 @@ export default function EditSubcat({ grupo, subcat }) {
                             </p>
                         </div>
 
-                        <div style={{ display:'flex', gap:'0.65rem' }}>
+                        <div className="es-actions">
                             <Link href={`/categorias/${grupo.id}`} className="btn-ghost">Cancelar</Link>
                             <button type="submit" disabled={processing} className="btn-primary-violet">
                                 {processing ? 'Guardando...' : 'Guardar Cambios'}

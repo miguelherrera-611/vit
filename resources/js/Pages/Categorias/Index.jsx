@@ -25,12 +25,11 @@ const PAGE_STYLES = `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;900&display=swap');
     .pg-bg { min-height:100vh; font-family:'Inter',-apple-system,sans-serif; background:${GLASS_BG}; }
     .pg-header { background:rgba(255,255,255,0.2); backdrop-filter:blur(32px) saturate(180%); -webkit-backdrop-filter:blur(32px) saturate(180%); border-bottom:1px solid rgba(255,255,255,0.68); box-shadow:0 4px 24px rgba(200,100,30,0.07),inset 0 1px 0 rgba(255,255,255,0.85); }
-    .btn-ghost { display:inline-flex; align-items:center; gap:0.4rem; padding:0.65rem 1.1rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.65); border-radius:14px; font-size:0.85rem; font-weight:500; color:rgba(120,60,10,0.8); text-decoration:none; cursor:pointer; transition:all 0.2s ease; backdrop-filter:blur(10px); box-shadow:0 2px 8px rgba(180,90,20,0.06),inset 0 1px 0 rgba(255,255,255,0.78); font-family:'Inter',sans-serif; white-space:nowrap; }
-    .btn-ghost:hover { background:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.85); color:rgba(90,40,5,0.95); }
+    .cat-head-row{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+    .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.5rem}
     .btn-primary { display:inline-flex; align-items:center; gap:0.4rem; padding:0.65rem 1.25rem; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.45); border-radius:14px; font-size:0.85rem; font-weight:500; color:rgba(185,28,28,0.95); text-decoration:none; cursor:pointer; transition:all 0.2s ease; backdrop-filter:blur(10px); box-shadow:0 4px 16px rgba(220,38,38,0.1),inset 0 1px 0 rgba(255,120,120,0.28); font-family:'Inter',sans-serif; white-space:nowrap; position:relative; overflow:hidden; }
     .btn-primary::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,150,150,0.7) 40%,rgba(255,150,150,0.7) 60%,transparent); }
     .btn-primary:hover { background:rgba(220,38,38,0.15); border-color:rgba(220,38,38,0.6); transform:translateY(-1px); }
-    /* grupo card overlay */
     .grupo-card { position:relative; border-radius:28px; overflow:hidden; min-height:280px; cursor:pointer; transition:transform 0.3s ease, box-shadow 0.3s ease; }
     .grupo-card:hover { transform:translateY(-4px); box-shadow:0 24px 64px rgba(0,0,0,0.22) !important; }
     .grupo-actions { position:absolute; top:1rem; right:1rem; display:flex; gap:0.5rem; opacity:0; transition:opacity 0.2s; z-index:20; }
@@ -39,6 +38,15 @@ const PAGE_STYLES = `
     .group-action-btn:hover { background:white; }
     .group-action-btn.edit:hover  { color:rgba(109,40,217,0.9); }
     .group-action-btn.del:hover   { color:rgba(185,28,28,0.9); }
+
+    @media (max-width:1024px){ .cat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem} }
+    @media (max-width:700px){
+        .cat-grid{grid-template-columns:1fr}
+        .cat-head-row{align-items:stretch}
+        .btn-primary{width:100%;justify-content:center}
+        .grupo-card{min-height:240px;border-radius:20px}
+        .grupo-actions{opacity:1}
+    }
 `;
 
 function GrupoCard({ grupo, onEdit, onDelete }) {
@@ -125,7 +133,7 @@ export default function CategoriasIndex({ grupos = [] }) {
             <div className="pg-bg">
                 <div className="pg-header">
                     <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.75rem 1.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+                        <div className="cat-head-row">
                             <div>
                                 <h1 style={{ fontSize: '1.6rem', fontWeight: '300', color: '#2d1a08', letterSpacing: '-0.03em' }}>Categorías</h1>
                                 <p style={{ marginTop: '0.3rem', fontSize: '0.82rem', color: 'rgba(150,80,20,0.6)' }}>
@@ -154,7 +162,7 @@ export default function CategoriasIndex({ grupos = [] }) {
                             <p style={{ fontSize: '0.82rem', color: 'rgba(150,80,20,0.55)' }}>Crea tu primera categoría con el botón de arriba</p>
                         </div>
                     ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                        <div className="cat-grid">
                             {gruposPaginados.map((grupo) => (
                                 <GrupoCard
                                     key={grupo.id}

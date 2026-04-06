@@ -62,6 +62,19 @@ const STYLES = `
     /* preview card */
     .preview-card { border-radius:28px; overflow:hidden; position:relative; min-height:280px; box-shadow:0 16px 48px rgba(0,0,0,0.18); }
     .preview-label-badge { display:inline-flex; align-items:center; background:rgba(255,255,255,0.18); backdrop-filter:blur(8px); color:white; font-size:0.72rem; font-weight:600; padding:0.3rem 0.75rem; border-radius:20px; border:1px solid rgba(255,255,255,0.28); letter-spacing:0.04em; }
+
+    .cg-shell{max-width:1024px;margin:0 auto;padding:2rem 1.5rem}
+    .cg-grid{display:grid;grid-template-columns:1fr 320px;gap:1.75rem;align-items:start}
+    .cg-actions{display:flex;gap:.65rem}
+    @media (max-width:980px){
+        .cg-grid{grid-template-columns:1fr}
+        .cg-preview{position:static !important;order:-1}
+    }
+    @media (max-width:640px){
+        .cg-shell{padding:1rem .85rem 1.8rem}
+        .glass-panel{padding:1.2rem;border-radius:16px}
+        .cg-actions{flex-direction:column}
+    }
 `;
 
 export default function CreateGrupo() {
@@ -105,9 +118,8 @@ export default function CreateGrupo() {
                     </div>
                 </div>
 
-                <div style={{ maxWidth:'1024px', margin:'0 auto', padding:'2rem 1.5rem' }}>
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 320px', gap:'1.75rem', alignItems:'start' }}>
-
+                <div className="cg-shell">
+                    <div className="cg-grid">
                         {/* ── Form ── */}
                         <form onSubmit={submit} encType="multipart/form-data" style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
 
@@ -181,7 +193,7 @@ export default function CreateGrupo() {
                             </div>
 
                             {/* Buttons */}
-                            <div style={{ display:'flex', gap:'0.65rem' }}>
+                            <div className="cg-actions">
                                 <Link href="/categorias" className="btn-ghost">Cancelar</Link>
                                 <button type="submit" disabled={processing} className="btn-primary-violet">
                                     {processing ? 'Creando...' : 'Crear Categoría'}
@@ -190,7 +202,7 @@ export default function CreateGrupo() {
                         </form>
 
                         {/* ── Preview ── */}
-                        <div style={{ position:'sticky', top:'5rem' }}>
+                        <div className="cg-preview" style={{ position:'sticky', top:'5rem' }}>
                             <p style={{ fontSize:'0.78rem', fontWeight:'600', color:'rgba(150,80,20,0.55)', letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:'0.85rem' }}>
                                 Vista previa
                             </p>
