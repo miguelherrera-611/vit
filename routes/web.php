@@ -114,6 +114,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('admin/reclamos')->name('admin.reclamos.')->middleware('role:admin')->group(function () {
         Route::get('/', [ReclamoController::class, 'adminIndex'])->name('index');
         Route::patch('/{reclamo}', [ReclamoController::class, 'actualizar'])->name('actualizar');
+        Route::post('/eliminar', [ReclamoController::class, 'eliminar'])->name('eliminar');
     });
 
     // ─────────────────────────────────────────────────────────────────────────
