@@ -82,7 +82,7 @@ class AuthenticatedSessionController extends Controller
             return back()->withErrors(['code' => 'Usuario no encontrado.']);
         }
 
-        if ($user->verification_code != $request->code) {
+        if ((string) $user->verification_code !== (string) $request->code) {
             return back()->withErrors(['code' => 'El código ingresado es incorrecto.']);
         }
 
