@@ -24,6 +24,7 @@ class Venta extends Model
         'estado',
         'metodo_pago',
         'notas',
+        'fecha_limite',
     ];
 
     protected $casts = [
@@ -33,6 +34,7 @@ class Venta extends Model
         'total' => 'decimal:2',
         'pagado' => 'decimal:2',
         'saldo_pendiente' => 'decimal:2',
+        'fecha_limite' => 'date:Y-m-d',
     ];
 
     public function cliente()

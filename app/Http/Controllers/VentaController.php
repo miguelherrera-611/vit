@@ -75,16 +75,17 @@ class VentaController extends Controller
         $pagado         = $validated['pagado'];
         $saldoPendiente = max(0, $total - $pagado);
 
-        if (empty($validated['cliente_id']) && $validated['tipo_venta'] === 'Contado' && $saldoPendiente > 0) {
+        // NUEVO: contado no permite saldo pendiente (aplica para cualquier cliente)
+        if ($validated['tipo_venta'] === 'Contado' && $saldoPendiente > 0) {
             return back()->withErrors([
-                'pagado' => 'El cliente general debe pagar el total (' . number_format($total, 0, ',', '.') . ') en ventas de contado. Registra al cliente, cambia a Separado, o ajusta el monto recibido.',
+                'pagado' => 'Esta venta no puede registrarse como Contado porque el pago es menor al total. Selecciona Separado o Crédito, o completa el pago total (' . number_format($total, 0, ',', '.') . ').',
             ]);
         }
 
         DB::beginTransaction();
 
         try {
-            // Verificar stock suficiente con lockForUpdate
+            // Verificar stock suficiente with lockForUpdate
             $erroresStock          = [];
             $productosEnTransaccion = [];
 
@@ -318,10 +319,12 @@ class VentaController extends Controller
             ->orderBy('fecha_limite')
             ->get()
             ->map(function ($v) {
-                $vencida  = $v->fecha_limite && Carbon::parse($v->fecha_limite)->isPast();
-                $diasMora = $v->fecha_limite
-                    ? max(0, (int) Carbon::parse($v->fecha_limite)->diffInDays(now(), false))
+                $fechaLimite = $v->fecha_limite ? Carbon::parse($v->fecha_limite) : null;
+                $vencida  = $fechaLimite && $fechaLimite->isPast();
+                $diasMora = $fechaLimite
+                    ? max(0, (int) $fechaLimite->diffInDays(now(), false))
                     : 0;
+
                 return [
                     'id'              => $v->id,
                     'numero_venta'    => $v->numero_venta,
@@ -331,7 +334,7 @@ class VentaController extends Controller
                     'total'           => $v->total,
                     'pagado'          => $v->pagado,
                     'saldo_pendiente' => $v->saldo_pendiente,
-                    'fecha_limite'    => $v->fecha_limite,
+                    'fecha_limite'    => $fechaLimite ? $fechaLimite->format('d/m/Y') : null,
                     'estado'          => $v->estado,
                     'vencida'         => $vencida,
                     'dias_mora'       => $diasMora,

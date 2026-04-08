@@ -620,7 +620,12 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             },
             onError: () => {
-                setTimeout(() => document.getElementById('aviso-stock')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setTimeout(() => {
+                    if (document.getElementById('aviso-stock')) {
+                        document.getElementById('aviso-stock')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 120);
             },
         });
     };
@@ -757,14 +762,19 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                 /* Btn primary */
                 .vc-btn-submit {
                     width:100%;padding:0.85rem 1rem;
-                    background:rgba(185,28,28,0.08);border:1px solid rgba(185,28,28,0.25);
-                    border-radius:11px;color:rgba(185,28,28,0.9);
-                    font-size:0.86rem;font-weight:500;font-family:'Inter',sans-serif;
+                    background:rgba(185,28,28,0.1);border:1px solid rgba(185,28,28,0.3);
+                    border-radius:11px;color:rgba(165,20,20,0.95);
+                    font-size:0.86rem;font-weight:600;font-family:'Inter',sans-serif;
                     cursor:pointer;transition:all 0.15s;letter-spacing:-0.01em;
                 }
-                .vc-btn-submit:hover:not(:disabled) { background:rgba(185,28,28,0.13);border-color:rgba(185,28,28,0.38); }
-                .vc-btn-submit:disabled { opacity:0.38;cursor:not-allowed; }
-                .vc-btn-submit.blocked { background:rgba(200,140,80,0.06);border-color:rgba(200,140,80,0.18);color:rgba(150,80,20,0.4); }
+                .vc-btn-submit:hover:not(:disabled) { background:rgba(185,28,28,0.16);border-color:rgba(185,28,28,0.42); }
+                .vc-btn-submit:disabled { opacity:1;cursor:not-allowed; }
+                .vc-btn-submit.blocked {
+                    background:rgba(245,158,11,0.18);
+                    border-color:rgba(245,158,11,0.42);
+                    color:rgba(120,60,10,0.92);
+                    box-shadow:inset 0 1px 0 rgba(255,255,255,0.35);
+                }
 
                 /* Alert boxes */
                 .vc-alert {

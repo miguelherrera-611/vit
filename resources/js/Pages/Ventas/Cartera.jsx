@@ -121,8 +121,9 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                     border:1px solid rgba(200,140,80,0.24);
                     border-radius:9px;
                     font-size:0.82rem;
-                    color:#2d1a08;
+                    color:rgba(120,60,10,0.86); /* color visible para todos los estados */
                     font-family:'Inter',sans-serif;
+                    font-weight:500;
                     outline:none;
                     transition:all 0.15s;
                     letter-spacing:-0.01em;
@@ -177,11 +178,17 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                 /* Table */
                 .ca-table-wrap {
                     overflow-x:auto;
+                    -webkit-overflow-scrolling: touch;
                     animation:fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.12s both;
                     position: relative;
                     z-index: 10; /* por debajo del bloque filtros */
                 }
-                .ca-table { width:100%;border-collapse:collapse; }
+                .ca-table {
+                    width:100%;
+                    min-width: 980px; /* fuerza scroll horizontal en móvil sin romper columnas */
+                    border-collapse:collapse;
+                }
+
                 .ca-table thead tr { border-bottom:1px solid rgba(200,140,80,0.1); }
                 .ca-table th {
                     padding:0.75rem 1rem;text-align:left;
@@ -275,8 +282,13 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                         max-height:180px;
                     }
 
-                    .ca-table-wrap table { display:none; }
-                    .ca-mobile-list { display:flex;flex-direction:column; }
+                    /* Mantener tabla en móvil (NO ocultar) */
+                    .ca-table th { padding:0.7rem 0.8rem; }
+                    .ca-table td { padding:0.78rem 0.8rem; }
+
+                    /* desactivado: usamos misma tabla de desktop */
+                    /* .ca-table-wrap table { display:none; } */
+                    /* .ca-mobile-list { display:flex;flex-direction:column; } */
                 }
                 @media (max-width:400px) {
                     .ca-stats { grid-template-columns:1fr; }
@@ -391,11 +403,15 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                             </div>
 
                             <div className={`ca-select-wrap${openTipo ? ' open' : ''}`} ref={tipoRef}>
-                                <button type="button" className={`ca-select-btn${openTipo ? ' open' : ''}`} onClick={() => setOpenTipo(v => !v)}>
+                                <button
+                                    type="button"
+                                    className={`ca-select-btn${openTipo ? ' open' : ''}`}
+                                    onClick={() => setOpenTipo(v => !v)}
+                                >
                                     <span>
-                                        {filtroTipo === '' ? 'Todos'
-                                            : filtroTipo === 'Crédito' ? 'Crédito'
-                                                : 'Separado'}
+                                        {filtroTipo === '' ? 'Tipo: todos'
+                                            : filtroTipo === 'Crédito' ? 'Tipo: crédito'
+                                                : 'Tipo: separado'}
                                     </span>
                                     <svg className={`ca-caret${openTipo ? ' up' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
@@ -422,11 +438,15 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                             </div>
 
                             <div className={`ca-select-wrap${openEstado ? ' open' : ''}`} ref={estadoRef}>
-                                <button type="button" className={`ca-select-btn${openEstado ? ' open' : ''}`} onClick={() => setOpenEstado(v => !v)}>
+                                <button
+                                    type="button"
+                                    className={`ca-select-btn${openEstado ? ' open' : ''}`}
+                                    onClick={() => setOpenEstado(v => !v)}
+                                >
                                     <span>
-                                        {filtroEstado === '' ? 'Todas'
-                                            : filtroEstado === 'al_dia' ? 'Al día'
-                                                : 'Vencidas'}
+                                        {filtroEstado === '' ? 'Estado: todas'
+                                            : filtroEstado === 'al_dia' ? 'Estado: al día'
+                                                : 'Estado: vencidas'}
                                     </span>
                                     <svg className={`ca-caret${openEstado ? ' up' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
@@ -478,7 +498,7 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                         </div>
                     ) : (
                         <div className="ca-card ca-table-wrap">
-                            {/* Desktop table */}
+                            {/* Desktop table (ahora también móvil) */}
                             <table className="ca-table">
                                 <thead>
                                 <tr>
@@ -556,45 +576,6 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                                 </tbody>
                             </table>
 
-                            {/* Mobile list */}
-                            <div className="ca-mobile-list">
-                                {ventasFiltradas.length === 0 ? (
-                                    <div style={{padding:'2.5rem',textAlign:'center'}}>
-                                        <p style={{fontSize:'0.82rem',color:'rgba(150,80,20,0.45)'}}>Sin resultados</p>
-                                    </div>
-                                ) : ventasFiltradas.map((v) => (
-                                    <div key={v.id} className={`ca-mobile-row${v.vencida ? ' vencida' : ''}`}>
-                                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'0.5rem'}}>
-                                            <div>
-                                                <p style={{fontSize:'0.84rem',fontWeight:'500',color:'#2d1a08',margin:'0 0 0.1rem',letterSpacing:'-0.01em'}}>{v.cliente}</p>
-                                                <p style={{fontSize:'0.7rem',color:'rgba(150,80,20,0.5)',margin:0}}>{v.numero_venta} · {v.tipo_venta}</p>
-                                            </div>
-                                            <span className={`badge ${v.vencida ? 'badge-red' : 'badge-yellow'}`} style={{flexShrink:0}}>
-                                                {v.vencida ? 'Vencida' : 'Al día'}
-                                            </span>
-                                        </div>
-                                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                                            <div>
-                                                <p style={{fontSize:'0.7rem',color:'rgba(150,80,20,0.45)',margin:'0 0 0.08rem'}}>Saldo pendiente</p>
-                                                <p style={{fontSize:'0.9rem',fontWeight:'600',color:v.vencida?'rgba(185,28,28,0.9)':'rgba(146,64,14,0.85)',margin:0,letterSpacing:'-0.02em'}}>
-                                                    {fmt(v.saldo_pendiente)}
-                                                </p>
-                                            </div>
-                                            <div style={{display:'flex',gap:'0.6rem',flexShrink:0}}>
-                                                <a href={`/abonos/${v.id}/historial`} className="ca-link ca-link-muted" style={{fontSize:'0.74rem'}}>Abonos</a>
-                                                <span style={{color:'rgba(200,140,80,0.3)'}}>|</span>
-                                                <a href={`/abonos?cliente=${encodeURIComponent(v.cliente)}`} className="ca-link" style={{fontSize:'0.74rem'}}>Abonar</a>
-                                            </div>
-                                        </div>
-                                        {v.fecha_limite && (
-                                            <p style={{fontSize:'0.7rem',color:v.vencida?'rgba(185,28,28,0.7)':'rgba(150,80,20,0.5)',margin:0}}>
-                                                Fecha límite: {v.fecha_limite}
-                                                {v.vencida && v.dias_mora > 0 && ` · ${v.dias_mora} día${v.dias_mora!==1?'s':''} en mora`}
-                                            </p>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
 
                             {ventasFiltradas.length > 0 && (
                                 <div className="ca-table-footer">

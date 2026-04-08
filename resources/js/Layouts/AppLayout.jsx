@@ -23,6 +23,18 @@ export default function AppLayout({ children }) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Evita que el scroll del mouse cambie valores en inputs type="number"
+    useEffect(() => {
+        const onWheel = (e) => {
+            const el = document.activeElement;
+            if (el && el.tagName === 'INPUT' && el.type === 'number') {
+                el.blur();
+            }
+        };
+        document.addEventListener('wheel', onWheel, { passive: true });
+        return () => document.removeEventListener('wheel', onWheel);
+    }, []);
+
     return (
         <div style={{
             minHeight: '100vh',
@@ -38,6 +50,17 @@ export default function AppLayout({ children }) {
         }}>
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+                /* Quitar flechas (spinners) de TODOS los input number en toda la app */
+                input[type="number"]::-webkit-outer-spin-button,
+                input[type="number"]::-webkit-inner-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+                input[type="number"] {
+                    -moz-appearance: textfield;
+                    appearance: textfield;
+                }
 
                 .app-nav {
                     position: sticky; top: 0; z-index: 1000;
