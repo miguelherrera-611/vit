@@ -9,20 +9,40 @@ use Inertia\Response;
 
 class ClienteController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $clientes = Cliente::with([
-            'ventas' => function ($query) {
-                $query->orderBy('created_at', 'desc');
-            },
+        $search = $request->get('search', '');
+
+        $query = Cliente::with([
+            'ventas' => fn($q) => $q->orderBy('created_at', 'desc'),
             'ventas.detalles.producto',
             'ventas.abonos',
-        ])
-            ->orderBy('nombre')
-            ->get();
+        ])->orderBy('nombre');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nombre',    'like', "%{$search}%")
+                  ->orWhere('telefono', 'like', "%{$search}%")
+                  ->orWhere('documento','like', "%{$search}%")
+                  ->orWhere('email',    'like', "%{$search}%");
+            });
+        }
+
+        $clientes = $query->paginate(20)->withQueryString();
+
+        $stats = [
+            'total'            => Cliente::count(),
+            'activos'          => Cliente::where('activo', true)->count(),
+            'con_deudas'       => Cliente::whereHas('ventas', fn($q) => $q->where('estado', 'Pendiente'))->count(),
+            'nuevos_este_mes'  => Cliente::whereYear('created_at', now()->year)
+                                         ->whereMonth('created_at', now()->month)
+                                         ->count(),
+        ];
 
         return Inertia::render('Clientes/Index', [
             'clientes' => $clientes,
+            'stats'    => $stats,
+            'filters'  => ['search' => $search],
         ]);
     }
 

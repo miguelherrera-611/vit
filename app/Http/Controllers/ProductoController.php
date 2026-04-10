@@ -48,16 +48,38 @@ class ProductoController extends Controller
         ])->toArray();
     }
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $productos = Producto::with(['proveedores', 'fotos', 'tallas'])->orderBy('nombre')->get()
-            ->map(fn($p) => array_merge($p->toArray(), [
-                'stock_total'   => $p->stock_total,
-                'maneja_tallas' => $p->maneja_tallas,
-            ]));
+        $search = $request->get('search', '');
+
+        $query = Producto::with(['proveedores', 'fotos', 'tallas'])
+            ->orderBy('nombre');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nombre',        'like', "%{$search}%")
+                  ->orWhere('codigo_barras','like', "%{$search}%");
+            });
+        }
+
+        $paginated = $query->paginate(20)->withQueryString();
+
+        // Añadir stock_total y maneja_tallas a cada item
+        $paginated->getCollection()->transform(fn($p) => array_merge($p->toArray(), [
+            'stock_total'   => $p->stock_total,
+            'maneja_tallas' => $p->maneja_tallas,
+        ]));
+
+        $stats = [
+            'total'      => Producto::count(),
+            'activos'    => Producto::whereNull('deleted_at')->count(),
+            'stock_bajo' => Producto::whereNull('deleted_at')->where('stock', '<', 5)->count(),
+        ];
 
         return Inertia::render('Productos/Index', [
-            'productos' => $productos,
+            'productos' => $paginated,
+            'stats'     => $stats,
+            'filters'   => ['search' => $search],
         ]);
     }
 

@@ -42,6 +42,13 @@ export default function AbonosHistorial({ venta }) {
                     border-radius:18px;
                     box-shadow:0 12px 40px rgba(180,90,20,.07), inset 0 1.5px 0 rgba(255,255,255,.88);
                 }
+                .ah-talla-badge{
+                    display:inline-flex;align-items:center;
+                    padding:.1rem .42rem;border-radius:5px;margin-left:.35rem;
+                    font-size:.62rem;font-weight:600;letter-spacing:.03em;
+                    background:rgba(185,28,28,.07);border:1px solid rgba(185,28,28,.18);
+                    color:rgba(185,28,28,.8);vertical-align:middle;
+                }
                 @media (min-width:768px){ .ah-shell{padding:1.8rem 1.3rem 2.8rem} }
                 @media (max-width:640px){
                     .ah-head-row{flex-direction:column;align-items:flex-start !important;gap:.6rem}
@@ -126,14 +133,24 @@ export default function AbonosHistorial({ venta }) {
                     {venta.detalles && venta.detalles.length > 0 && (
                         <div className="ah-card overflow-hidden">
                             <div className="px-4 sm:px-6 py-4 border-b" style={{borderColor:'rgba(200,140,80,.12)'}}>
-                                <h2 className="text-lg font-semibold text-gray-900">Productos</h2>
+                                <h2 className="text-lg font-semibold text-gray-900">
+                                    Productos
+                                    <span className="ml-2 text-sm font-normal" style={{color:'rgba(150,80,20,.5)'}}>
+                                        {venta.detalles.length} ítem{venta.detalles.length !== 1 ? 's' : ''}
+                                    </span>
+                                </h2>
                             </div>
                             <div className="divide-y" style={{borderColor:'rgba(200,140,80,.08)'}}>
                                 {venta.detalles.map((d, i) => (
                                     <div key={i} className="px-4 sm:px-6 py-3 flex items-center justify-between ah-prod-row">
                                         <div>
-                                            <p className="text-sm font-medium text-gray-800">{d.nombre}</p>
-                                            <p className="text-xs text-gray-400">{d.cantidad} x {fmt(d.precio_unitario)}</p>
+                                            <p className="text-sm font-medium text-gray-800" style={{marginBottom:'0.15rem'}}>
+                                                {d.nombre}
+                                                {d.talla && (
+                                                    <span className="ah-talla-badge">Talla {d.talla}</span>
+                                                )}
+                                            </p>
+                                            <p className="text-xs text-gray-400">{d.cantidad} unidad{d.cantidad !== 1 ? 'es' : ''} × {fmt(d.precio_unitario)}</p>
                                         </div>
                                         <p className="text-sm font-semibold text-gray-700">{fmt(d.subtotal)}</p>
                                     </div>

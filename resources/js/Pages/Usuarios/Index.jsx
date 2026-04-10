@@ -1,8 +1,10 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import Pagination from '@/Components/Pagination';
 
-export default function UsuariosIndex({ usuarios }) {
+export default function UsuariosIndex({ usuarios, filters = {} }) {
+    const lista = usuarios?.data ?? [];
     const { flash } = usePage().props;
     const [eliminando, setEliminando]       = useState(null);
     const [password, setPassword]           = useState('');
@@ -272,7 +274,7 @@ export default function UsuariosIndex({ usuarios }) {
                     <div className="u-header-inner">
                         <div>
                             <h1 className="u-title">Usuarios</h1>
-                            <p className="u-subtitle">{usuarios.length} usuario{usuarios.length !== 1 ? 's' : ''} registrado{usuarios.length !== 1 ? 's' : ''}</p>
+                            <p className="u-subtitle">{usuarios?.total ?? 0} usuario{(usuarios?.total ?? 0) !== 1 ? 's' : ''} registrado{(usuarios?.total ?? 0) !== 1 ? 's' : ''}</p>
                         </div>
                         <Link href="/usuarios/create" className="u-btn-primary">
                             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -300,7 +302,7 @@ export default function UsuariosIndex({ usuarios }) {
                                 </tr>
                                 </thead>
                                 <tbody className="u-tbody">
-                                {usuarios.map((u) => {
+                                {lista.map((u) => {
                                     const rm = rolMeta(u.rol);
                                     return (
                                         <tr key={u.id} className={u.bloqueado ? 'locked' : ''}>
@@ -378,8 +380,19 @@ export default function UsuariosIndex({ usuarios }) {
                                 })}
                                 </tbody>
                             </table>
-                            {usuarios.length === 0 && <div className="u-empty">No hay usuarios registrados.</div>}
+                            {lista.length === 0 && <div className="u-empty">No hay usuarios registrados.</div>}
                         </div>  {/* u-table-scroll */}
+                        {(usuarios?.total ?? 0) > (usuarios?.per_page ?? 20) && (
+                            <div style={{padding:'0.875rem 1.25rem',borderTop:'1px solid rgba(200,140,80,0.08)'}}>
+                                <Pagination
+                                    currentPage={usuarios?.current_page ?? 1}
+                                    totalItems={usuarios?.total ?? 0}
+                                    perPage={usuarios?.per_page ?? 20}
+                                    onPageChange={(page) => router.get('/usuarios', { search: filters.search, page }, { preserveState: true })}
+                                    accentColor="blue"
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

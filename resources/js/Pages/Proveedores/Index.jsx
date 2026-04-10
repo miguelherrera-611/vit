@@ -4,41 +4,24 @@ import { useState, useMemo, useEffect } from 'react';
 import Pagination from '@/Components/Pagination';
 import PasswordConfirmModal from '@/Components/PasswordConfirmModal';
 
-export default function ProveedoresIndex({ proveedores = [] }) {
-    const [searchTerm, setSearchTerm]     = useState('');
+export default function ProveedoresIndex({ proveedores, filters = {} }) {
+    const lista = proveedores?.data ?? [];
+    const [searchTerm, setSearchTerm]       = useState(filters.search ?? '');
     const [confirmDelete, setConfirmDelete] = useState(null);
-    const [currentPage, setCurrentPage]   = useState(1);
     const [delProcessing, setDelProcessing] = useState(false);
-    const [delError, setDelError]         = useState(null);
+    const [delError, setDelError]           = useState(null);
 
-    const PER_PAGE = 15;
-
-    const normalizeText = (text) => {
-        if (!text) return '';
-        return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    };
-
-    useEffect(() => { setCurrentPage(1); }, [searchTerm]);
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            router.get('/proveedores', { search: searchTerm }, { preserveState: true, replace: true });
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     const stats = useMemo(() => {
-        const activos = proveedores.filter(p => p.activo);
-        return { total: proveedores.length, activos: activos.length };
-    }, [proveedores]);
-
-    const proveedoresFiltrados = useMemo(() => {
-        const q = normalizeText(searchTerm);
-        return proveedores.filter(p =>
-            normalizeText(p.nombre).includes(q) ||
-            normalizeText(p.empresa).includes(q) ||
-            normalizeText(p.email).includes(q) ||
-            normalizeText(p.telefono).includes(q)
-        );
-    }, [proveedores, searchTerm]);
-
-    const proveedoresPaginados = useMemo(() => {
-        const start = (currentPage - 1) * PER_PAGE;
-        return proveedoresFiltrados.slice(start, start + PER_PAGE);
-    }, [proveedoresFiltrados, currentPage]);
+        const activos = lista.filter(p => p.activo);
+        return { total: proveedores?.total ?? lista.length, activos: activos.length };
+    }, [lista, proveedores]);
 
     const handleDelete = (password) => {
         if (!confirmDelete) return;
@@ -211,30 +194,28 @@ export default function ProveedoresIndex({ proveedores = [] }) {
                 </div>
 
                 {/* Buscador */}
-                {proveedores.length > 0 && (
-                    <div className="pv-search-wrap">
-                        <div className="pv-search-inner">
-                            <svg className="pv-search-icon" width="15" height="15" fill="none" stroke="rgba(150,80,20,0.38)" strokeWidth="1.8" viewBox="0 0 24 24">
-                                <circle cx="11" cy="11" r="8"/><path strokeLinecap="round" d="M21 21l-4.35-4.35"/>
-                            </svg>
-                            <input
-                                type="text"
-                                className="pv-search-input"
-                                placeholder="Buscar por nombre, empresa, email o teléfono..."
-                                value={searchTerm}
+                <div className="pv-search-wrap">
+                    <div className="pv-search-inner">
+                        <svg className="pv-search-icon" width="15" height="15" fill="none" stroke="rgba(150,80,20,0.38)" strokeWidth="1.8" viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8"/><path strokeLinecap="round" d="M21 21l-4.35-4.35"/>
+                        </svg>
+                        <input
+                            type="text"
+                            className="pv-search-input"
+                            placeholder="Buscar por nombre, empresa, email o teléfono..."
+                            value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                         {searchTerm && (
                             <p style={{marginTop:'0.5rem',fontSize:'0.75rem',color:'rgba(150,80,20,0.5)'}}>
-                                <span style={{fontWeight:'500',color:'#2d1a08'}}>{proveedoresFiltrados.length}</span> resultado{proveedoresFiltrados.length !== 1 ? 's' : ''} para «{searchTerm}»
+                                <span style={{fontWeight:'500',color:'#2d1a08'}}>{proveedores?.total ?? 0}</span> resultado{(proveedores?.total ?? 0) !== 1 ? 's' : ''} para «{searchTerm}»
                             </p>
                         )}
                     </div>
-                )}
 
                 {/* Tabla / Empty */}
-                {proveedoresFiltrados.length > 0 ? (
+                {lista.length > 0 ? (
                     <div className="pv-table-wrap">
                         <div style={{overflowX:'auto'}}>
                             <table className="pv-table">
@@ -248,7 +229,7 @@ export default function ProveedoresIndex({ proveedores = [] }) {
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {proveedoresPaginados.map((proveedor) => (
+                                {lista.map((proveedor) => (
                                     <tr key={proveedor.id} className="pv-tr">
                                         <td className="pv-td">
                                             <div style={{display:'flex',alignItems:'center',gap:'0.65rem'}}>
@@ -299,10 +280,10 @@ export default function ProveedoresIndex({ proveedores = [] }) {
                         </div>
                         <div className="pv-pagination">
                             <Pagination
-                                currentPage={currentPage}
-                                totalItems={proveedoresFiltrados.length}
-                                perPage={PER_PAGE}
-                                onPageChange={setCurrentPage}
+                                currentPage={proveedores?.current_page ?? 1}
+                                totalItems={proveedores?.total ?? 0}
+                                perPage={proveedores?.per_page ?? 20}
+                                onPageChange={(page) => router.get('/proveedores', { search: filters.search, page }, { preserveState: true })}
                                 accentColor="indigo"
                             />
                         </div>

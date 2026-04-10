@@ -103,26 +103,37 @@ class UserController extends Controller
         ];
     }
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $usuarios = User::with('roles', 'permissions')
-            ->orderBy('name')
-            ->get()
-            ->map(fn($u) => [
-                'id'               => $u->id,
-                'name'             => $u->name,
-                'email'            => $u->email,
-                'rol'              => $u->roles->first()?->name ?? 'sin_rol',
-                'permisos'         => $u->getAllPermissions()->pluck('name')->toArray(),
-                'activo'           => $u->activo,
-                'bloqueado'        => $u->estaBloqueado(),
-                'intentos_fallidos'=> $u->intentos_fallidos,
-                'bloqueado_hasta'  => $u->bloqueado_hasta?->format('d/m/Y H:i'),
-                'created_at'       => $u->created_at->format('d/m/Y'),
-            ]);
+        $search = $request->get('search', '');
+
+        $query = User::with('roles', 'permissions')->orderBy('name');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email','like', "%{$search}%");
+            });
+        }
+
+        $paginated = $query->paginate(20)->withQueryString();
+
+        $paginated->getCollection()->transform(fn($u) => [
+            'id'               => $u->id,
+            'name'             => $u->name,
+            'email'            => $u->email,
+            'rol'              => $u->roles->first()?->name ?? 'sin_rol',
+            'permisos'         => $u->getAllPermissions()->pluck('name')->toArray(),
+            'activo'           => $u->activo,
+            'bloqueado'        => $u->estaBloqueado(),
+            'intentos_fallidos'=> $u->intentos_fallidos,
+            'bloqueado_hasta'  => $u->bloqueado_hasta?->format('d/m/Y H:i'),
+            'created_at'       => $u->created_at->format('d/m/Y'),
+        ]);
 
         return Inertia::render('Usuarios/Index', [
-            'usuarios' => $usuarios,
+            'usuarios' => $paginated,
+            'filters'  => ['search' => $search],
         ]);
     }
 

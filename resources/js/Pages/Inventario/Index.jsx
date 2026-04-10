@@ -1,10 +1,9 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Pagination from '@/Components/Pagination';
 
-const PER_PAGE = 15;
 const CATS_POR_PAG = 8;
 
 const normalize = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -354,48 +353,44 @@ function CategoriaDropdown({ categorias, value, onChange }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function InventarioIndex({ productos = [] }) {
-    const [searchTerm,       setSearchTerm]       = useState('');
+export default function InventarioIndex({ productos, filters = {} }) {
+    const lista = productos?.data ?? [];
+    const [searchTerm,       setSearchTerm]       = useState(filters.search ?? '');
     const [selectedCategory, setSelectedCategory] = useState('');
-    const [currentPage,      setCurrentPage]      = useState(1);
 
-    const stats = useMemo(() => {
-        const activos = productos.filter(p => p.activo);
-        return {
-            total:     activos.length,
-            enStock:   activos.filter(p => p.stock > p.stock_minimo).length,
-            bajoStock: productos.filter(p => p.stock <= p.stock_minimo && p.stock > 0).length,
-            agotados:  productos.filter(p => p.stock === 0).length,
-        };
-    }, [productos]);
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            router.get('/inventario', { search: searchTerm }, { preserveState: true, replace: true });
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     const categorias = useMemo(() =>
-            [...new Set(productos.map(p => p.categoria).filter(Boolean))].sort(),
-        [productos]
+            [...new Set(lista.map(p => p.categoria).filter(Boolean))].sort(),
+        [lista]
     );
 
     const productosFiltrados = useMemo(() => {
-        return productos.filter(p => {
-            const q = searchTerm.toLowerCase();
-            return (
-                (!q || p.nombre.toLowerCase().includes(q) || (p.codigo_barras || '').toLowerCase().includes(q)) &&
-                (!selectedCategory || p.categoria === selectedCategory)
-            );
-        });
-    }, [productos, searchTerm, selectedCategory]);
+        return lista.filter(p =>
+            !selectedCategory || p.categoria === selectedCategory
+        );
+    }, [lista, selectedCategory]);
 
-    useEffect(() => { setCurrentPage(1); }, [searchTerm, selectedCategory]);
-
-    const productosPaginados = useMemo(
-        () => productosFiltrados.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE),
-        [productosFiltrados, currentPage]
-    );
+    const statsCalc = useMemo(() => {
+        const activos = lista.filter(p => p.activo);
+        return {
+            total:     activos.length,
+            enStock:   activos.filter(p => p.stock > p.stock_minimo).length,
+            bajoStock: lista.filter(p => p.stock <= p.stock_minimo && p.stock > 0).length,
+            agotados:  lista.filter(p => p.stock === 0).length,
+        };
+    }, [lista]);
 
     const STAT_CARDS = [
-        { label: 'Productos totales', value: stats.total,     accent: 'rgba(180,90,20,0.8)',  bg: 'rgba(180,90,20,0.07)',  path: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
-        { label: 'En stock',          value: stats.enStock,   accent: 'rgba(16,185,129,0.8)', bg: 'rgba(16,185,129,0.07)', path: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
-        { label: 'Stock bajo',        value: stats.bajoStock, accent: 'rgba(245,158,11,0.8)', bg: 'rgba(245,158,11,0.07)', path: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' },
-        { label: 'Agotados',          value: stats.agotados,  accent: 'rgba(220,38,38,0.8)',  bg: 'rgba(220,38,38,0.07)',  path: 'M6 18L18 6M6 6l12 12' },
+        { label: 'Productos totales', value: statsCalc.total,     accent: 'rgba(180,90,20,0.8)',  bg: 'rgba(180,90,20,0.07)',  path: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+        { label: 'En stock',          value: statsCalc.enStock,   accent: 'rgba(16,185,129,0.8)', bg: 'rgba(16,185,129,0.07)', path: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+        { label: 'Stock bajo',        value: statsCalc.bajoStock, accent: 'rgba(245,158,11,0.8)', bg: 'rgba(245,158,11,0.07)', path: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' },
+        { label: 'Agotados',          value: statsCalc.agotados,  accent: 'rgba(220,38,38,0.8)',  bg: 'rgba(220,38,38,0.07)',  path: 'M6 18L18 6M6 6l12 12' },
     ];
 
     return (
@@ -521,7 +516,7 @@ export default function InventarioIndex({ productos = [] }) {
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    {productosPaginados.map((p) => {
+                                    {productosFiltrados.map((p) => {
                                         const stockEfectivo = p.stock_total ?? p.stock;
                                         const agotado = stockEfectivo === 0;
                                         const bajo    = !agotado && p.stock <= p.stock_minimo;
@@ -597,10 +592,10 @@ export default function InventarioIndex({ productos = [] }) {
                             </div>
                             <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid rgba(255,255,255,0.3)' }}>
                                 <Pagination
-                                    currentPage={currentPage}
-                                    totalItems={productosFiltrados.length}
-                                    perPage={PER_PAGE}
-                                    onPageChange={setCurrentPage}
+                                    currentPage={productos?.current_page ?? 1}
+                                    totalItems={productos?.total ?? 0}
+                                    perPage={productos?.per_page ?? 20}
+                                    onPageChange={(page) => router.get('/inventario', { search: filters.search, page }, { preserveState: true })}
                                     accentColor="orange"
                                 />
                             </div>

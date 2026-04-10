@@ -16,6 +16,14 @@ const MODULOS = [
     { permiso:'ver_reportes_financieros',title:'Reportes Financieros',  desc:'Ver reportes financieros',              href:'/reportes/financiero',  icon:'money',      accent:'rgba(16,185,129,0.8)'  },
     { permiso:'gestionar_categorias',    title:'Categorías',            desc:'Gestionar categorías de productos',     href:'/categorias',           icon:'tag',        accent:'rgba(168,85,247,0.8)'  },
     { permiso:'gestionar_papelera',      title:'Papelera',              desc:'Restaurar elementos eliminados',        href:'/papelera',             icon:'trash',      accent:'rgba(185,28,28,0.8)'   },
+    { permiso:'ver_cartera',             title:'Cartera / Deudas',      desc:'Ver deudas y cartera activa',            href:'/ventas/cartera',       icon:'wallet',     accent:'rgba(245,158,11,0.85)' },
+    { permiso:'ver_abonos',              title:'Abonos',                desc:'Consultar historial de abonos',          href:'/abonos',               icon:'cash',       accent:'rgba(16,185,129,0.8)'  },
+    { permiso:'crear_abonos',            title:'Registrar Abono',       desc:'Registrar abonos y pagos parciales',     href:'/abonos',               icon:'cash',       accent:'rgba(16,185,129,0.8)'  },
+    { permiso:'ver_reportes_clientes',   title:'Reportes de Clientes',  desc:'Ver estadísticas de clientes',           href:'/reportes/clientes',    icon:'chart',      accent:'rgba(236,72,153,0.8)'  },
+    { permiso:'ver_reportes_rentabilidad',title:'Rentabilidad',         desc:'Ver márgenes y rentabilidad',            href:'/reportes/rentabilidad',icon:'chart-bar',  accent:'rgba(99,102,241,0.8)'  },
+    { permiso:'ver_reportes_categorias', title:'Ventas por Categoría',  desc:'Ver ventas por categoría',               href:'/reportes/ventas-categoria',icon:'chart-bar',accent:'rgba(20,184,166,0.8)'  },
+    { permiso:'ver_reportes_ejecutivo',  title:'Reporte Ejecutivo',     desc:'Ver dashboard gerencial',                href:'/reportes/ejecutivo',   icon:'chart',      accent:'rgba(139,92,246,0.8)'  },
+    { permiso:'ver_registros',           title:'Registros de Actividad',desc:'Ver registros de auditoría',             href:'/registros',            icon:'clipboard',  accent:'rgba(150,80,20,0.75)'  },
 ];
 
 const ICONS = {
@@ -32,6 +40,9 @@ const ICONS = {
     money:      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />,
     tag:        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />,
     trash:      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />,
+    wallet:     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />,
+    cash:       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />,
+    clipboard:  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />,
 };
 
 export default function Empleado() {

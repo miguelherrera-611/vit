@@ -5,8 +5,6 @@ import ClienteDetalleModal from '@/Components/ClienteDetalleModal';
 import Pagination from '@/Components/Pagination';
 import PasswordConfirmModal from '@/Components/PasswordConfirmModal';
 
-const PER_PAGE = 15;
-
 const STAT_STYLES = {
     pink:  { accent:'rgba(180,90,20,0.8)',  bg:'rgba(180,90,20,0.07)'  },
     green: { accent:'rgba(16,185,129,0.8)', bg:'rgba(16,185,129,0.07)' },
@@ -14,18 +12,25 @@ const STAT_STYLES = {
     red:   { accent:'rgba(220,38,38,0.8)',  bg:'rgba(220,38,38,0.07)'  },
 };
 
-export default function ClientesIndex({ clientes = [] }) {
-    const [searchTerm, setSearchTerm]               = useState('');
+export default function ClientesIndex({ clientes, stats: serverStats = {}, filters = {} }) {
+    const lista = clientes?.data ?? [];
+    const [searchTerm, setSearchTerm]               = useState(filters.search ?? '');
     const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
     const [modalOpen, setModalOpen]                 = useState(false);
-    const [currentPage, setCurrentPage]             = useState(1);
     const [confirmDelete, setConfirmDelete]         = useState(null);
     const [delProcessing, setDelProcessing]         = useState(false);
     const [delError, setDelError]                   = useState(null);
 
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            router.get('/clientes', { search: searchTerm }, { preserveState: true, replace: true });
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
     const clientesMap = useMemo(
-        () => new Map(clientes.map((c) => [String(c.id), c])),
-        [clientes]
+        () => new Map(lista.map((c) => [String(c.id), c])),
+        [lista]
     );
 
     const handleOpenCliente = (cliente) => {
@@ -40,36 +45,6 @@ export default function ClientesIndex({ clientes = [] }) {
         handleOpenCliente(cliente);
     };
 
-    const normalizeText = (text) =>
-        (text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-    const stats = useMemo(() => {
-        const activos = clientes.filter(c => c.activo);
-        const conDeudas = clientes.filter(c => (c.saldo_total || 0) > 0);
-        const hoy = new Date();
-        const esteMes = clientes.filter(c => {
-            const f = new Date(c.created_at);
-            return f.getMonth() === hoy.getMonth() && f.getFullYear() === hoy.getFullYear();
-        });
-        return { total: clientes.length, activos: activos.length, nuevosEsteMes: esteMes.length, conDeudas: conDeudas.length };
-    }, [clientes]);
-
-    const clientesFiltrados = useMemo(() => {
-        const q = normalizeText(searchTerm);
-        return clientes.filter(c =>
-            !q ||
-            normalizeText(c.nombre).includes(q) ||
-            normalizeText(c.email).includes(q) ||
-            normalizeText(c.telefono).includes(q)
-        );
-    }, [clientes, searchTerm]);
-
-    useEffect(() => { setCurrentPage(1); }, [searchTerm]);
-
-    const clientesPaginados = useMemo(
-        () => clientesFiltrados.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE),
-        [clientesFiltrados, currentPage]
-    );
 
     const handleDelete = (password) => {
         if (!confirmDelete) return;
@@ -109,10 +84,10 @@ export default function ClientesIndex({ clientes = [] }) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
                         {[
-                            { label: 'Total Clientes',   value: stats.total,          color: 'pink',  icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-                            { label: 'Activos',          value: stats.activos,         color: 'green', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
-                            { label: 'Nuevos este mes',  value: stats.nuevosEsteMes,   color: 'blue',  icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-                            { label: 'Con Deudas',       value: stats.conDeudas,       color: 'red',   icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+                            { label: 'Total Clientes',   value: serverStats.total ?? 0,            color: 'pink',  icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+                            { label: 'Activos',          value: serverStats.activos ?? 0,          color: 'green', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+                            { label: 'Nuevos este mes',  value: serverStats.nuevos_este_mes ?? 0,  color: 'blue',  icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+                            { label: 'Con Deudas',       value: serverStats.con_deudas ?? 0,       color: 'red',   icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
                         ].map(({ label, value, color, icon }) => {
                             const st = STAT_STYLES[color] || STAT_STYLES.pink;
                             return (
@@ -130,27 +105,25 @@ export default function ClientesIndex({ clientes = [] }) {
                         })}
                     </div>
 
-                    {clientes.length > 0 && (
-                        <div className="rounded-2xl p-4 sm:p-6 mb-5" style={{background:'rgba(255,255,255,.04)',backdropFilter:'blur(22px) saturate(150%)',border:'1px solid rgba(255,255,255,.65)'}}>
-                            <div className="relative">
-                                <input type="text" placeholder="Buscar clientes por nombre, email o teléfono..."
-                                       value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                                       className="w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition"
-                                       style={{borderColor:'rgba(200,140,80,.4)',background:'rgba(255,255,255,.06)',color:'#2d1a08'}}
-                                />
-                                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                            {searchTerm && (
-                                <p className="mt-2 text-sm text-gray-500">
-                                    <span className="font-medium text-gray-700">{clientesFiltrados.length}</span> resultado{clientesFiltrados.length !== 1 ? 's' : ''} para "<em>{searchTerm}</em>"
-                                </p>
-                            )}
+                    <div className="rounded-2xl p-4 sm:p-6 mb-5" style={{background:'rgba(255,255,255,.04)',backdropFilter:'blur(22px) saturate(150%)',border:'1px solid rgba(255,255,255,.65)'}}>
+                        <div className="relative">
+                            <input type="text" placeholder="Buscar clientes por nombre, email o teléfono..."
+                                   value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                                   className="w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition"
+                                   style={{borderColor:'rgba(200,140,80,.4)',background:'rgba(255,255,255,.06)',color:'#2d1a08'}}
+                            />
+                            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
                         </div>
-                    )}
+                        {searchTerm && (
+                            <p className="mt-2 text-sm text-gray-500">
+                                <span className="font-medium text-gray-700">{clientes?.total ?? 0}</span> resultado{(clientes?.total ?? 0) !== 1 ? 's' : ''} para "<em>{searchTerm}</em>"
+                            </p>
+                        )}
+                    </div>
 
-                    {clientesFiltrados.length > 0 ? (
+                    {lista.length > 0 ? (
                         <div className="rounded-2xl overflow-hidden" style={{background:'rgba(255,255,255,.04)',backdropFilter:'blur(22px) saturate(150%)',border:'1px solid rgba(255,255,255,.65)'}}>
                             <div className="overflow-x-auto">
                                 <table className="w-full min-w-[760px]">
@@ -163,7 +136,7 @@ export default function ClientesIndex({ clientes = [] }) {
                                     </tr>
                                     </thead>
                                     <tbody style={{background:'transparent'}}>
-                                    {clientesPaginados.map((cliente) => (
+                                    {lista.map((cliente) => (
                                         <tr
                                             key={cliente.id}
                                             data-cliente-id={cliente.id}
@@ -236,10 +209,10 @@ export default function ClientesIndex({ clientes = [] }) {
                             </div>
                             <div className="px-4 sm:px-6 pb-5 sm:pb-6">
                                 <Pagination
-                                    currentPage={currentPage}
-                                    totalItems={clientesFiltrados.length}
-                                    perPage={PER_PAGE}
-                                    onPageChange={setCurrentPage}
+                                    currentPage={clientes?.current_page ?? 1}
+                                    totalItems={clientes?.total ?? 0}
+                                    perPage={clientes?.per_page ?? 20}
+                                    onPageChange={(page) => router.get('/clientes', { search: filters.search, page }, { preserveState: true })}
                                     accentColor="orange"
                                 />
                             </div>

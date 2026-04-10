@@ -1,10 +1,8 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Link } from '@inertiajs/react';
-import { useState, useMemo, useEffect } from 'react';
+import { Link, router } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
 import VentaDetalleModal from '@/Components/VentaDetalleModal';
 import Pagination from '@/Components/Pagination';
-
-const PER_PAGE = 15;
 
 const formatCurrency = (v) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
@@ -12,39 +10,18 @@ const formatCurrency = (v) =>
 const formatDate = (s) =>
     new Date(s).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-const normalizeText = (t) =>
-    (t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-export default function VentasIndex({ ventas = [] }) {
-    const [searchTerm, setSearchTerm]               = useState('');
+export default function VentasIndex({ ventas, stats: serverStats = {}, filters = {} }) {
+    const lista = ventas?.data ?? [];
+    const [searchTerm, setSearchTerm]               = useState(filters.search ?? '');
     const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
     const [modalOpen, setModalOpen]                 = useState(false);
-    const [currentPage, setCurrentPage]             = useState(1);
 
-    const stats = useMemo(() => {
-        const hoy       = new Date().toISOString().split('T')[0];
-        const ventasHoy = ventas.filter(v => v.created_at.startsWith(hoy));
-        const totalHoy  = ventasHoy.reduce((s, v) => s + parseFloat(v.total), 0);
-        const promedio  = ventas.length ? ventas.reduce((s, v) => s + parseFloat(v.total), 0) / ventas.length : 0;
-        return { ventasHoy: ventasHoy.length, totalHoy, promedio };
-    }, [ventas]);
-
-    const ventasFiltradas = useMemo(() => {
-        const q = normalizeText(searchTerm);
-        return ventas.filter(v =>
-            !q ||
-            normalizeText(v.numero_venta).includes(q) ||
-            normalizeText(v.cliente?.nombre).includes(q) ||
-            normalizeText(v.estado).includes(q)
-        );
-    }, [ventas, searchTerm]);
-
-    useEffect(() => { setCurrentPage(1); }, [searchTerm]);
-
-    const ventasPaginadas = useMemo(
-        () => ventasFiltradas.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE),
-        [ventasFiltradas, currentPage]
-    );
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            router.get('/ventas', { search: searchTerm }, { preserveState: true, replace: true });
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     return (
         <AppLayout>
@@ -326,9 +303,9 @@ export default function VentasIndex({ ventas = [] }) {
                     <p className="vi-section-label">Resumen</p>
                     <div className="vi-stats">
                         {[
-                            { label: 'Ventas hoy',        value: stats.ventasHoy,               mono: false, delay: '0.04s', accent: 'rgba(16,185,129,0.75)'  },
-                            { label: 'Recaudado hoy',     value: formatCurrency(stats.totalHoy), mono: true,  delay: '0.08s', accent: 'rgba(59,130,246,0.75)'  },
-                            { label: 'Promedio por venta',value: formatCurrency(stats.promedio),  mono: true,  delay: '0.12s', accent: 'rgba(185,28,28,0.75)'   },
+                            { label: 'Ventas hoy',        value: serverStats.ventas_hoy ?? 0,                mono: false, delay: '0.04s', accent: 'rgba(16,185,129,0.75)'  },
+                            { label: 'Recaudado hoy',     value: formatCurrency(serverStats.total_hoy ?? 0), mono: true,  delay: '0.08s', accent: 'rgba(59,130,246,0.75)'  },
+                            { label: 'Promedio por venta',value: formatCurrency(serverStats.promedio ?? 0),  mono: true,  delay: '0.12s', accent: 'rgba(185,28,28,0.75)'   },
                         ].map((s) => (
                             <div key={s.label} className="vi-card vi-stat" style={{animationDelay: s.delay}}>
                                 <div className="vi-icon-box" style={{
@@ -348,31 +325,29 @@ export default function VentasIndex({ ventas = [] }) {
                     </div>
 
                     {/* Search */}
-                    {ventas.length > 0 && (
-                        <div className="vi-card vi-search-wrap">
-                            <div style={{position:'relative'}}>
-                                <svg width="15" height="15" fill="none" stroke="rgba(150,80,20,0.35)" strokeWidth="1.8" viewBox="0 0 24 24"
-                                     style={{position:'absolute',left:'0.7rem',top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}>
-                                    <circle cx="11" cy="11" r="8"/><path strokeLinecap="round" d="M21 21l-4.35-4.35"/>
-                                </svg>
-                                <input
-                                    type="text"
-                                    placeholder="Buscar por número, cliente o estado..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="vi-search-input"
-                                />
-                            </div>
-                            {searchTerm && (
-                                <p style={{fontSize:'0.73rem',color:'rgba(150,80,20,0.5)',marginTop:'0.5rem',paddingLeft:'0.1rem'}}>
-                                    <span style={{fontWeight:'500',color:'rgba(120,60,10,0.7)'}}>{ventasFiltradas.length}</span> resultado{ventasFiltradas.length !== 1 ? 's' : ''}
-                                </p>
-                            )}
+                    <div className="vi-card vi-search-wrap">
+                        <div style={{position:'relative'}}>
+                            <svg width="15" height="15" fill="none" stroke="rgba(150,80,20,0.35)" strokeWidth="1.8" viewBox="0 0 24 24"
+                                 style={{position:'absolute',left:'0.7rem',top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}>
+                                <circle cx="11" cy="11" r="8"/><path strokeLinecap="round" d="M21 21l-4.35-4.35"/>
+                            </svg>
+                            <input
+                                type="text"
+                                placeholder="Buscar por número, cliente o estado..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="vi-search-input"
+                            />
                         </div>
-                    )}
+                        {searchTerm && (
+                            <p style={{fontSize:'0.73rem',color:'rgba(150,80,20,0.5)',marginTop:'0.5rem',paddingLeft:'0.1rem'}}>
+                                <span style={{fontWeight:'500',color:'rgba(120,60,10,0.7)'}}>{ventas?.total ?? 0}</span> resultado{(ventas?.total ?? 0) !== 1 ? 's' : ''}
+                            </p>
+                        )}
+                    </div>
 
                     {/* Table / List */}
-                    {ventasFiltradas.length > 0 ? (
+                    {lista.length > 0 ? (
                         <div className="vi-card vi-table-wrap">
                             {/* Hint deslizar — solo visible en móvil */}
                             <div className="vi-scroll-hint">
@@ -396,7 +371,7 @@ export default function VentasIndex({ ventas = [] }) {
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {ventasPaginadas.map((venta) => (
+                                {lista.map((venta) => (
                                     <tr key={venta.id}>
                                         <td>
                                             <span style={{fontWeight:'500',letterSpacing:'-0.01em'}}>{venta.numero_venta}</span>
@@ -436,10 +411,10 @@ export default function VentasIndex({ ventas = [] }) {
 
                             <div style={{padding:'0.875rem 1.1rem',borderTop:'1px solid rgba(200,140,80,0.08)'}}>
                                 <Pagination
-                                    currentPage={currentPage}
-                                    totalItems={ventasFiltradas.length}
-                                    perPage={PER_PAGE}
-                                    onPageChange={setCurrentPage}
+                                    currentPage={ventas?.current_page ?? 1}
+                                    totalItems={ventas?.total ?? 0}
+                                    perPage={ventas?.per_page ?? 20}
+                                    onPageChange={(page) => router.get('/ventas', { search: filters.search, page }, { preserveState: true })}
                                     accentColor="green"
                                 />
                             </div>

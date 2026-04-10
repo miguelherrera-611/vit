@@ -305,23 +305,29 @@ function FilterDropdown({ label, icon, value, options, onChange }) {
 }
 
 // ─── Main ───────────────────────────────────────────────────────────────────
-export default function ProductosIndex({ productos = [] }) {
-    const [busqueda, setBusqueda]               = useState('');
+export default function ProductosIndex({ productos, stats: serverStats = {}, filters = {} }) {
+    const lista = productos?.data ?? [];
+    const [busqueda, setBusqueda]               = useState(filters.search ?? '');
     const [filtroCategoria, setFiltroCategoria] = useState('');
     const [filtroStock, setFiltroStock]         = useState('');
     const [confirmDelete, setConfirmDelete]     = useState(null);
     const [delProcessing, setDelProcessing]     = useState(false);
     const [delError, setDelError]               = useState(null);
-    const [currentPage, setCurrentPage]         = useState(1);
-    const PER_PAGE = 15;
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            router.get('/productos', { search: busqueda }, { preserveState: true, replace: true });
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [busqueda]);
 
     const opcionesCategorias = useMemo(() => {
-        const cats = [...new Set(productos.map(p => p.categoria).filter(Boolean))].sort();
+        const cats = [...new Set(lista.map(p => p.categoria).filter(Boolean))].sort();
         return [
             { value: '', label: 'Todas las categorías' },
             ...cats.map(c => ({ value: c, label: c })),
         ];
-    }, [productos]);
+    }, [lista]);
 
     const opcionesStock = [
         { value: '',           label: 'Todo el stock' },
@@ -331,12 +337,7 @@ export default function ProductosIndex({ productos = [] }) {
     ];
 
     const productosFiltrados = useMemo(() => {
-        const q = normalize(busqueda);
-        return productos.filter((p) => {
-            if (q) {
-                const match = normalize(p.nombre).includes(q) || normalize(p.codigo_barras).includes(q) || normalize(p.categoria).includes(q);
-                if (!match) return false;
-            }
+        return lista.filter((p) => {
             if (filtroCategoria && p.categoria !== filtroCategoria) return false;
             const minimo = p.stock_minimo || 5;
             if (filtroStock === 'disponible' && p.stock <= 0) return false;
@@ -344,16 +345,9 @@ export default function ProductosIndex({ productos = [] }) {
             if (filtroStock === 'agotado'    && p.stock > 0) return false;
             return true;
         });
-    }, [productos, busqueda, filtroCategoria, filtroStock]);
-
-    useEffect(() => { setCurrentPage(1); }, [busqueda, filtroCategoria, filtroStock]);
+    }, [lista, filtroCategoria, filtroStock]);
 
     const hayFiltros = busqueda || filtroCategoria || filtroStock;
-
-    const productosPaginados = useMemo(
-        () => productosFiltrados.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE),
-        [productosFiltrados, currentPage]
-    );
 
     const handleDelete = (password) => {
         if (!confirmDelete) return;
@@ -368,11 +362,8 @@ export default function ProductosIndex({ productos = [] }) {
     const formatCurrency = (v) =>
         new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
 
-    const stats = useMemo(() => ({
-        total:   productos.length,
-        bajo:    productos.filter(p => p.stock > 0 && p.stock <= (p.stock_minimo || 5)).length,
-        agotado: productos.filter(p => p.stock === 0).length,
-    }), [productos]);
+    const statsBajo    = serverStats.stock_bajo ?? lista.filter(p => p.stock > 0 && p.stock <= (p.stock_minimo || 5)).length;
+    const statsAgotado = lista.filter(p => p.stock === 0).length;
 
     return (
         <AppLayout>
@@ -385,7 +376,7 @@ export default function ProductosIndex({ productos = [] }) {
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
                             <div>
                                 <h1 style={{ fontSize: '1.6rem', fontWeight: '300', color: '#2d1a08', letterSpacing: '-0.03em', lineHeight: 1 }}>Productos</h1>
-                                <p style={{ marginTop: '0.3rem', fontSize: '0.82rem', color: 'rgba(150,80,20,0.6)' }}>{productos.length} productos en total</p>
+                                <p style={{ marginTop: '0.3rem', fontSize: '0.82rem', color: 'rgba(150,80,20,0.6)' }}>{serverStats.total ?? 0} productos en total</p>
                             </div>
                             <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
                                 <Link href="/categorias" className="btn-ghost">
@@ -404,16 +395,16 @@ export default function ProductosIndex({ productos = [] }) {
                         </div>
 
                         {/* Stock alerts */}
-                        {(stats.bajo > 0 || stats.agotado > 0) && (
+                        {(statsBajo > 0 || statsAgotado > 0) && (
                             <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-                                {stats.agotado > 0 && (
+                                {statsAgotado > 0 && (
                                     <button onClick={() => setFiltroStock('agotado')} className="badge-red" style={{ cursor: 'pointer', border: 'none' }}>
-                                        {stats.agotado} agotado{stats.agotado > 1 ? 's' : ''} — ver
+                                        {statsAgotado} agotado{statsAgotado > 1 ? 's' : ''} — ver
                                     </button>
                                 )}
-                                {stats.bajo > 0 && (
+                                {statsBajo > 0 && (
                                     <button onClick={() => setFiltroStock('bajo')} className="badge-yellow" style={{ cursor: 'pointer', border: 'none' }}>
-                                        {stats.bajo} bajo stock — ver
+                                        {statsBajo} bajo stock — ver
                                     </button>
                                 )}
                             </div>
@@ -463,7 +454,7 @@ export default function ProductosIndex({ productos = [] }) {
 
                         {hayFiltros && (
                             <p style={{ marginTop: '0.65rem', fontSize: '0.8rem', color: 'rgba(150,80,20,0.55)' }}>
-                                Mostrando <span style={{ fontWeight: '600', color: '#2d1a08' }}>{productosFiltrados.length}</span> de {productos.length} productos
+                                Mostrando <span style={{ fontWeight: '600', color: '#2d1a08' }}>{productosFiltrados.length}</span> de {serverStats.total ?? 0} productos
                             </p>
                         )}
                     </div>
@@ -504,7 +495,7 @@ export default function ProductosIndex({ productos = [] }) {
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    {productosPaginados.map((producto) => {
+                                    {productosFiltrados.map((producto) => {
                                         const minimo        = producto.stock_minimo || 5;
                                         const stockEfectivo = producto.stock_total ?? producto.stock;
                                         const agotado       = stockEfectivo === 0;
@@ -600,15 +591,13 @@ export default function ProductosIndex({ productos = [] }) {
                             </div>
                         )}
                     </div>
-                    {productosFiltrados.length > PER_PAGE && (
-                        <Pagination
-                            currentPage={currentPage}
-                            totalItems={productosFiltrados.length}
-                            perPage={PER_PAGE}
-                            onPageChange={setCurrentPage}
-                            accentColor="red"
-                        />
-                    )}
+                    <Pagination
+                        currentPage={productos?.current_page ?? 1}
+                        totalItems={productos?.total ?? 0}
+                        perPage={productos?.per_page ?? 20}
+                        onPageChange={(page) => router.get('/productos', { search: filters.search, page }, { preserveState: true })}
+                        accentColor="red"
+                    />
                 </div>
             </div>
 

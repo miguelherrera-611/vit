@@ -9,12 +9,26 @@ use Inertia\Response;
 
 class ProveedorController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $proveedores = Proveedor::orderBy('nombre')->get();
+        $search = $request->get('search', '');
+
+        $query = Proveedor::orderBy('nombre');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nombre',  'like', "%{$search}%")
+                  ->orWhere('empresa','like', "%{$search}%")
+                  ->orWhere('email',  'like', "%{$search}%")
+                  ->orWhere('telefono','like',"%{$search}%");
+            });
+        }
+
+        $proveedores = $query->paginate(20)->withQueryString();
 
         return Inertia::render('Proveedores/Index', [
             'proveedores' => $proveedores,
+            'filters'     => ['search' => $search],
         ]);
     }
 

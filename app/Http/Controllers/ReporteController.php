@@ -48,6 +48,13 @@ class ReporteController extends Controller
         $hasta  = $request->get('hasta', Carbon::today()->toDateString());
         $estado = $request->get('estado', '');
 
+        // Cap: máximo 90 días para evitar cargar miles de registros
+        $desdeCarbon = Carbon::parse($desde);
+        $hastaCarbon = Carbon::parse($hasta);
+        if ($desdeCarbon->diffInDays($hastaCarbon) > 90) {
+            $desde = $hastaCarbon->copy()->subDays(90)->toDateString();
+        }
+
         $query = Venta::with(['cliente', 'detalles.producto'])
             ->whereBetween(DB::raw('DATE(created_at)'), [$desde, $hasta]);
 
@@ -149,8 +156,22 @@ class ReporteController extends Controller
      ─────────────────────────────────────────────────────────────*/
     public function clientes(): Response
     {
-        $clientes = Cliente::whereNull('deleted_at')
-            ->with(['ventas'])
+        $clientes = Cliente::whereNull('clientes.deleted_at')
+            ->leftJoin('ventas', 'clientes.id', '=', 'ventas.cliente_id')
+            ->select(
+                'clientes.id',
+                'clientes.nombre',
+                'clientes.email',
+                'clientes.telefono',
+                'clientes.activo',
+                'clientes.saldo_total',
+                DB::raw('COALESCE(SUM(ventas.total), 0) as total_compras'),
+                DB::raw('COUNT(ventas.id) as num_compras'),
+                DB::raw('MAX(ventas.created_at) as ultima_compra'),
+                DB::raw('CASE WHEN COUNT(ventas.id) > 0 THEN AVG(ventas.total) ELSE 0 END as ticket_promedio')
+            )
+            ->groupBy('clientes.id', 'clientes.nombre', 'clientes.email', 'clientes.telefono', 'clientes.activo', 'clientes.saldo_total')
+            ->orderByDesc('total_compras')
             ->get()
             ->map(fn($c) => [
                 'id'              => $c->id,
@@ -158,13 +179,12 @@ class ReporteController extends Controller
                 'email'           => $c->email,
                 'telefono'        => $c->telefono,
                 'activo'          => $c->activo,
-                'saldo_total'     => $c->saldo_total ?? 0,
-                'total_compras'   => $c->ventas->sum('total'),
-                'num_compras'     => $c->ventas->count(),
-                'ultima_compra'   => $c->ventas->sortByDesc('created_at')->first()?->created_at,
-                'ticket_promedio' => $c->ventas->count() ? $c->ventas->avg('total') : 0,
+                'saldo_total'     => (float) ($c->saldo_total ?? 0),
+                'total_compras'   => (float) $c->total_compras,
+                'num_compras'     => (int) $c->num_compras,
+                'ultima_compra'   => $c->ultima_compra,
+                'ticket_promedio' => (float) $c->ticket_promedio,
             ])
-            ->sortByDesc('total_compras')
             ->values();
 
         $kpis = [

@@ -19,18 +19,33 @@ use Carbon\Carbon;
 
 class VentaController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $ventas = Venta::with([
-            'cliente',
-            'detalles.producto',
-            'abonos',
-        ])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $search = $request->get('search', '');
+
+        $query = Venta::with(['cliente', 'detalles.producto', 'abonos'])
+            ->orderBy('created_at', 'desc');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('numero_venta', 'like', "%{$search}%")
+                  ->orWhereHas('cliente', fn($q2) => $q2->where('nombre', 'like', "%{$search}%"));
+            });
+        }
+
+        $ventas = $query->paginate(20)->withQueryString();
+
+        $hoy = Carbon::today();
+        $stats = [
+            'ventas_hoy'  => Venta::whereDate('created_at', $hoy)->count(),
+            'total_hoy'   => Venta::whereDate('created_at', $hoy)->sum('total'),
+            'promedio'    => Venta::avg('total') ?? 0,
+        ];
 
         return Inertia::render('Ventas/Index', [
-            'ventas' => $ventas,
+            'ventas'  => $ventas,
+            'stats'   => $stats,
+            'filters' => ['search' => $search],
         ]);
     }
 
@@ -379,46 +394,96 @@ class VentaController extends Controller
 
     // ── CARTERA ───────────────────────────────────────────────────
 
-    public function cartera(): Response
+    public function cartera(Request $request): Response
     {
-        $ventas = Venta::with(['cliente', 'abonos'])
-            ->whereIn('estado', ['Pendiente'])
-            ->orderBy('fecha_limite')
-            ->get()
-            ->map(function ($v) {
-                $fechaLimite = $v->fecha_limite ? Carbon::parse($v->fecha_limite) : null;
-                $vencida  = $fechaLimite && $fechaLimite->isPast();
-                $diasMora = $fechaLimite
-                    ? max(0, (int) $fechaLimite->diffInDays(now(), false))
-                    : 0;
+        $tipo   = $request->get('tipo', '');
+        $estado = $request->get('estado', ''); // 'vencida' | 'al_dia' | ''
+        $search = $request->get('search', '');
+        $hoy    = now()->toDateString();
 
-                return [
-                    'id'              => $v->id,
-                    'numero_venta'    => $v->numero_venta,
-                    'tipo_venta'      => $v->tipo_venta,
-                    'cliente'         => $v->cliente?->nombre ?? 'Sin cliente',
-                    'cliente_tel'     => $v->cliente?->telefono,
-                    'total'           => $v->total,
-                    'pagado'          => $v->pagado,
-                    'saldo_pendiente' => $v->saldo_pendiente,
-                    'fecha_limite'    => $fechaLimite ? $fechaLimite->format('d/m/Y') : null,
-                    'estado'          => $v->estado,
-                    'vencida'         => $vencida,
-                    'dias_mora'       => $diasMora,
-                    'created_at'      => $v->created_at->format('d/m/Y'),
-                ];
-            });
-
+        // KPIs siempre sobre el total real (queries directas a BD, sin cargar colecciones)
         $kpis = [
-            'total_cartera'   => $ventas->sum('saldo_pendiente'),
-            'clientes_deuda'  => $ventas->unique('cliente')->count(),
-            'deudas_vencidas' => $ventas->where('vencida', true)->count(),
-            'num_pendientes'  => $ventas->count(),
+            'total_cartera'   => Venta::where('estado', 'Pendiente')->sum('saldo_pendiente'),
+            'clientes_deuda'  => Venta::where('estado', 'Pendiente')->whereNotNull('cliente_id')->distinct()->count('cliente_id'),
+            'num_pendientes'  => Venta::where('estado', 'Pendiente')->count(),
+            'deudas_vencidas' => Venta::where('estado', 'Pendiente')
+                                      ->whereNotNull('fecha_limite')
+                                      ->where('fecha_limite', '<', $hoy)
+                                      ->count(),
         ];
 
+        $query = Venta::with(['cliente', 'detalles.producto', 'abonos.empleado'])
+            ->where('estado', 'Pendiente')
+            ->orderBy('fecha_limite');
+
+        if ($tipo) {
+            $query->where('tipo_venta', $tipo);
+        }
+        if ($estado === 'vencida') {
+            $query->whereNotNull('fecha_limite')->where('fecha_limite', '<', $hoy);
+        }
+        if ($estado === 'al_dia') {
+            $query->where(fn($q) => $q->whereNull('fecha_limite')->orWhere('fecha_limite', '>=', $hoy));
+        }
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('numero_venta', 'like', "%{$search}%")
+                  ->orWhereHas('cliente', fn($q2) => $q2->where('nombre', 'like', "%{$search}%"));
+            });
+        }
+
+        $ventas = $query->paginate(20)->withQueryString();
+
+        $ventas->getCollection()->transform(function ($v) {
+            $fechaLimite = $v->fecha_limite ? Carbon::parse($v->fecha_limite) : null;
+            $vencida     = $fechaLimite && $fechaLimite->isPast();
+            $diasMora    = $fechaLimite ? max(0, (int) $fechaLimite->diffInDays(now(), false)) : 0;
+
+            return [
+                'id'              => $v->id,
+                'numero_venta'    => $v->numero_venta,
+                'tipo_venta'      => $v->tipo_venta,
+                'cliente'         => $v->cliente ? [
+                    'nombre'    => $v->cliente->nombre,
+                    'telefono'  => $v->cliente->telefono,
+                    'documento' => $v->cliente->documento ?? null,
+                ] : null,
+                'cliente_nombre'  => $v->cliente?->nombre ?? 'Sin cliente',
+                'cliente_tel'     => $v->cliente?->telefono,
+                'total'           => $v->total,
+                'pagado'          => $v->pagado,
+                'saldo_pendiente' => $v->saldo_pendiente,
+                'descuento'       => $v->descuento ?? 0,
+                'metodo_pago'     => $v->metodo_pago ?? null,
+                'notas'           => $v->notas ?? null,
+                'fecha_limite'    => $fechaLimite ? $fechaLimite->format('d/m/Y') : null,
+                'estado'          => $v->estado,
+                'vencida'         => $vencida,
+                'dias_mora'       => $diasMora,
+                'created_at'      => $v->created_at->toISOString(),
+                'detalles'        => $v->detalles->map(fn($d) => [
+                    'producto'        => $d->producto ? [
+                        'nombre'        => $d->producto->nombre,
+                        'codigo_barras' => $d->producto->codigo_barras ?? null,
+                    ] : null,
+                    'talla'           => $d->talla ?? null,
+                    'cantidad'        => $d->cantidad,
+                    'precio_unitario' => $d->precio_unitario,
+                    'subtotal'        => $d->subtotal,
+                ])->values(),
+                'abonos'          => $v->abonos->map(fn($a) => [
+                    'created_at' => $a->created_at->toISOString(),
+                    'forma_pago' => $a->forma_pago,
+                    'monto'      => $a->monto,
+                    'empleado'   => $a->empleado ? ['name' => $a->empleado->name] : null,
+                ])->values(),
+            ];
+        });
+
         return Inertia::render('Ventas/Cartera', [
-            'ventas' => $ventas,
-            'kpis'   => $kpis,
+            'ventas'  => $ventas,
+            'kpis'    => $kpis,
+            'filters' => ['tipo' => $tipo, 'estado' => $estado, 'search' => $search],
         ]);
     }
 }

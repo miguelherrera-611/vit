@@ -219,6 +219,7 @@ class AbonoController extends Controller
                 'created_at'      => $venta->created_at->format('d/m/Y H:i'),
                 'detalles'        => $venta->detalles->map(fn($d) => [
                     'nombre'          => $d->producto?->nombre ?? 'Eliminado',
+                    'talla'           => $d->talla ?? null,
                     'cantidad'        => $d->cantidad,
                     'precio_unitario' => $d->precio_unitario,
                     'subtotal'        => $d->subtotal,

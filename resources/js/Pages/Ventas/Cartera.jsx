@@ -1,14 +1,19 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Link } from '@inertiajs/react';
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { Link, router } from '@inertiajs/react';
+import { useState, useEffect, useRef } from 'react';
+import VentaDetalleModal from '@/Components/VentaDetalleModal';
+import Pagination from '@/Components/Pagination';
 
 const fmt = (v) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v ?? 0);
 
-export default function Cartera({ ventas = [], kpis = {} }) {
-    const [filtroTipo, setFiltroTipo]     = useState('');
-    const [filtroEstado, setFiltroEstado] = useState('');
-    const [busqueda, setBusqueda]         = useState('');
+export default function Cartera({ ventas, kpis = {}, filters = {} }) {
+    const lista = ventas?.data ?? [];
+
+    const [filtroTipo, setFiltroTipo]         = useState(filters.tipo   ?? '');
+    const [filtroEstado, setFiltroEstado]     = useState(filters.estado ?? '');
+    const [busqueda, setBusqueda]             = useState(filters.search  ?? '');
+    const [ventaModal, setVentaModal]         = useState(null);
 
     const [openTipo, setOpenTipo] = useState(false);
     const [openEstado, setOpenEstado] = useState(false);
@@ -24,17 +29,20 @@ export default function Cartera({ ventas = [], kpis = {} }) {
         return () => document.removeEventListener('mousedown', onClick);
     }, []);
 
-    const ventasFiltradas = useMemo(() => {
-        const q = busqueda.toLowerCase();
-        return ventas.filter((v) => {
-            const matchBusqueda = !q || v.cliente.toLowerCase().includes(q) || v.numero_venta.toLowerCase().includes(q);
-            const matchTipo     = !filtroTipo   || v.tipo_venta === filtroTipo;
-            const matchEstado   = !filtroEstado || (filtroEstado === 'vencida' ? v.vencida : !v.vencida);
-            return matchBusqueda && matchTipo && matchEstado;
-        });
-    }, [ventas, busqueda, filtroTipo, filtroEstado]);
+    // Debounced search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            router.get('/ventas/cartera', { tipo: filtroTipo, estado: filtroEstado, search: busqueda }, { preserveState: true, replace: true });
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [busqueda]);
+
+    const applyFilters = (tipo, estado) => {
+        router.get('/ventas/cartera', { tipo, estado, search: busqueda }, { preserveState: true, replace: true });
+    };
 
     const hayFiltros = busqueda || filtroTipo || filtroEstado;
+    const totalResultados = ventas?.total ?? 0;
 
     return (
         <AppLayout>
@@ -199,10 +207,11 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                     padding:0.875rem 1rem;font-size:0.82rem;color:#2d1a08;
                     border-bottom:1px solid rgba(200,140,80,0.07);vertical-align:middle;
                 }
-                .ca-table tbody tr { transition:background 0.12s; }
-                .ca-table tbody tr:hover { background:rgba(255,255,255,0.45); }
+                .ca-table tbody tr { transition:background 0.12s; cursor:pointer; }
+                .ca-table tbody tr:hover { background:rgba(255,255,255,0.55); }
+                .ca-table tbody tr:hover td:first-child { color:rgba(185,28,28,0.85); }
                 .ca-table tbody tr.vencida { background:rgba(220,38,38,0.03); }
-                .ca-table tbody tr.vencida:hover { background:rgba(220,38,38,0.06); }
+                .ca-table tbody tr.vencida:hover { background:rgba(220,38,38,0.07); }
                 .ca-table tbody tr:last-child td { border-bottom:none; }
 
                 /* Badges */
@@ -428,7 +437,7 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                                                 key={opt.label}
                                                 type="button"
                                                 className={`ca-select-opt${filtroTipo === opt.value ? ' active' : ''}`}
-                                                onClick={() => { setFiltroTipo(opt.value); setOpenTipo(false); }}
+                                                onClick={() => { setFiltroTipo(opt.value); setOpenTipo(false); applyFilters(opt.value, filtroEstado); }}
                                             >
                                                 {opt.label}
                                             </button>
@@ -463,7 +472,7 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                                                 key={opt.label}
                                                 type="button"
                                                 className={`ca-select-opt${filtroEstado === opt.value ? ' active' : ''}`}
-                                                onClick={() => { setFiltroEstado(opt.value); setOpenEstado(false); }}
+                                                onClick={() => { setFiltroEstado(opt.value); setOpenEstado(false); applyFilters(filtroTipo, opt.value); }}
                                             >
                                                 {opt.label}
                                             </button>
@@ -475,9 +484,9 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                         {hayFiltros && (
                             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:'0.6rem',paddingTop:'0.6rem',borderTop:'1px solid rgba(200,140,80,0.08)'}}>
                                 <p style={{fontSize:'0.73rem',color:'rgba(150,80,20,0.55)',margin:0}}>
-                                    <span style={{fontWeight:'500',color:'rgba(120,60,10,0.7)'}}>{ventasFiltradas.length}</span> resultado{ventasFiltradas.length !== 1 ? 's' : ''}
+                                    <span style={{fontWeight:'500',color:'rgba(120,60,10,0.7)'}}>{totalResultados}</span> resultado{totalResultados !== 1 ? 's' : ''}
                                 </p>
-                                <button onClick={() => { setBusqueda(''); setFiltroTipo(''); setFiltroEstado(''); }}
+                                <button onClick={() => { setBusqueda(''); setFiltroTipo(''); setFiltroEstado(''); router.get('/ventas/cartera', {}, { preserveState: true, replace: true }); }}
                                         style={{fontSize:'0.73rem',color:'rgba(185,28,28,0.7)',background:'none',border:'none',cursor:'pointer',fontFamily:'Inter,sans-serif',fontWeight:'500'}}>
                                     Limpiar filtros
                                 </button>
@@ -486,7 +495,7 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                     </div>
 
                     {/* Contenido */}
-                    {ventas.length === 0 ? (
+                    {lista.length === 0 ? (
                         <div className="ca-card ca-empty">
                             <div style={{width:'44px',height:'44px',borderRadius:'11px',margin:'0 auto 1.25rem',background:'rgba(16,185,129,0.07)',border:'1px solid rgba(16,185,129,0.2)',display:'flex',alignItems:'center',justifyContent:'center'}}>
                                 <svg width="18" height="18" fill="none" stroke="rgba(4,120,87,0.65)" strokeWidth="1.6" viewBox="0 0 24 24">
@@ -514,16 +523,16 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {ventasFiltradas.length === 0 ? (
+                                {lista.length === 0 ? (
                                     <tr>
                                         <td colSpan={9} style={{textAlign:'center',padding:'3rem',color:'rgba(150,80,20,0.45)',fontSize:'0.82rem'}}>
                                             Sin resultados para los filtros aplicados
                                         </td>
                                     </tr>
-                                ) : ventasFiltradas.map((v) => (
-                                    <tr key={v.id} className={v.vencida ? 'vencida' : ''}>
+                                ) : lista.map((v) => (
+                                    <tr key={v.id} className={v.vencida ? 'vencida' : ''} onClick={() => setVentaModal(v)}>
                                         <td>
-                                            <p style={{fontWeight:'500',color:'#2d1a08',margin:'0 0 0.1rem',letterSpacing:'-0.01em'}}>{v.cliente}</p>
+                                            <p style={{fontWeight:'500',color:'#2d1a08',margin:'0 0 0.1rem',letterSpacing:'-0.01em'}}>{v.cliente_nombre}</p>
                                             {v.cliente_tel && <p style={{fontSize:'0.7rem',color:'rgba(150,80,20,0.5)',margin:0}}>{v.cliente_tel}</p>}
                                         </td>
                                         <td style={{color:'rgba(100,50,10,0.7)',whiteSpace:'nowrap'}}>{v.numero_venta}</td>
@@ -560,13 +569,13 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                                                     {v.vencida ? 'Vencida' : 'Al día'}
                                                 </span>
                                         </td>
-                                        <td style={{textAlign:'right',whiteSpace:'nowrap'}}>
+                                        <td style={{textAlign:'right',whiteSpace:'nowrap'}} onClick={e => e.stopPropagation()}>
                                             <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:'0.75rem'}}>
                                                 <a href={`/abonos/${v.id}/historial`} className="ca-link ca-link-muted">
                                                     Ver abonos
                                                 </a>
                                                 <span style={{color:'rgba(200,140,80,0.3)'}}>|</span>
-                                                <a href={`/abonos?cliente=${encodeURIComponent(v.cliente)}`} className="ca-link">
+                                                <a href={`/abonos?cliente=${encodeURIComponent(v.cliente_nombre)}`} className="ca-link">
                                                     Abonar
                                                 </a>
                                             </div>
@@ -577,13 +586,10 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                             </table>
 
 
-                            {ventasFiltradas.length > 0 && (
+                            {lista.length > 0 && (
                                 <div className="ca-table-footer">
                                     <p style={{fontSize:'0.73rem',color:'rgba(150,80,20,0.55)',margin:0}}>
-                                        {ventasFiltradas.length} deuda{ventasFiltradas.length!==1?'s':''} — Pendiente total:{' '}
-                                        <span style={{fontWeight:'600',color:'rgba(120,60,10,0.75)'}}>
-                                            {fmt(ventasFiltradas.reduce((s, v) => s + parseFloat(v.saldo_pendiente), 0))}
-                                        </span>
+                                        {totalResultados} deuda{totalResultados!==1?'s':''} en total
                                     </p>
                                     <Link href="/abonos" style={{
                                         padding:'0.55rem 1rem',borderRadius:'8px',
@@ -596,10 +602,27 @@ export default function Cartera({ ventas = [], kpis = {} }) {
                                     </Link>
                                 </div>
                             )}
+                            {(ventas?.total ?? 0) > (ventas?.per_page ?? 20) && (
+                                <div style={{padding:'0.75rem 1rem',borderTop:'1px solid rgba(200,140,80,0.08)'}}>
+                                    <Pagination
+                                        currentPage={ventas?.current_page ?? 1}
+                                        totalItems={ventas?.total ?? 0}
+                                        perPage={ventas?.per_page ?? 20}
+                                        accentColor="rgba(185,28,28,0.75)"
+                                        onPageChange={(page) => router.get('/ventas/cartera', { tipo: filtroTipo, estado: filtroEstado, search: busqueda, page }, { preserveState: true })}
+                                    />
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
             </div>
+
+            <VentaDetalleModal
+                venta={ventaModal}
+                open={ventaModal !== null}
+                onClose={() => setVentaModal(null)}
+            />
         </AppLayout>
     );
 }

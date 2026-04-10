@@ -263,7 +263,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('store');
 
         Route::get('/cartera', [VentaController::class, 'cartera'])
-            ->middleware('role:admin')
+            ->middleware('role_or_permission:admin|ver_cartera')
             ->name('cartera');
         Route::post('/{venta}/anular', [VentaController::class, 'anular'])
             ->middleware('role:admin')
@@ -275,10 +275,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ─────────────────────────────────────────────────────────────────────────
     Route::prefix('abonos')->name('abonos.')->group(function () {
         Route::get('/', [AbonoController::class, 'index'])
-            ->middleware('role_or_permission:admin|crear_ventas')
+            ->middleware('role_or_permission:admin|ver_abonos')
             ->name('index');
         Route::post('/', [AbonoController::class, 'store'])
-            ->middleware('role_or_permission:admin|crear_ventas')
+            ->middleware('role_or_permission:admin|crear_abonos')
             ->name('store');
         Route::get('/{venta}/historial', [AbonoController::class, 'historial'])
             ->middleware('role_or_permission:admin|ver_ventas')
@@ -324,16 +324,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('role_or_permission:admin|ver_reportes_financieros')
             ->name('financiero');
         Route::get('/clientes', [ReporteController::class, 'clientes'])
-            ->middleware('role:admin')
+            ->middleware('role_or_permission:admin|ver_reportes_clientes')
             ->name('clientes');
         Route::get('/ejecutivo', [ReporteController::class, 'ejecutivo'])
-            ->middleware('role:admin')
+            ->middleware('role_or_permission:admin|ver_reportes_ejecutivo')
             ->name('ejecutivo');
         Route::get('/rentabilidad', [ReporteController::class, 'rentabilidad'])
-            ->middleware('role:admin')
+            ->middleware('role_or_permission:admin|ver_reportes_rentabilidad')
             ->name('rentabilidad');
         Route::get('/ventas-categoria', [ReporteController::class, 'ventasCategoria'])
-            ->middleware('role:admin')
+            ->middleware('role_or_permission:admin|ver_reportes_categorias')
             ->name('ventas-categoria');
     });
 

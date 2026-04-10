@@ -259,6 +259,11 @@ export default function ReporteVentas({
         setCurrentPage(1);
         router.get('/reportes/ventas', { desde, hasta, estado }, { preserveState: true });
     };
+
+    const rangeSuperaCap = desde && hasta && (() => {
+        const diff = (new Date(hasta) - new Date(desde)) / (1000 * 60 * 60 * 24);
+        return diff > 90;
+    })();
     const maxMetodo = Math.max(...porMetodoPago.map(m => m.total || 0), 1);
 
     const ventasPaginadas = useMemo(
@@ -445,6 +450,23 @@ export default function ReporteVentas({
                                 </button>
                             </div>
                         </div>
+                        {rangeSuperaCap && (
+                            <div style={{
+                                marginTop: '0.75rem',
+                                padding: '0.6rem 0.875rem',
+                                borderRadius: '8px',
+                                background: 'rgba(245,158,11,0.07)',
+                                border: '1px solid rgba(245,158,11,0.25)',
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            }}>
+                                <svg width="14" height="14" fill="none" stroke="rgba(146,64,14,0.8)" strokeWidth="2" viewBox="0 0 24 24" style={{flexShrink:0}}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                </svg>
+                                <p style={{ fontSize: '0.76rem', color: 'rgba(146,64,14,0.85)', margin: 0 }}>
+                                    El rango supera 90 días — el reporte se limitará a los <strong>últimos 90 días</strong> desde la fecha final seleccionada.
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     {/* ── KPIs ── */}
