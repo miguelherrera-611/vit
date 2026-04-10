@@ -177,6 +177,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('role_or_permission:admin|editar_productos')
             ->name('fotos.destroy');
 
+        Route::delete('/{producto}/tallas/{talla}', [ProductoController::class, 'eliminarTalla'])
+            ->middleware('role_or_permission:admin|editar_productos')
+            ->name('tallas.destroy');
+
         Route::get('/{producto}', [ProductoController::class, 'show'])
             ->middleware('role_or_permission:admin|ver_productos')
             ->name('show');

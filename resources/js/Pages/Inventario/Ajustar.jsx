@@ -442,11 +442,11 @@ export default function InventarioAjustar({ productos = [] }) {
     const [productoSeleccionado, setProductoSeleccionado] = useState(null);
 
     const { data, setData, post, processing, errors } = useForm({
-        producto_id: '', tipo_ajuste: 'incremento', cantidad: '1', motivo: '', observaciones: '',
+        producto_id: '', tipo_ajuste: 'incremento', cantidad: '1', motivo: '', observaciones: '', talla: '',
     });
 
     const handleProductoChange = (id) => {
-        setData('producto_id', id);
+        setData(prev => ({ ...prev, producto_id: id, talla: '' }));
         setProductoSeleccionado(productos.find(p => String(p.id) === id) || null);
     };
 
@@ -454,15 +454,25 @@ export default function InventarioAjustar({ productos = [] }) {
         setData(prev => ({ ...prev, tipo_ajuste: tipo, motivo: '' }));
     };
 
-    const submit = (e) => { e.preventDefault(); post('/inventario/ajustar'); };
+    const submit = (e) => {
+        e.preventDefault();
+        if (productoSeleccionado?.maneja_tallas && !data.talla) return;
+        post('/inventario/ajustar');
+    };
+
+    const tallaActual = productoSeleccionado?.tallas?.find(t => t.talla === data.talla);
+    const stockBase   = productoSeleccionado?.maneja_tallas
+        ? (tallaActual?.stock ?? 0)
+        : (productoSeleccionado?.stock ?? 0);
 
     const resultado = useMemo(() => {
         if (!productoSeleccionado || !data.cantidad) return null;
+        if (productoSeleccionado.maneja_tallas && !data.talla) return null;
         const cant = parseInt(data.cantidad) || 0;
         return data.tipo_ajuste === 'incremento'
-            ? productoSeleccionado.stock + cant
-            : Math.max(0, productoSeleccionado.stock - cant);
-    }, [productoSeleccionado, data.cantidad, data.tipo_ajuste]);
+            ? stockBase + cant
+            : Math.max(0, stockBase - cant);
+    }, [productoSeleccionado, data.cantidad, data.tipo_ajuste, data.talla, stockBase]);
 
     const esPlusSub = data.tipo_ajuste === 'incremento';
 
@@ -506,6 +516,44 @@ export default function InventarioAjustar({ productos = [] }) {
                                 <ProductoSelect productos={productos} value={data.producto_id} onChange={handleProductoChange} error={errors.producto_id} />
                                 {errors.producto_id && <p className="aj-error">{errors.producto_id}</p>}
 
+                                {/* Selector de talla (solo si el producto maneja tallas) */}
+                                {productoSeleccionado?.maneja_tallas && (
+                                    <div style={{ marginTop: '1rem' }}>
+                                        <label className="aj-label">
+                                            Talla a ajustar <span style={{ color: 'rgba(185,28,28,0.8)' }}>*</span>
+                                        </label>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.4rem' }}>
+                                            {productoSeleccionado.tallas?.map(t => (
+                                                <button
+                                                    key={t.talla}
+                                                    type="button"
+                                                    onClick={() => setData('talla', t.talla)}
+                                                    style={{
+                                                        padding: '0.4rem 0.875rem', borderRadius: '9px', cursor: 'pointer',
+                                                        fontFamily: 'Inter,sans-serif', fontSize: '0.82rem', fontWeight: '500',
+                                                        border: data.talla === t.talla
+                                                            ? '1.5px solid rgba(185,28,28,0.45)'
+                                                            : '1px solid rgba(200,140,80,0.3)',
+                                                        background: data.talla === t.talla
+                                                            ? 'rgba(185,28,28,0.08)'
+                                                            : 'rgba(255,255,255,0.06)',
+                                                        color: data.talla === t.talla
+                                                            ? 'rgba(185,28,28,0.9)'
+                                                            : 'rgba(120,60,10,0.7)',
+                                                        transition: 'all 0.15s',
+                                                    }}
+                                                >
+                                                    {t.talla} <span style={{ opacity: 0.6, fontSize: '0.72rem' }}>({t.stock})</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {errors.talla && <p className="aj-error">{errors.talla}</p>}
+                                        {productoSeleccionado?.maneja_tallas && !data.talla && (
+                                            <p className="aj-hint">Selecciona una talla para continuar</p>
+                                        )}
+                                    </div>
+                                )}
+
                                 {productoSeleccionado && (
                                     <div style={{
                                         marginTop: '1rem', padding: '1rem 1.25rem',
@@ -522,9 +570,15 @@ export default function InventarioAjustar({ productos = [] }) {
                                         </div>
                                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                             <p style={{ fontSize: '2rem', fontWeight: '700', color: 'rgba(185,28,28,0.85)', letterSpacing: '-0.03em', lineHeight: 1 }}>
-                                                {productoSeleccionado.stock}
+                                                {productoSeleccionado.maneja_tallas
+                                                    ? (data.talla ? stockBase : '—')
+                                                    : productoSeleccionado.stock}
                                             </p>
-                                            <p style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.55)', marginTop: '0.1rem' }}>Stock actual</p>
+                                            <p style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.55)', marginTop: '0.1rem' }}>
+                                                {productoSeleccionado.maneja_tallas
+                                                    ? (data.talla ? `Stock talla ${data.talla}` : 'Elige una talla')
+                                                    : 'Stock actual'}
+                                            </p>
                                         </div>
                                     </div>
                                 )}

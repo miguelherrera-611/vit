@@ -1,6 +1,7 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, useForm } from '@inertiajs/react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 
 const GLASS_BG = `
     radial-gradient(ellipse 75% 60% at 0% 0%, rgba(255,210,170,0.22) 0%, transparent 55%),
@@ -61,7 +62,43 @@ const FORM_STYLES = `
     .prov-empresa { font-size:0.74rem; color:rgba(150,80,20,0.55); margin-top:0.05rem; }
     .prov-empty { font-size:0.82rem; color:rgba(150,80,20,0.5); text-align:center; padding:1rem 0; }
 
-    /* ── NUEVO: Fotos adicionales ── */
+    /* ── Tallas ── */
+    .tallas-toggle-row { display:flex; align-items:center; gap:0.75rem; cursor:pointer; margin-bottom:0; }
+    .talla-quick-btns { display:flex; flex-wrap:wrap; gap:0.45rem; margin-bottom:0.85rem; }
+    .talla-quick-btn { padding:0.32rem 0.75rem; border-radius:10px; font-size:0.78rem; font-weight:600; border:1px solid rgba(200,140,80,0.35); background:rgba(255,255,255,0.06); color:rgba(120,60,10,0.75); cursor:pointer; transition:all 0.15s; font-family:'Inter',sans-serif; }
+    .talla-quick-btn:hover { background:rgba(255,255,255,0.14); border-color:rgba(200,140,80,0.6); color:rgba(80,35,5,0.9); }
+    .talla-rows { display:flex; flex-direction:column; gap:0.4rem; margin-top:0.65rem; }
+    .talla-row { display:flex; align-items:center; gap:0.55rem; padding:0.42rem 0.65rem; background:rgba(255,255,255,0.06); border:1px solid rgba(200,140,80,0.2); border-radius:11px; }
+    .talla-badge-pill { flex-shrink:0; min-width:2.5rem; text-align:center; padding:0.18rem 0.5rem; border-radius:8px; font-size:0.74rem; font-weight:700; background:rgba(220,38,38,0.07); border:1px solid rgba(220,38,38,0.2); color:rgba(185,28,28,0.85); }
+    .talla-stock-input { flex:1; padding:0.36rem 0.6rem; background:rgba(255,255,255,0.1); border:1px solid rgba(200,140,80,0.35); border-radius:9px; font-size:0.84rem; color:#2d1a08; font-family:'Inter',sans-serif; outline:none; transition:border-color 0.15s; box-sizing:border-box; }
+    .talla-stock-input:focus { border-color:rgba(200,140,80,0.65); }
+    .talla-del-btn { flex-shrink:0; width:26px; height:26px; border-radius:8px; cursor:pointer; background:rgba(220,38,38,0.06); border:1px solid rgba(220,38,38,0.2); display:flex; align-items:center; justify-content:center; color:rgba(185,28,28,0.7); transition:all 0.15s; }
+    .talla-del-btn:hover:not(:disabled) { background:rgba(220,38,38,0.14); color:rgba(185,28,28,0.95); }
+    .talla-del-btn:disabled { opacity:0.3; cursor:not-allowed; }
+    .talla-saved-badge { font-size:0.62rem; font-weight:600; padding:0.1rem 0.4rem; border-radius:6px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.22); color:rgba(4,120,87,0.8); flex-shrink:0; }
+    .talla-total-bar { margin-top:0.65rem; padding:0.5rem 0.85rem; background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.18); border-radius:11px; display:flex; align-items:center; justify-content:space-between; font-size:0.82rem; }
+    /* ── Dropdown portal ── */
+    .cat-trigger { width:100%; display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; background:rgba(255,255,255,0.06); border:1px solid rgba(200,140,80,0.4); border-radius:12px; font-size:0.9rem; color:#2d1a08; font-family:'Inter',sans-serif; outline:none; cursor:pointer; transition:all 0.2s ease; backdrop-filter:blur(10px); box-shadow:0 3px 12px rgba(160,80,10,0.07),inset 0 1px 0 rgba(255,255,255,0.75); text-align:left; }
+    .cat-trigger.open { border-color:rgba(200,140,80,0.65); background:rgba(255,255,255,0.12); }
+    @keyframes catDropIn { from { opacity:0; transform:translateY(-8px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+    .cat-portal-panel { position:fixed; z-index:99999; background:rgba(255,248,240,0.98); backdrop-filter:blur(32px) saturate(180%); border:1px solid rgba(255,255,255,0.72); border-radius:18px; box-shadow:0 24px 64px rgba(180,90,20,0.18),0 8px 24px rgba(180,90,20,0.1),inset 0 1px 0 rgba(255,255,255,0.9); overflow:hidden; animation:catDropIn 0.18s cubic-bezier(0.16,1,0.3,1); font-family:'Inter',-apple-system,sans-serif; }
+    .cat-search-wrap { padding:0.65rem 0.75rem 0.5rem; border-bottom:1px solid rgba(200,140,80,0.14); }
+    .cat-search { width:100%; padding:0.55rem 2.2rem 0.55rem 2.2rem; background:rgba(255,255,255,0.1); border:1px solid rgba(200,140,80,0.35); border-radius:11px; font-size:0.82rem; color:#2d1a08; font-family:'Inter',sans-serif; outline:none; box-shadow:inset 0 1px 0 rgba(255,255,255,0.7); transition:all 0.18s; box-sizing:border-box; }
+    .cat-search:focus { border-color:rgba(200,140,80,0.6); }
+    .cat-search::placeholder { color:rgba(180,100,30,0.38); }
+    .cat-list { max-height:220px; overflow-y:auto; }
+    .cat-list::-webkit-scrollbar { width:4px; }
+    .cat-list::-webkit-scrollbar-thumb { background:rgba(200,140,80,0.3); border-radius:4px; }
+    .cat-group-label { padding:0.5rem 1rem 0.2rem; font-size:0.64rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(150,80,20,0.42); }
+    .cat-option { display:flex; align-items:center; justify-content:space-between; padding:0.6rem 1rem; cursor:pointer; font-size:0.86rem; font-weight:500; color:rgba(80,40,8,0.82); transition:background 0.12s; border:none; background:none; width:100%; text-align:left; font-family:'Inter',sans-serif; }
+    .cat-option:hover { background:rgba(255,255,255,0.6); }
+    .cat-pager { display:flex; align-items:center; justify-content:space-between; padding:0.45rem 0.75rem; border-top:1px solid rgba(200,140,80,0.12); background:rgba(255,255,255,0.04); }
+    .cat-pager-btn { display:flex; align-items:center; gap:0.3rem; padding:0.28rem 0.6rem; border-radius:8px; cursor:pointer; font-size:0.74rem; font-weight:500; color:rgba(120,60,10,0.7); background:none; border:none; font-family:'Inter',sans-serif; transition:background 0.12s; }
+    .cat-pager-btn:hover:not(:disabled) { background:rgba(255,255,255,0.65); }
+    .cat-pager-btn:disabled { opacity:0.28; cursor:not-allowed; }
+    .cat-pager-dot { width:24px; height:24px; border-radius:7px; cursor:pointer; font-size:0.72rem; font-weight:600; border:none; font-family:'Inter',sans-serif; transition:all 0.12s; }
+
+    /* ── Fotos adicionales ── */
     .fotos-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0.6rem; }
     .foto-thumb-wrap { position:relative; border-radius:11px; overflow:hidden; aspect-ratio:1/1; border:1.5px solid rgba(255,255,255,0.6); box-shadow:0 3px 10px rgba(180,90,20,0.07); }
     .foto-thumb-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -80,6 +117,170 @@ const FORM_STYLES = `
     .foto-add-btn:hover { border-color:rgba(200,140,80,0.62); background:rgba(255,255,255,0.1); color:rgba(120,55,10,0.8); }
 `;
 
+const TALLAS_LETRAS  = ['XXXS','XXS','XS','S','M','L','XL','XXL','XXXL','XXXXL','XXXXXL'];
+const TALLAS_NUMEROS = Array.from({ length: 25 }, (_, i) => String(12 + i * 2));
+const TALLAS_JEANS   = Array.from({ length: 12 }, (_, i) => String(26 + i * 2));
+const TODAS_PREDEFINIDAS_E = [
+    ...TALLAS_LETRAS.map(t  => ({ talla: t, grupo: 'Letras' })),
+    ...TALLAS_NUMEROS.map(t => ({ talla: t, grupo: 'Números' })),
+    ...TALLAS_JEANS.map(t   => ({ talla: t, grupo: 'Jeans' })),
+    { talla: 'ÚNICA', grupo: 'Especial' },
+];
+
+function TallaDropdownEdit({ tallasAgregadas, onAdd }) {
+    const [open,     setOpen]    = useState(false);
+    const [busqueda, setBusqueda]= useState('');
+    const [pagina,   setPagina]  = useState(1);
+    const [panelPos, setPanelPos]= useState({ top: 0, left: 0, width: 0 });
+
+    const triggerRef = useRef(null);
+    const panelRef   = useRef(null);
+    const inputRef   = useRef(null);
+
+    const TALLAS_POR_PAG = 8;
+    const agregadasSet = useMemo(() => new Set(tallasAgregadas.map(t => t.talla)), [tallasAgregadas]);
+
+    const disponibles = useMemo(() => {
+        const q = busqueda.trim().toUpperCase();
+        return TODAS_PREDEFINIDAS_E.filter(t => !agregadasSet.has(t.talla) && (!q || t.talla.includes(q)));
+    }, [agregadasSet, busqueda]);
+
+    const totalPags = Math.ceil(disponibles.length / TALLAS_POR_PAG);
+    const paginadas = disponibles.slice((pagina - 1) * TALLAS_POR_PAG, pagina * TALLAS_POR_PAG);
+
+    const grupos = useMemo(() => {
+        const mapa = {};
+        paginadas.forEach(t => { if (!mapa[t.grupo]) mapa[t.grupo] = []; mapa[t.grupo].push(t); });
+        return Object.entries(mapa);
+    }, [paginadas]);
+
+    const busquedaUpper = busqueda.trim().toUpperCase();
+    const esCustom = busquedaUpper && !agregadasSet.has(busquedaUpper) && !TODAS_PREDEFINIDAS_E.some(t => t.talla === busquedaUpper);
+
+    const calcPos = () => {
+        if (!triggerRef.current) return;
+        const r = triggerRef.current.getBoundingClientRect();
+        setPanelPos({ top: r.bottom + 6, left: r.left, width: r.width });
+    };
+
+    useEffect(() => {
+        if (!open) return;
+        const h = (e) => {
+            if (triggerRef.current && !triggerRef.current.contains(e.target) &&
+                panelRef.current   && !panelRef.current.contains(e.target)) setOpen(false);
+        };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) return;
+        const h = () => calcPos();
+        window.addEventListener('scroll', h, true);
+        window.addEventListener('resize', h);
+        return () => { window.removeEventListener('scroll', h, true); window.removeEventListener('resize', h); };
+    }, [open]);
+
+    useEffect(() => {
+        if (open) { setPagina(1); setTimeout(() => inputRef.current?.focus(), 60); }
+        else setBusqueda('');
+    }, [open]);
+
+    useEffect(() => { setPagina(1); }, [busqueda]);
+
+    return (
+        <>
+            <button ref={triggerRef} type="button"
+                    onClick={() => open ? setOpen(false) : (calcPos(), setOpen(true))}
+                    className={`cat-trigger${open ? ' open' : ''}`}>
+                <span style={{ color: 'rgba(180,100,30,0.38)', fontWeight: '400' }}>+ Agregar talla individual...</span>
+                <svg style={{ width: '14px', height: '14px', color: 'rgba(150,80,20,0.45)', flexShrink: 0, transition: 'transform 0.18s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            {open && createPortal(
+                <div ref={panelRef} className="cat-portal-panel" style={{ top: panelPos.top, left: panelPos.left, width: panelPos.width }}>
+                    <div className="cat-search-wrap">
+                        <div style={{ position: 'relative' }}>
+                            <svg style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(180,100,30,0.4)', pointerEvents: 'none' }}
+                                 width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input ref={inputRef} type="text" value={busqueda}
+                                   onChange={e => setBusqueda(e.target.value)}
+                                   placeholder="Buscar o escribir talla..."
+                                   className="cat-search" style={{ textTransform: 'uppercase' }} />
+                            {busqueda && (
+                                <button type="button" onClick={() => setBusqueda('')}
+                                        style={{ position: 'absolute', right: '0.65rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(150,80,20,0.5)', padding: 0 }}>
+                                    <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
+                        {esCustom && (
+                            <button type="button"
+                                    onClick={() => { onAdd(busquedaUpper); setBusqueda(''); }}
+                                    style={{ marginTop: '0.35rem', width: '100%', padding: '0.4rem 0.75rem', background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.22)', borderRadius: '9px', fontSize: '0.8rem', color: 'rgba(185,28,28,0.85)', cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontWeight: '500', textAlign: 'left' }}>
+                                + Agregar talla personalizada "{busquedaUpper}"
+                            </button>
+                        )}
+                        <p style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.45)', marginTop: '0.3rem', paddingLeft: '0.2rem' }}>
+                            {disponibles.length} disponible{disponibles.length !== 1 ? 's' : ''}
+                        </p>
+                    </div>
+
+                    {paginadas.length === 0 && !esCustom ? (
+                        <div style={{ padding: '1.25rem', textAlign: 'center' }}>
+                            <p style={{ fontSize: '0.84rem', color: 'rgba(150,80,20,0.5)' }}>
+                                {busqueda ? `"${busquedaUpper}" ya fue agregada` : 'Todas las tallas predefinidas ya están en la lista'}
+                            </p>
+                        </div>
+                    ) : paginadas.length > 0 ? (
+                        <div className="cat-list">
+                            {grupos.map(([grupo, talls]) => (
+                                <div key={grupo}>
+                                    <p className="cat-group-label">{grupo}</p>
+                                    {talls.map(t => (
+                                        <button key={t.talla} type="button" onClick={() => onAdd(t.talla)} className="cat-option">
+                                            <span>{t.talla}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    ) : null}
+
+                    {totalPags > 1 && (
+                        <div className="cat-pager">
+                            <button type="button" className="cat-pager-btn" disabled={pagina === 1} onClick={() => setPagina(p => Math.max(1, p - 1))}>
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                                Ant.
+                            </button>
+                            <div style={{ display: 'flex', gap: '3px' }}>
+                                {Array.from({ length: totalPags }, (_, i) => i + 1).map(n => (
+                                    <button key={n} type="button" className="cat-pager-dot" onClick={() => setPagina(n)}
+                                            style={{ background: n === pagina ? 'rgba(220,38,38,0.12)' : 'rgba(255,255,255,0.08)', color: n === pagina ? 'rgba(185,28,28,0.9)' : 'rgba(120,60,10,0.6)', border: n === pagina ? '1px solid rgba(220,38,38,0.3)' : '1px solid rgba(200,140,80,0.2)' }}>
+                                        {n}
+                                    </button>
+                                ))}
+                            </div>
+                            <button type="button" className="cat-pager-btn" disabled={pagina === totalPags} onClick={() => setPagina(p => Math.min(totalPags, p + 1))}>
+                                Sig.
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                            </button>
+                        </div>
+                    )}
+                </div>,
+                document.body
+            )}
+        </>
+    );
+}
+
 export default function ProductosEdit({ producto, categorias = [], proveedores = [] }) {
     const proveedoresIniciales = (producto.proveedores || []).map(p => p.id);
     // ── NUEVO ──
@@ -93,9 +294,12 @@ export default function ProductosEdit({ producto, categorias = [], proveedores =
         imagen: null, activo: producto.activo ?? true,
         proveedores: proveedoresIniciales,
         _method: 'PUT',
-        // ── NUEVO ──
         fotos_eliminar: [],
         fotos: [],
+        // ── Tallas ──
+        maneja_tallas: producto.maneja_tallas ?? false,
+        tallas: (producto.tallas || []).map(t => ({ id: t.id, talla: t.talla, stock: t.stock })),
+        tallas_eliminar: [],
     });
 
     const [buscarProv, setBuscarProv] = useState('');
@@ -153,6 +357,38 @@ export default function ProductosEdit({ producto, categorias = [], proveedores =
         if (!ruta) return '';
         if (ruta.startsWith('http')) return ruta;
         return `/storage/${ruta}`;
+    };
+
+    // ── Tallas helpers ──
+    const agregarTallaEdit = (talla) => {
+        const t = talla.toUpperCase().trim();
+        if (!t || data.tallas.some(x => x.talla === t)) return;
+        setData('tallas', [...data.tallas, { talla: t, stock: 0 }]);
+    };
+
+    const agregarConjuntoEdit = (tipo) => {
+        let set;
+        if (tipo === 'letras')       set = TALLAS_LETRAS;
+        else if (tipo === 'numeros') set = TALLAS_NUMEROS;
+        else if (tipo === 'jeans')   set = TALLAS_JEANS;
+        else set = ['ÚNICA'];
+        const existentes = new Set(data.tallas.map(t => t.talla));
+        const nuevas = set.filter(t => !existentes.has(t)).map(t => ({ talla: t, stock: 0 }));
+        if (nuevas.length) setData('tallas', [...data.tallas, ...nuevas]);
+    };
+
+    const actualizarStockTallaEdit = (index, valor) => {
+        const copia = [...data.tallas];
+        copia[index] = { ...copia[index], stock: Math.max(0, parseInt(valor) || 0) };
+        setData('tallas', copia);
+    };
+
+    const quitarTallaEdit = (index) => {
+        const t = data.tallas[index];
+        if (t.id && t.stock > 0) return; // no eliminar guardada con stock
+        const nuevasTallas = data.tallas.filter((_, i) => i !== index);
+        const nuevasEliminar = t.id ? [...data.tallas_eliminar, t.id] : data.tallas_eliminar;
+        setData({ ...data, tallas: nuevasTallas, tallas_eliminar: nuevasEliminar });
     };
 
     const submit = (e) => { e.preventDefault(); post(`/productos/${producto.id}`, { forceFormData: true }); };
@@ -253,8 +489,10 @@ export default function ProductosEdit({ producto, categorias = [], proveedores =
                                             )}
 
                                             <div>
-                                                <label className="form-label">Stock Actual</label>
-                                                <input type="number" value={producto.stock ?? 0} readOnly className="glass-input-readonly" />
+                                                <label className="form-label">
+                                                    {data.maneja_tallas ? 'Stock Total (tallas)' : 'Stock Actual'}
+                                                </label>
+                                                <input type="number" value={data.maneja_tallas ? (producto.stock_total ?? producto.stock ?? 0) : (producto.stock ?? 0)} readOnly className="glass-input-readonly" />
                                                 <p className="hint-text">Para ajustar stock usa el módulo de Inventario</p>
                                             </div>
                                             <div>
@@ -263,6 +501,87 @@ export default function ProductosEdit({ producto, categorias = [], proveedores =
                                                 {errors.stock_minimo && <p className="error-text">{errors.stock_minimo}</p>}
                                             </div>
                                         </div>
+                                    </div>
+
+                                    {/* Tallas */}
+                                    <div className="glass-panel">
+                                        <p className="panel-title">Tallas</p>
+
+                                        <label className="tallas-toggle-row" onClick={() => setData('maneja_tallas', !data.maneja_tallas)}>
+                                            <div className={`toggle-track ${data.maneja_tallas ? 'on' : 'off'}`}>
+                                                <div className="toggle-thumb" />
+                                            </div>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: '500', color: 'rgba(120,60,10,0.78)' }}>
+                                                {data.maneja_tallas ? 'Producto maneja tallas' : 'Sin tallas (stock único)'}
+                                            </span>
+                                        </label>
+
+                                        {data.maneja_tallas && (
+                                            <div style={{ marginTop: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                <div>
+                                                    <p style={{ fontSize: '0.68rem', fontWeight: '600', color: 'rgba(150,80,20,0.6)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                                                        Agregar conjunto
+                                                    </p>
+                                                    <div className="talla-quick-btns">
+                                                        <button type="button" className="talla-quick-btn" onClick={() => agregarConjuntoEdit('letras')}>Letras</button>
+                                                        <button type="button" className="talla-quick-btn" onClick={() => agregarConjuntoEdit('numeros')}>Números</button>
+                                                        <button type="button" className="talla-quick-btn" onClick={() => agregarConjuntoEdit('jeans')}>Jeans</button>
+                                                        <button type="button" className="talla-quick-btn" onClick={() => agregarConjuntoEdit('unica')}>Talla única</button>
+                                                    </div>
+                                                </div>
+
+                                                <TallaDropdownEdit tallasAgregadas={data.tallas} onAdd={agregarTallaEdit} />
+
+                                                {data.tallas.length > 0 ? (
+                                                    <>
+                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                            <p style={{ fontSize: '0.68rem', fontWeight: '600', color: 'rgba(150,80,20,0.6)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+                                                                {data.tallas.length} talla{data.tallas.length !== 1 ? 's' : ''}
+                                                            </p>
+                                                        </div>
+                                                        <div className="talla-rows">
+                                                            {data.tallas.map((t, i) => {
+                                                                const esGuardada = !!t.id;
+                                                                const sinStock   = (parseInt(t.stock) || 0) === 0;
+                                                                return (
+                                                                    <div key={t.talla} className="talla-row">
+                                                                        <span className="talla-badge-pill">{t.talla}</span>
+                                                                        {esGuardada && <span className="talla-saved-badge">Guardada</span>}
+                                                                        <input type="number" value={t.stock} min="0"
+                                                                               onChange={e => actualizarStockTallaEdit(i, e.target.value)}
+                                                                               className="talla-stock-input"
+                                                                               placeholder="Stock" />
+                                                                        <button type="button" className="talla-del-btn"
+                                                                                disabled={esGuardada && !sinStock}
+                                                                                title={esGuardada && !sinStock ? 'No se puede eliminar con stock > 0' : 'Eliminar talla'}
+                                                                                onClick={() => quitarTallaEdit(i)}>
+                                                                            <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                                            </svg>
+                                                                        </button>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                        <div className="talla-total-bar">
+                                                            <span style={{ color: 'rgba(80,40,8,0.65)' }}>Stock total en tallas</span>
+                                                            <span style={{ fontWeight: '600', color: 'rgba(4,120,87,0.85)' }}>
+                                                                {data.tallas.reduce((s, t) => s + (parseInt(t.stock) || 0), 0)} uds.
+                                                            </span>
+                                                        </div>
+                                                        {data.tallas_eliminar.length > 0 && (
+                                                            <p style={{ fontSize: '0.72rem', color: 'rgba(185,28,28,0.75)', fontWeight: '500', padding: '0.45rem 0.75rem', borderRadius: '9px', background: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.15)' }}>
+                                                                {data.tallas_eliminar.length} talla{data.tallas_eliminar.length !== 1 ? 's' : ''} se eliminarán al guardar.
+                                                            </p>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <p style={{ fontSize: '0.8rem', color: 'rgba(150,80,20,0.42)', textAlign: 'center', padding: '0.5rem 0' }}>
+                                                        Agrega al menos una talla
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Proveedores */}

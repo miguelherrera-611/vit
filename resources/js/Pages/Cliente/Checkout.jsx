@@ -109,6 +109,7 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
             data.append(`items[${idx}][producto_id]`,     item.id);
             data.append(`items[${idx}][cantidad]`,        item.cantidad);
             data.append(`items[${idx}][precio_unitario]`, item.precio);
+            if (item.talla) data.append(`items[${idx}][talla]`, item.talla);
         });
         router.post('/cliente/pedidos', data, {
             forceFormData: true,
@@ -584,7 +585,7 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
 
                         <div style={{maxHeight:'280px',overflowY:'auto',marginBottom:'1rem'}}>
                             {carrito.map((item) => (
-                                <div key={item.id} style={{
+                                <div key={`${item.id}-${item.talla ?? ''}`} style={{
                                     display:'flex',gap:'0.65rem',padding:'0.65rem 0',
                                     borderBottom:'1px solid rgba(200,140,80,0.08)',
                                 }}>
@@ -603,6 +604,14 @@ export default function Checkout({ metodosPago = [], contacto = {} }) {
                                         <p style={{fontSize:'0.78rem',fontWeight:'500',color:'#2d1a08',margin:'0 0 0.15rem',
                                             overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',letterSpacing:'-0.01em'}}>
                                             {item.nombre}
+                                            {item.talla && (
+                                                <span style={{marginLeft:'0.35rem',fontSize:'0.62rem',fontWeight:'700',
+                                                    padding:'0.08rem 0.35rem',borderRadius:'5px',
+                                                    background:'rgba(185,28,28,0.07)',border:'1px solid rgba(185,28,28,0.18)',
+                                                    color:'rgba(185,28,28,0.85)',verticalAlign:'middle'}}>
+                                                    {item.talla}
+                                                </span>
+                                            )}
                                         </p>
                                         <p style={{fontSize:'0.72rem',color:'rgba(150,80,20,0.5)',margin:0}}>
                                             {item.cantidad} × {formatCOP(item.precio)}

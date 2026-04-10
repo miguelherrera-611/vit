@@ -264,10 +264,59 @@ const FORM_STYLES = `
         .fotos-grid { grid-template-columns:repeat(2,1fr); }
         .btn-primary, .btn-ghost { width:100%; }
     }
+
+    /* ── Tallas ── */
+    .tallas-toggle-row { display:flex; align-items:center; gap:0.75rem; cursor:pointer; margin-bottom:0; }
+    .talla-quick-btns { display:flex; flex-wrap:wrap; gap:0.45rem; margin-bottom:0.85rem; }
+    .talla-quick-btn {
+        padding:0.32rem 0.75rem; border-radius:10px; font-size:0.78rem; font-weight:600;
+        border:1px solid rgba(200,140,80,0.35); background:rgba(255,255,255,0.06);
+        color:rgba(120,60,10,0.75); cursor:pointer; transition:all 0.15s; font-family:'Inter',sans-serif;
+    }
+    .talla-quick-btn:hover { background:rgba(255,255,255,0.14); border-color:rgba(200,140,80,0.6); color:rgba(80,35,5,0.9); }
+    .talla-rows { display:flex; flex-direction:column; gap:0.4rem; margin-top:0.65rem; }
+    .talla-row {
+        display:flex; align-items:center; gap:0.55rem; padding:0.42rem 0.65rem;
+        background:rgba(255,255,255,0.06); border:1px solid rgba(200,140,80,0.2); border-radius:11px;
+    }
+    .talla-badge-pill {
+        flex-shrink:0; min-width:2.5rem; text-align:center;
+        padding:0.18rem 0.5rem; border-radius:8px; font-size:0.74rem; font-weight:700;
+        background:rgba(220,38,38,0.07); border:1px solid rgba(220,38,38,0.2); color:rgba(185,28,28,0.85);
+    }
+    .talla-stock-input {
+        flex:1; padding:0.36rem 0.6rem; background:rgba(255,255,255,0.1);
+        border:1px solid rgba(200,140,80,0.35); border-radius:9px;
+        font-size:0.84rem; color:#2d1a08; font-family:'Inter',sans-serif; outline:none;
+        transition:border-color 0.15s; box-sizing:border-box;
+    }
+    .talla-stock-input:focus { border-color:rgba(200,140,80,0.65); }
+    .talla-del-btn {
+        flex-shrink:0; width:26px; height:26px; border-radius:8px; cursor:pointer;
+        background:rgba(220,38,38,0.06); border:1px solid rgba(220,38,38,0.2);
+        display:flex; align-items:center; justify-content:center; color:rgba(185,28,28,0.7);
+        transition:all 0.15s;
+    }
+    .talla-del-btn:hover { background:rgba(220,38,38,0.14); color:rgba(185,28,28,0.95); }
+    .talla-total-bar {
+        margin-top:0.65rem; padding:0.5rem 0.85rem;
+        background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.18); border-radius:11px;
+        display:flex; align-items:center; justify-content:space-between; font-size:0.82rem;
+    }
 `;
 
 const OPCIONES_POR_PAG = 7;
 const normalize = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+const TALLAS_LETRAS  = ['XXXS','XXS','XS','S','M','L','XL','XXL','XXXL','XXXXL','XXXXXL'];
+const TALLAS_NUMEROS = Array.from({ length: 25 }, (_, i) => String(12 + i * 2));
+const TALLAS_JEANS   = Array.from({ length: 12 }, (_, i) => String(26 + i * 2));
+const TODAS_PREDEFINIDAS = [
+    ...TALLAS_LETRAS.map(t  => ({ talla: t, grupo: 'Letras' })),
+    ...TALLAS_NUMEROS.map(t => ({ talla: t, grupo: 'Números' })),
+    ...TALLAS_JEANS.map(t   => ({ talla: t, grupo: 'Jeans' })),
+    { talla: 'ÚNICA', grupo: 'Especial' },
+];
 
 // ── Dropdown de categoría con portal ─────────────────────────────────────────
 function CategoriaDropdown({ categorias, value, onChange, error }) {
@@ -497,6 +546,169 @@ function CategoriaDropdown({ categorias, value, onChange, error }) {
     );
 }
 
+// ── Dropdown de talla individual con portal ───────────────────────────────────
+function TallaDropdown({ tallasAgregadas, onAdd }) {
+    const [open,     setOpen]    = useState(false);
+    const [busqueda, setBusqueda]= useState('');
+    const [pagina,   setPagina]  = useState(1);
+    const [panelPos, setPanelPos]= useState({ top: 0, left: 0, width: 0 });
+
+    const triggerRef = useRef(null);
+    const panelRef   = useRef(null);
+    const inputRef   = useRef(null);
+
+    const TALLAS_POR_PAG = 8;
+    const agregadasSet = useMemo(() => new Set(tallasAgregadas.map(t => t.talla)), [tallasAgregadas]);
+
+    const disponibles = useMemo(() => {
+        const q = busqueda.trim().toUpperCase();
+        return TODAS_PREDEFINIDAS.filter(t => !agregadasSet.has(t.talla) && (!q || t.talla.includes(q)));
+    }, [agregadasSet, busqueda]);
+
+    const totalPags = Math.ceil(disponibles.length / TALLAS_POR_PAG);
+    const paginadas = disponibles.slice((pagina - 1) * TALLAS_POR_PAG, pagina * TALLAS_POR_PAG);
+
+    const grupos = useMemo(() => {
+        const mapa = {};
+        paginadas.forEach(t => { if (!mapa[t.grupo]) mapa[t.grupo] = []; mapa[t.grupo].push(t); });
+        return Object.entries(mapa);
+    }, [paginadas]);
+
+    const busquedaUpper    = busqueda.trim().toUpperCase();
+    const esCustom         = busquedaUpper && !agregadasSet.has(busquedaUpper) && !TODAS_PREDEFINIDAS.some(t => t.talla === busquedaUpper);
+
+    const calcPos = () => {
+        if (!triggerRef.current) return;
+        const r = triggerRef.current.getBoundingClientRect();
+        setPanelPos({ top: r.bottom + 6, left: r.left, width: r.width });
+    };
+
+    useEffect(() => {
+        if (!open) return;
+        const h = (e) => {
+            if (triggerRef.current && !triggerRef.current.contains(e.target) &&
+                panelRef.current   && !panelRef.current.contains(e.target)) setOpen(false);
+        };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) return;
+        const h = () => calcPos();
+        window.addEventListener('scroll', h, true);
+        window.addEventListener('resize', h);
+        return () => { window.removeEventListener('scroll', h, true); window.removeEventListener('resize', h); };
+    }, [open]);
+
+    useEffect(() => {
+        if (open) { setPagina(1); setTimeout(() => inputRef.current?.focus(), 60); }
+        else setBusqueda('');
+    }, [open]);
+
+    useEffect(() => { setPagina(1); }, [busqueda]);
+
+    return (
+        <>
+            <button ref={triggerRef} type="button"
+                    onClick={() => open ? setOpen(false) : (calcPos(), setOpen(true))}
+                    className={`cat-trigger${open ? ' open' : ''}`}>
+                <span style={{ color: 'rgba(180,100,30,0.38)', fontWeight: '400' }}>+ Agregar talla individual...</span>
+                <svg style={{ width: '14px', height: '14px', color: 'rgba(150,80,20,0.45)', flexShrink: 0, transition: 'transform 0.18s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            {open && createPortal(
+                <div ref={panelRef} className="cat-portal-panel" style={{ top: panelPos.top, left: panelPos.left, width: panelPos.width }}>
+                    <div className="cat-search-wrap">
+                        <div style={{ position: 'relative' }}>
+                            <svg style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(180,100,30,0.4)', pointerEvents: 'none' }}
+                                 width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input ref={inputRef} type="text" value={busqueda}
+                                   onChange={e => setBusqueda(e.target.value)}
+                                   placeholder="Buscar o escribir talla..."
+                                   className="cat-search" style={{ textTransform: 'uppercase' }} />
+                            {busqueda && (
+                                <button type="button" onClick={() => setBusqueda('')}
+                                        style={{ position: 'absolute', right: '0.65rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(150,80,20,0.5)', padding: 0 }}>
+                                    <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
+                        {esCustom && (
+                            <button type="button"
+                                    onClick={() => { onAdd(busquedaUpper); setBusqueda(''); }}
+                                    style={{ marginTop: '0.35rem', width: '100%', padding: '0.4rem 0.75rem', background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.22)', borderRadius: '9px', fontSize: '0.8rem', color: 'rgba(185,28,28,0.85)', cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontWeight: '500', textAlign: 'left' }}>
+                                + Agregar talla personalizada "{busquedaUpper}"
+                            </button>
+                        )}
+                        <p style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.45)', marginTop: '0.3rem', paddingLeft: '0.2rem' }}>
+                            {disponibles.length} disponible{disponibles.length !== 1 ? 's' : ''}
+                        </p>
+                    </div>
+
+                    {paginadas.length === 0 && !esCustom ? (
+                        <div style={{ padding: '1.25rem', textAlign: 'center' }}>
+                            <p style={{ fontSize: '0.84rem', color: 'rgba(150,80,20,0.5)' }}>
+                                {busqueda ? `"${busquedaUpper}" ya fue agregada` : 'Todas las tallas predefinidas ya están en la lista'}
+                            </p>
+                        </div>
+                    ) : paginadas.length > 0 ? (
+                        <div className="cat-list">
+                            {grupos.map(([grupo, talls]) => (
+                                <div key={grupo}>
+                                    <p className="cat-group-label">{grupo}</p>
+                                    {talls.map(t => (
+                                        <button key={t.talla} type="button"
+                                                onClick={() => onAdd(t.talla)}
+                                                className="cat-option">
+                                            <span>{t.talla}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    ) : null}
+
+                    {totalPags > 1 && (
+                        <div className="cat-pager">
+                            <button type="button" className="cat-pager-btn" disabled={pagina === 1}
+                                    onClick={() => setPagina(p => Math.max(1, p - 1))}>
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                                Ant.
+                            </button>
+                            <div style={{ display: 'flex', gap: '3px' }}>
+                                {Array.from({ length: totalPags }, (_, i) => i + 1).map(n => (
+                                    <button key={n} type="button" className="cat-pager-dot" onClick={() => setPagina(n)}
+                                            style={{ background: n === pagina ? 'rgba(220,38,38,0.12)' : 'rgba(255,255,255,0.08)', color: n === pagina ? 'rgba(185,28,28,0.9)' : 'rgba(120,60,10,0.6)', border: n === pagina ? '1px solid rgba(220,38,38,0.3)' : '1px solid rgba(200,140,80,0.2)' }}>
+                                        {n}
+                                    </button>
+                                ))}
+                            </div>
+                            <button type="button" className="cat-pager-btn" disabled={pagina === totalPags}
+                                    onClick={() => setPagina(p => Math.min(totalPags, p + 1))}>
+                                Sig.
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    )}
+                </div>,
+                document.body
+            )}
+        </>
+    );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ProductosCreate({ categorias = [], proveedores = [] }) {
@@ -504,8 +716,10 @@ export default function ProductosCreate({ categorias = [], proveedores = [] }) {
         nombre: '', descripcion: '', codigo_barras: '', categoria: '',
         precio: '', precio_compra: '', stock: '0', stock_minimo: '5',
         imagen: null, activo: true, proveedores: [],
-        // ── NUEVO ──
         fotos: [],
+        // ── Tallas ──
+        maneja_tallas: false,
+        tallas: [],
     });
 
     const [buscarProv, setBuscarProv] = useState('');
@@ -544,10 +758,38 @@ export default function ProductosCreate({ categorias = [], proveedores = [] }) {
         setFotosPreviews(prev => prev.filter((_, i) => i !== index));
     };
 
-    // ── NUEVO: limpiar object URLs al desmontar ──
+    // ── limpiar object URLs al desmontar ──
     useEffect(() => {
         return () => fotosPreviews.forEach(url => URL.revokeObjectURL(url));
     }, []);
+
+    // ── Tallas helpers ──
+    const agregarTalla = (talla) => {
+        const t = talla.toUpperCase().trim();
+        if (!t || data.tallas.some(x => x.talla === t)) return;
+        setData('tallas', [...data.tallas, { talla: t, stock: 0 }]);
+    };
+
+    const agregarConjunto = (tipo) => {
+        let set;
+        if (tipo === 'letras')  set = TALLAS_LETRAS;
+        else if (tipo === 'numeros') set = TALLAS_NUMEROS;
+        else if (tipo === 'jeans')   set = TALLAS_JEANS;
+        else set = ['ÚNICA'];
+        const existentes = new Set(data.tallas.map(t => t.talla));
+        const nuevas = set.filter(t => !existentes.has(t)).map(t => ({ talla: t, stock: 0 }));
+        if (nuevas.length) setData('tallas', [...data.tallas, ...nuevas]);
+    };
+
+    const actualizarStockTalla = (index, valor) => {
+        const copia = [...data.tallas];
+        copia[index] = { ...copia[index], stock: Math.max(0, parseInt(valor) || 0) };
+        setData('tallas', copia);
+    };
+
+    const quitarTalla = (index) => {
+        setData('tallas', data.tallas.filter((_, i) => i !== index));
+    };
 
     const submit = (e) => { e.preventDefault(); post('/productos', { forceFormData: true }); };
 
@@ -663,6 +905,82 @@ export default function ProductosCreate({ categorias = [], proveedores = [] }) {
                                             {errors.stock_minimo && <p className="error-text">{errors.stock_minimo}</p>}
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Tallas */}
+                                <div className="glass-panel">
+                                    <p className="panel-title">Tallas</p>
+
+                                    {/* Toggle */}
+                                    <label className="tallas-toggle-row" onClick={() => setData('maneja_tallas', !data.maneja_tallas)}>
+                                        <div className={`toggle-track ${data.maneja_tallas ? 'on' : 'off'}`}>
+                                            <div className="toggle-thumb" />
+                                        </div>
+                                        <span style={{ fontSize: '0.85rem', fontWeight: '500', color: 'rgba(120,60,10,0.78)' }}>
+                                            {data.maneja_tallas ? 'Producto maneja tallas' : 'Sin tallas (stock único)'}
+                                        </span>
+                                    </label>
+
+                                    {data.maneja_tallas && (
+                                        <div style={{ marginTop: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                            {/* Quick-set buttons */}
+                                            <div>
+                                                <p style={{ fontSize: '0.68rem', fontWeight: '600', color: 'rgba(150,80,20,0.6)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                                                    Agregar conjunto
+                                                </p>
+                                                <div className="talla-quick-btns">
+                                                    <button type="button" className="talla-quick-btn" onClick={() => agregarConjunto('letras')}>Letras</button>
+                                                    <button type="button" className="talla-quick-btn" onClick={() => agregarConjunto('numeros')}>Números</button>
+                                                    <button type="button" className="talla-quick-btn" onClick={() => agregarConjunto('jeans')}>Jeans</button>
+                                                    <button type="button" className="talla-quick-btn" onClick={() => agregarConjunto('unica')}>Talla única</button>
+                                                </div>
+                                            </div>
+
+                                            {/* Dropdown individual */}
+                                            <TallaDropdown tallasAgregadas={data.tallas} onAdd={agregarTalla} />
+
+                                            {/* Lista de tallas */}
+                                            {data.tallas.length > 0 ? (
+                                                <>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                        <p style={{ fontSize: '0.68rem', fontWeight: '600', color: 'rgba(150,80,20,0.6)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+                                                            {data.tallas.length} talla{data.tallas.length !== 1 ? 's' : ''} — Stock inicial
+                                                        </p>
+                                                        <button type="button" onClick={() => setData('tallas', [])}
+                                                                style={{ fontSize: '0.72rem', color: 'rgba(185,28,28,0.7)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>
+                                                            Limpiar todas
+                                                        </button>
+                                                    </div>
+                                                    <div className="talla-rows">
+                                                        {data.tallas.map((t, i) => (
+                                                            <div key={t.talla} className="talla-row">
+                                                                <span className="talla-badge-pill">{t.talla}</span>
+                                                                <input type="number" value={t.stock} min="0"
+                                                                       onChange={e => actualizarStockTalla(i, e.target.value)}
+                                                                       className="talla-stock-input"
+                                                                       placeholder="Stock" />
+                                                                <button type="button" className="talla-del-btn" onClick={() => quitarTalla(i)}>
+                                                                    <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="talla-total-bar">
+                                                        <span style={{ color: 'rgba(80,40,8,0.65)' }}>Stock total inicial</span>
+                                                        <span style={{ fontWeight: '600', color: 'rgba(4,120,87,0.85)' }}>
+                                                            {data.tallas.reduce((s, t) => s + (parseInt(t.stock) || 0), 0)} uds.
+                                                        </span>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <p style={{ fontSize: '0.8rem', color: 'rgba(150,80,20,0.42)', textAlign: 'center', padding: '0.5rem 0' }}>
+                                                    Agrega al menos una talla
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Proveedores */}

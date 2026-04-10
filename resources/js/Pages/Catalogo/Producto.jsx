@@ -7,10 +7,11 @@ const formatCOP = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', cur
 
 export default function CatalogoProducto({ producto }) {
     const { auth } = usePage().props;
-    const [cantidad,       setCantidad]       = useState(1);
-    const [agregado,       setAgregado]       = useState(false);
-    const [esMovil,        setEsMovil]        = useState(false);
-    const [modalFoto,      setModalFoto]      = useState(false);
+    const [cantidad,          setCantidad]          = useState(1);
+    const [agregado,          setAgregado]          = useState(false);
+    const [esMovil,           setEsMovil]           = useState(false);
+    const [modalFoto,         setModalFoto]         = useState(false);
+    const [tallaSeleccionada, setTallaSeleccionada] = useState(null);
 
     const fotos = [...(producto.imagen ? [producto.imagen] : []), ...(producto.fotos || [])];
     const [fotoIdx, setFotoIdx] = useState(0);
@@ -35,28 +36,44 @@ export default function CatalogoProducto({ producto }) {
         return () => window.removeEventListener('keydown', h);
     }, [modalFoto, fotos.length]);
 
+    // Stock efectivo según talla seleccionada (o stock total si no maneja tallas)
+    const tallaData  = producto.maneja_tallas && tallaSeleccionada
+        ? (producto.tallas || []).find(t => t.talla === tallaSeleccionada)
+        : null;
+    const stockEfectivo = tallaData ? tallaData.stock : producto.stock;
+    const puedeAgregar  = producto.disponible && (!producto.maneja_tallas || tallaSeleccionada);
+
     const agregar = () => {
-        if (!producto.disponible) return;
-        // Sin sesión: disparar modal de auth en el layout
+        if (!puedeAgregar) return;
         if (!auth?.user) {
             window.dispatchEvent(new CustomEvent('vitali:carrito-actualizado', { detail: { abrir: false, sinSesion: true } }));
             return;
         }
-        // Leer carrito actual del sessionStorage (con clave por usuario)
         const key = `vitali_carrito_${auth.user.id}`;
         let carrito = [];
         try { carrito = JSON.parse(sessionStorage.getItem(key) || '[]'); } catch {}
-        const ex = carrito.find(i => i.id === producto.id);
+
+        // Clave única por (producto_id, talla) para diferenciar tallas en el carrito
+        const ex = carrito.find(i => i.id === producto.id && (i.talla ?? null) === (tallaSeleccionada ?? null));
         if (ex) {
-            carrito = carrito.map(i => i.id === producto.id
-                ? { ...i, cantidad: Math.min(i.cantidad + cantidad, producto.stock) } : i);
+            carrito = carrito.map(i =>
+                (i.id === producto.id && (i.talla ?? null) === (tallaSeleccionada ?? null))
+                    ? { ...i, cantidad: Math.min(i.cantidad + cantidad, stockEfectivo) }
+                    : i
+            );
         } else {
-            carrito = [...carrito, { id: producto.id, nombre: producto.nombre, precio: producto.precio,
-                imagen: producto.imagen, cantidad, stock: producto.stock }];
+            carrito = [...carrito, {
+                id:     producto.id,
+                nombre: producto.nombre,
+                precio: producto.precio,
+                imagen: producto.imagen,
+                cantidad,
+                stock:  stockEfectivo,
+                talla:  tallaSeleccionada ?? null,
+            }];
         }
         sessionStorage.setItem(key, JSON.stringify(carrito));
         sessionStorage.setItem('vitali_carrito', JSON.stringify(carrito));
-        // Notificar al layout para que actualice su estado y abra el drawer
         window.dispatchEvent(new CustomEvent('vitali:carrito-actualizado', { detail: { abrir: true } }));
         setAgregado(true);
         setTimeout(() => setAgregado(false), 2000);
@@ -265,7 +282,14 @@ export default function CatalogoProducto({ producto }) {
                                     background: producto.disponible ? 'rgba(16,185,129,0.8)' : 'rgba(200,140,80,0.6)' }}/>
                                 <span style={{ fontSize:'0.7rem', fontWeight:'500', letterSpacing:'-0.01em',
                                     color: producto.disponible ? 'rgba(4,120,87,0.8)' : 'rgba(150,80,20,0.6)' }}>
-                                    {producto.disponible ? `${producto.stock} disponibles` : 'Sin stock'}
+                                    {!producto.disponible
+                                        ? 'Sin stock'
+                                        : producto.maneja_tallas
+                                            ? tallaSeleccionada
+                                                ? `${stockEfectivo} disponibles (Talla ${tallaSeleccionada})`
+                                                : 'Disponible — elige una talla'
+                                            : `${producto.stock} disponibles`
+                                    }
                                 </span>
                             </div>
 
@@ -279,8 +303,45 @@ export default function CatalogoProducto({ producto }) {
                                 </div>
                             )}
 
+                            {/* Selector de tallas (solo cuando maneja_tallas=true) */}
+                            {producto.disponible && producto.maneja_tallas && (
+                                <div>
+                                    <label style={{ display:'block', fontSize:'0.64rem', fontWeight:'500',
+                                        color:'rgba(150,80,20,0.44)', textTransform:'uppercase',
+                                        letterSpacing:'0.07em', marginBottom:'0.5rem' }}>
+                                        Talla
+                                    </label>
+                                    <div style={{ display:'flex', flexWrap:'wrap', gap:'0.4rem' }}>
+                                        {(producto.tallas || []).map(t => {
+                                            const sel = tallaSeleccionada === t.talla;
+                                            return (
+                                                <button key={t.talla} type="button"
+                                                        onClick={() => { setTallaSeleccionada(t.talla); setCantidad(1); }}
+                                                        style={{
+                                                            padding: '0.38rem 0.72rem', borderRadius: '9px',
+                                                            cursor: 'pointer', fontFamily: 'inherit',
+                                                            fontSize: '0.8rem', fontWeight: sel ? '600' : '500',
+                                                            transition: 'all 0.13s',
+                                                            background: sel ? 'rgba(185,28,28,0.08)' : 'rgba(255,255,255,0.5)',
+                                                            border: sel ? '1.5px solid rgba(185,28,28,0.35)' : '1px solid rgba(200,140,80,0.22)',
+                                                            color: sel ? 'rgba(185,28,28,0.9)' : 'rgba(100,50,10,0.75)',
+                                                            boxShadow: sel ? '0 0 0 3px rgba(185,28,28,0.07)' : 'none',
+                                                        }}>
+                                                    {t.talla}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {!tallaSeleccionada && (
+                                        <p style={{ fontSize:'0.68rem', color:'rgba(150,80,20,0.5)', marginTop:'0.4rem' }}>
+                                            Selecciona una talla para continuar
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Cantidad */}
-                            {producto.disponible && (
+                            {producto.disponible && (!producto.maneja_tallas || tallaSeleccionada) && (
                                 <div>
                                     <label style={{ display:'block', fontSize:'0.64rem', fontWeight:'500',
                                         color:'rgba(150,80,20,0.44)', textTransform:'uppercase',
@@ -292,7 +353,7 @@ export default function CatalogoProducto({ producto }) {
                                         <span style={{ minWidth:'24px', textAlign:'center', fontSize:'0.84rem', fontWeight:'500', color:'#2d1a08' }}>
                                             {cantidad}
                                         </span>
-                                        <button style={qtyBtn} onClick={() => setCantidad(c => Math.min(producto.stock, c+1))} disabled={cantidad >= producto.stock}>+</button>
+                                        <button style={qtyBtn} onClick={() => setCantidad(c => Math.min(stockEfectivo, c+1))} disabled={cantidad >= stockEfectivo}>+</button>
                                     </div>
                                 </div>
                             )}
@@ -300,27 +361,31 @@ export default function CatalogoProducto({ producto }) {
                             {/* Botón agregar */}
                             <button
                                 onClick={agregar}
-                                disabled={!producto.disponible}
+                                disabled={!puedeAgregar}
                                 style={{
                                     width:'100%', padding:'0.82rem', borderRadius:'10px',
                                     fontFamily:'inherit', fontSize:'0.84rem', fontWeight:'500',
-                                    cursor: producto.disponible ? 'pointer' : 'not-allowed',
+                                    cursor: puedeAgregar ? 'pointer' : 'not-allowed',
                                     transition:'all 0.15s', letterSpacing:'-0.01em',
                                     display:'flex', alignItems:'center', justifyContent:'center', gap:'0.38rem',
                                     border: 'none',
                                     ...(agregado
-                                            ? { background:'rgba(16,185,129,0.08)', border:'1px solid rgba(16,185,129,0.22)', color:'rgba(4,120,87,0.9)' }
-                                            : producto.disponible
-                                                ? { background:'rgba(185,28,28,0.08)', border:'1px solid rgba(185,28,28,0.22)', color:'rgba(185,28,28,0.9)' }
-                                                : { background:'rgba(200,140,80,0.04)', border:'1px solid rgba(200,140,80,0.12)', color:'rgba(150,80,20,0.3)' }
+                                        ? { background:'rgba(16,185,129,0.08)', border:'1px solid rgba(16,185,129,0.22)', color:'rgba(4,120,87,0.9)' }
+                                        : puedeAgregar
+                                            ? { background:'rgba(185,28,28,0.08)', border:'1px solid rgba(185,28,28,0.22)', color:'rgba(185,28,28,0.9)' }
+                                            : { background:'rgba(200,140,80,0.04)', border:'1px solid rgba(200,140,80,0.12)', color:'rgba(150,80,20,0.3)' }
                                     ),
                                 }}
                             >
                                 {agregado ? (
                                     <><svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{animation:'checkIn 0.3s ease'}}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>Agregado al carrito</>
-                                ) : producto.disponible ? (
+                                ) : !producto.disponible ? (
+                                    'Producto agotado'
+                                ) : producto.maneja_tallas && !tallaSeleccionada ? (
+                                    'Elige una talla'
+                                ) : (
                                     <><svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>Agregar al carrito</>
-                                ) : 'Producto agotado'}
+                                )}
                             </button>
 
                             {/* Chips — siempre en columna, sin grid */}

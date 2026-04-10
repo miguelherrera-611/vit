@@ -103,20 +103,24 @@ class CatalogoController extends Controller
             ->where('activo', true)
             ->whereNull('deleted_at')
             ->orderBy('nombre')
-            ->with('fotos')
+            ->with(['fotos', 'tallas'])
             ->get()
             ->map(fn($p) => [
-                'id'          => $p->id,
-                'nombre'      => $p->nombre,
-                'descripcion' => $p->descripcion,
-                'precio'      => $p->precio,
-                // imagen principal con URL completa
-                'imagen'      => $this->storageUrl($p->imagen),
-                // fotos adicionales con URL completa
-                'fotos'       => $p->fotos->map(fn($f) => $this->storageUrl($f->ruta)),
-                'stock'       => $p->stock,
-                'disponible'  => $p->stock > 0,
-                'categoria'   => $p->categoria,
+                'id'           => $p->id,
+                'nombre'       => $p->nombre,
+                'descripcion'  => $p->descripcion,
+                'precio'       => $p->precio,
+                'imagen'       => $this->storageUrl($p->imagen),
+                'fotos'        => $p->fotos->map(fn($f) => $this->storageUrl($f->ruta)),
+                'maneja_tallas'=> $p->maneja_tallas,
+                'stock'        => $p->stock_total ?? $p->stock,
+                'disponible'   => ($p->stock_total ?? $p->stock) > 0,
+                'tallas'       => $p->maneja_tallas
+                    ? $p->tallas->where('stock', '>', 0)
+                        ->map(fn($t) => ['talla' => $t->talla, 'stock' => $t->stock])
+                        ->values()
+                    : [],
+                'categoria'    => $p->categoria,
             ]);
 
         return Inertia::render('Catalogo/Subcategoria', [
@@ -142,22 +146,26 @@ class CatalogoController extends Controller
     {
         $producto = Producto::where('activo', true)
             ->whereNull('deleted_at')
-            ->with('fotos')
+            ->with(['fotos', 'tallas'])
             ->findOrFail($productoId);
 
         return Inertia::render('Catalogo/Producto', [
             'producto' => [
-                'id'          => $producto->id,
-                'nombre'      => $producto->nombre,
-                'descripcion' => $producto->descripcion,
-                'precio'      => $producto->precio,
-                // imagen principal con URL completa
-                'imagen'      => $this->storageUrl($producto->imagen),
-                // fotos adicionales con URL completa
-                'fotos'       => $producto->fotos->map(fn($f) => $this->storageUrl($f->ruta)),
-                'stock'       => $producto->stock,
-                'disponible'  => $producto->stock > 0,
-                'categoria'   => $producto->categoria,
+                'id'           => $producto->id,
+                'nombre'       => $producto->nombre,
+                'descripcion'  => $producto->descripcion,
+                'precio'       => $producto->precio,
+                'imagen'       => $this->storageUrl($producto->imagen),
+                'fotos'        => $producto->fotos->map(fn($f) => $this->storageUrl($f->ruta)),
+                'maneja_tallas'=> $producto->maneja_tallas,
+                'stock'        => $producto->stock_total ?? $producto->stock,
+                'disponible'   => ($producto->stock_total ?? $producto->stock) > 0,
+                'tallas'       => $producto->maneja_tallas
+                    ? $producto->tallas->where('stock', '>', 0)
+                        ->map(fn($t) => ['talla' => $t->talla, 'stock' => $t->stock])
+                        ->values()
+                    : [],
+                'categoria'    => $producto->categoria,
             ],
         ]);
     }

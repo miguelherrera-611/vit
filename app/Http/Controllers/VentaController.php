@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use App\Models\Venta;
 use App\Models\VentaDetalle;
 use App\Models\Producto;
+use App\Models\ProductoTalla;
 use App\Models\Cliente;
 use App\Models\Abono;
 use App\Models\Registro;
@@ -35,8 +36,26 @@ class VentaController extends Controller
 
     public function create(): Response
     {
-        $productos = Producto::activos()->where('stock', '>', 0)->orderBy('nombre')->get();
-        $clientes  = Cliente::activos()->orderBy('nombre')->get();
+        $productos = Producto::with('tallas')->activos()->orderBy('nombre')->get()
+            ->filter(fn($p) => $p->stock_total > 0)
+            ->map(fn($p) => [
+                'id'            => $p->id,
+                'nombre'        => $p->nombre,
+                'precio'        => $p->precio,
+                'stock'         => $p->stock,
+                'stock_total'   => $p->stock_total,
+                'maneja_tallas' => $p->maneja_tallas,
+                'imagen'        => $p->imagen,
+                'tallas'        => $p->maneja_tallas
+                    ? $p->tallas->where('stock', '>', 0)->map(fn($t) => [
+                        'id'    => $t->id,
+                        'talla' => $t->talla,
+                        'stock' => $t->stock,
+                    ])->values()
+                    : [],
+            ])->values();
+
+        $clientes = Cliente::activos()->orderBy('nombre')->get();
 
         return Inertia::render('Ventas/Create', [
             'productos' => $productos,
@@ -58,6 +77,7 @@ class VentaController extends Controller
             'items.*.producto_id'     => 'required|exists:productos,id',
             'items.*.cantidad'        => 'required|integer|min:1',
             'items.*.precio_unitario' => 'required|numeric|min:0',
+            'items.*.talla'           => 'nullable|string|max:20',
         ], [
             'fecha_limite.after' => 'La fecha límite debe ser posterior a hoy.',
         ]);
@@ -90,16 +110,27 @@ class VentaController extends Controller
             $productosEnTransaccion = [];
 
             foreach ($validated['items'] as $item) {
-                $producto = Producto::lockForUpdate()->find($item['producto_id']);
+                $producto = Producto::with('tallas')->lockForUpdate()->find($item['producto_id']);
 
                 if (!$producto) {
                     $erroresStock[] = "Uno de los productos ya no existe en el sistema.";
                     continue;
                 }
 
-                if ($producto->stock < $item['cantidad']) {
-                    $erroresStock[] = "Stock insuficiente para \"{$producto->nombre}\": "
-                        . "disponible {$producto->stock}, solicitado {$item['cantidad']}.";
+                $talla = isset($item['talla']) ? strtoupper(trim($item['talla'])) : null;
+
+                if ($producto->maneja_tallas && $talla) {
+                    $tallaModel = $producto->tallas->firstWhere('talla', $talla);
+                    $stockDisp  = $tallaModel ? $tallaModel->stock : 0;
+                    if ($stockDisp < $item['cantidad']) {
+                        $erroresStock[] = "Stock insuficiente para \"{$producto->nombre}\" talla {$talla}: "
+                            . "disponible {$stockDisp}, solicitado {$item['cantidad']}.";
+                    }
+                } elseif (!$producto->maneja_tallas) {
+                    if ($producto->stock < $item['cantidad']) {
+                        $erroresStock[] = "Stock insuficiente para \"{$producto->nombre}\": "
+                            . "disponible {$producto->stock}, solicitado {$item['cantidad']}.";
+                    }
                 }
 
                 $productosEnTransaccion[$item['producto_id']] = $producto;
@@ -142,32 +173,50 @@ class VentaController extends Controller
 
             $productosVendidos = [];
             foreach ($validated['items'] as $item) {
+                $producto = $productosEnTransaccion[$item['producto_id']];
+                $talla    = isset($item['talla']) ? strtoupper(trim($item['talla'])) : null;
+
                 VentaDetalle::create([
                     'venta_id'        => $venta->id,
                     'producto_id'     => $item['producto_id'],
+                    'talla'           => $producto->maneja_tallas ? $talla : null,
                     'cantidad'        => $item['cantidad'],
                     'precio_unitario' => $item['precio_unitario'],
                     'subtotal'        => $item['cantidad'] * $item['precio_unitario'],
                 ]);
 
-                $producto      = $productosEnTransaccion[$item['producto_id']];
-                $stockAnterior = $producto->stock;
-                $producto->decrement('stock', $item['cantidad']);
-                $stockNuevo = $producto->fresh()->stock;
-
-                // NUEVO — registrar movimiento en kardex por cada producto vendido
-                MovimientoInventario::registrar(
-                    producto:      $producto,
-                    stockAnterior: $stockAnterior,
-                    stockNuevo:    $stockNuevo,
-                    tipo:          'venta',
-                    motivo:        "Venta {$numero}",
-                    observaciones: null,
-                    referencia:    $venta,
-                );
+                if ($producto->maneja_tallas && $talla) {
+                    $tallaModel        = $producto->tallas->firstWhere('talla', $talla);
+                    $stockAnteriorTotal = $producto->stock_total;
+                    ProductoTalla::where('id', $tallaModel->id)->decrement('stock', $item['cantidad']);
+                    $stockTotalNuevo = $stockAnteriorTotal - $item['cantidad'];
+                    MovimientoInventario::registrar(
+                        producto:      $producto,
+                        stockAnterior: $stockAnteriorTotal,
+                        stockNuevo:    $stockTotalNuevo,
+                        tipo:          'venta',
+                        motivo:        "Venta {$numero} | Talla: {$talla}",
+                        observaciones: null,
+                        referencia:    $venta,
+                    );
+                } else {
+                    $stockAnterior = $producto->stock;
+                    $producto->decrement('stock', $item['cantidad']);
+                    $stockNuevo = $producto->fresh()->stock;
+                    MovimientoInventario::registrar(
+                        producto:      $producto,
+                        stockAnterior: $stockAnterior,
+                        stockNuevo:    $stockNuevo,
+                        tipo:          'venta',
+                        motivo:        "Venta {$numero}",
+                        observaciones: null,
+                        referencia:    $venta,
+                    );
+                }
 
                 $productosVendidos[] = [
                     'nombre'          => $producto->nombre,
+                    'talla'           => $talla,
                     'cantidad'        => $item['cantidad'],
                     'precio_unitario' => $item['precio_unitario'],
                     'subtotal'        => $item['cantidad'] * $item['precio_unitario'],
@@ -256,25 +305,43 @@ class VentaController extends Controller
         try {
             $productosRestaurados = [];
             foreach ($venta->detalles as $detalle) {
-                $producto = Producto::find($detalle->producto_id);
+                $producto = Producto::with('tallas')->find($detalle->producto_id);
                 if ($producto) {
-                    $stockAnterior = $producto->stock;
-                    $producto->increment('stock', $detalle->cantidad);
-                    $stockNuevo = $producto->fresh()->stock;
-
-                    // NUEVO — registrar reingreso en kardex por anulación
-                    MovimientoInventario::registrar(
-                        producto:      $producto,
-                        stockAnterior: $stockAnterior,
-                        stockNuevo:    $stockNuevo,
-                        tipo:          'anulacion',
-                        motivo:        "Anulación venta {$venta->numero_venta}",
-                        observaciones: null,
-                        referencia:    $venta,
-                    );
+                    $talla = $detalle->talla;
+                    if ($producto->maneja_tallas && $talla) {
+                        $tallaModel = ProductoTalla::where('producto_id', $producto->id)
+                            ->where('talla', $talla)->first();
+                        if ($tallaModel) {
+                            $stockAnteriorTotal = $producto->stock_total;
+                            $tallaModel->increment('stock', $detalle->cantidad);
+                            MovimientoInventario::registrar(
+                                producto:      $producto,
+                                stockAnterior: $stockAnteriorTotal,
+                                stockNuevo:    $stockAnteriorTotal + $detalle->cantidad,
+                                tipo:          'anulacion',
+                                motivo:        "Anulación venta {$venta->numero_venta} | Talla: {$talla}",
+                                observaciones: null,
+                                referencia:    $venta,
+                            );
+                        }
+                    } else {
+                        $stockAnterior = $producto->stock;
+                        $producto->increment('stock', $detalle->cantidad);
+                        $stockNuevo = $producto->fresh()->stock;
+                        MovimientoInventario::registrar(
+                            producto:      $producto,
+                            stockAnterior: $stockAnterior,
+                            stockNuevo:    $stockNuevo,
+                            tipo:          'anulacion',
+                            motivo:        "Anulación venta {$venta->numero_venta}",
+                            observaciones: null,
+                            referencia:    $venta,
+                        );
+                    }
 
                     $productosRestaurados[] = [
                         'nombre'   => $producto->nombre,
+                        'talla'    => $talla,
                         'cantidad' => $detalle->cantidad,
                     ];
                 }

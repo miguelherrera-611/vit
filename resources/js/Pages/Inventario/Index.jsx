@@ -522,7 +522,8 @@ export default function InventarioIndex({ productos = [] }) {
                                     </thead>
                                     <tbody>
                                     {productosPaginados.map((p) => {
-                                        const agotado = p.stock === 0;
+                                        const stockEfectivo = p.stock_total ?? p.stock;
+                                        const agotado = stockEfectivo === 0;
                                         const bajo    = !agotado && p.stock <= p.stock_minimo;
                                         const badge   = agotado
                                             ? { bg: 'rgba(220,38,38,0.08)', border: 'rgba(220,38,38,0.25)', color: 'rgba(185,28,28,0.9)', label: 'Agotado' }
@@ -555,7 +556,12 @@ export default function InventarioIndex({ productos = [] }) {
                                                     }}>{p.categoria}</span>
                                                 </td>
                                                 <td style={{ padding: '0.9rem 1.25rem', fontSize: '0.9rem', fontWeight: '700', color: '#2d1a08' }}>
-                                                    {p.stock} <span style={{ fontSize: '0.75rem', fontWeight: '400', color: 'rgba(150,80,20,0.5)' }}>uds</span>
+                                                    {p.stock_total ?? p.stock} <span style={{ fontSize: '0.75rem', fontWeight: '400', color: 'rgba(150,80,20,0.5)' }}>uds</span>
+                                                    {p.maneja_tallas && (
+                                                        <span style={{ display: 'block', fontSize: '0.68rem', fontWeight: '500', color: 'rgba(109,40,217,0.7)', marginTop: '0.1rem' }}>
+                                                            {p.tallas?.length ?? 0} tallas
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td style={{ padding: '0.9rem 1.25rem', fontSize: '0.87rem', color: 'rgba(120,60,10,0.65)' }}>
                                                     {p.stock_minimo} uds

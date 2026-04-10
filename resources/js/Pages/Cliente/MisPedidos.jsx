@@ -217,6 +217,7 @@ export default function MisPedidos({ pedidos, contacto }) {
                                                         {item.nombre}
                                                     </p>
                                                     <p style={{fontSize:'0.7rem',color:'rgba(150,80,20,0.5)',margin:0}}>
+                                                        {item.talla && <span style={{fontWeight:'500',color:'rgba(120,60,10,0.7)'}}>Talla {item.talla} · </span>}
                                                         {item.cantidad} × {formatCOP(item.precio_unitario)}
                                                     </p>
                                                 </div>

@@ -121,10 +121,29 @@ export default function Kardex({ producto, movimientos }) {
                                 <p style={{ fontSize: '0.67rem', fontWeight: '600', letterSpacing: '0.09em', textTransform: 'uppercase', color: 'rgba(150,80,20,0.5)' }}>
                                     Stock actual
                                 </p>
-                                <p style={{ fontSize: '2.2rem', fontWeight: '700', color: stockColor(producto.stock), letterSpacing: '-0.04em', lineHeight: 1 }}>
-                                    {producto.stock}
+                                <p style={{ fontSize: '2.2rem', fontWeight: '700', color: stockColor(producto.stock_total ?? producto.stock), letterSpacing: '-0.04em', lineHeight: 1 }}>
+                                    {producto.stock_total ?? producto.stock}
                                 </p>
                                 <p style={{ fontSize: '0.72rem', color: 'rgba(150,80,20,0.45)' }}>unidades</p>
+                                {producto.maneja_tallas && producto.tallas?.length > 0 && (
+                                    <div style={{ marginTop: '0.75rem', textAlign: 'left' }}>
+                                        <p style={{ fontSize: '0.65rem', fontWeight: '600', color: 'rgba(150,80,20,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
+                                            Stock por talla
+                                        </p>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                                            {producto.tallas.map(t => (
+                                                <div key={t.talla} style={{
+                                                    padding: '0.25rem 0.6rem', borderRadius: '7px', fontSize: '0.75rem', fontWeight: '600',
+                                                    background: t.stock > 0 ? 'rgba(16,185,129,0.08)' : 'rgba(220,38,38,0.06)',
+                                                    border: `1px solid ${t.stock > 0 ? 'rgba(16,185,129,0.22)' : 'rgba(220,38,38,0.18)'}`,
+                                                    color: t.stock > 0 ? 'rgba(4,120,87,0.85)' : 'rgba(185,28,28,0.7)',
+                                                }}>
+                                                    {t.talla}: {t.stock}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

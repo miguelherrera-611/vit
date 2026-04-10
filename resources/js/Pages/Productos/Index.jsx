@@ -505,9 +505,10 @@ export default function ProductosIndex({ productos = [] }) {
                                     </thead>
                                     <tbody>
                                     {productosPaginados.map((producto) => {
-                                        const minimo  = producto.stock_minimo || 5;
-                                        const agotado = producto.stock === 0;
-                                        const bajo    = producto.stock > 0 && producto.stock <= minimo;
+                                        const minimo        = producto.stock_minimo || 5;
+                                        const stockEfectivo = producto.stock_total ?? producto.stock;
+                                        const agotado       = stockEfectivo === 0;
+                                        const bajo          = stockEfectivo > 0 && stockEfectivo <= minimo;
 
                                         return (
                                             <tr
@@ -528,7 +529,18 @@ export default function ProductosIndex({ productos = [] }) {
                                                             </div>
                                                         )}
                                                         <div>
-                                                            <p style={{ fontWeight: '500', color: '#2d1a08', fontSize: '0.9rem' }}>{producto.nombre}</p>
+                                                            <p style={{ fontWeight: '500', color: '#2d1a08', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                                                {producto.nombre}
+                                                                {producto.maneja_tallas && (
+                                                                    <span style={{
+                                                                        fontSize: '0.62rem', fontWeight: '600',
+                                                                        padding: '0.1rem 0.4rem', borderRadius: '4px',
+                                                                        background: 'rgba(139,92,246,0.08)',
+                                                                        border: '1px solid rgba(139,92,246,0.22)',
+                                                                        color: 'rgba(109,40,217,0.8)',
+                                                                    }}>Tallas</span>
+                                                                )}
+                                                            </p>
                                                             {producto.codigo_barras && <p style={{ fontSize: '0.74rem', color: 'rgba(150,80,20,0.5)', marginTop: '0.15rem' }}>{producto.codigo_barras}</p>}
                                                         </div>
                                                     </div>
@@ -555,7 +567,7 @@ export default function ProductosIndex({ productos = [] }) {
                                                 <td style={{ textAlign: 'right' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
                                                         <span style={{ fontWeight: '600', color: agotado ? 'rgba(185,28,28,0.85)' : bajo ? 'rgba(180,100,0,0.85)' : '#2d1a08' }}>
-                                                            {producto.stock}
+                                                            {stockEfectivo}
                                                         </span>
                                                         {agotado && <span className="badge-red">Agotado</span>}
                                                         {bajo    && <span className="badge-yellow">Bajo</span>}

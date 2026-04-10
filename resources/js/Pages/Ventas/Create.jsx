@@ -531,6 +531,7 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
     const [items, setItems]                             = useState([]);
     const [avisoClienteGeneral, setAvisoClienteGeneral] = useState(false);
     const [ventaExitosa, setVentaExitosa]               = useState(null);
+    const [tallaSelector, setTallaSelector]             = useState(null); // producto con tallas pendiente de elegir talla
     const pendingMeta                                    = useRef(null);
 
     const { data, setData, post, processing, errors, clearErrors, reset } = useForm({
@@ -552,16 +553,39 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
     );
 
     const agregarProducto = (producto) => {
-        const existe = items.find(i => i.producto_id === producto.id);
+        // Productos con tallas: mostrar selector de talla primero
+        if (producto.maneja_tallas && producto.tallas?.length > 0) {
+            setTallaSelector(producto);
+            setBusquedaProducto('');
+            return;
+        }
+        // Producto sin tallas: comportamiento original
+        const stockMax = producto.stock_total ?? producto.stock;
+        const existe = items.find(i => i.producto_id === producto.id && !i.talla);
         if (existe) {
-            const nuevos = items.map(i => i.producto_id === producto.id
-                ? { ...i, cantidad: Math.min(i.cantidad + 1, producto.stock) } : i);
+            const nuevos = items.map(i => (i.producto_id === producto.id && !i.talla)
+                ? { ...i, cantidad: Math.min(i.cantidad + 1, stockMax) } : i);
             setItems(nuevos); setData('items', nuevos);
         } else {
-            const nuevos = [...items, { producto_id: producto.id, nombre: producto.nombre, precio_unitario: producto.precio, cantidad: 1, stock_max: producto.stock }];
+            const nuevos = [...items, { producto_id: producto.id, nombre: producto.nombre, precio_unitario: producto.precio, cantidad: 1, stock_max: stockMax, talla: null }];
             setItems(nuevos); setData('items', nuevos);
         }
         setBusquedaProducto('');
+    };
+
+    const agregarProductoConTalla = (producto, talla) => {
+        const tallaData = producto.tallas.find(t => t.talla === talla);
+        const stockMax  = tallaData?.stock ?? 0;
+        const existe    = items.find(i => i.producto_id === producto.id && i.talla === talla);
+        if (existe) {
+            const nuevos = items.map(i => (i.producto_id === producto.id && i.talla === talla)
+                ? { ...i, cantidad: Math.min(i.cantidad + 1, stockMax) } : i);
+            setItems(nuevos); setData('items', nuevos);
+        } else {
+            const nuevos = [...items, { producto_id: producto.id, nombre: producto.nombre, precio_unitario: producto.precio, cantidad: 1, stock_max: stockMax, talla }];
+            setItems(nuevos); setData('items', nuevos);
+        }
+        setTallaSelector(null);
     };
 
     const actualizarCantidad = (idx, cantidad) => {
@@ -898,6 +922,9 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                                     <div>
                                                         <p style={{ fontSize: '0.82rem', fontWeight: '500', color: '#2d1a08', margin: '0 0 0.1rem', letterSpacing: '-0.01em' }}>
                                                             {p.nombre}
+                                                            {p.maneja_tallas && (
+                                                                <span style={{ marginLeft: '0.4rem', fontSize: '0.62rem', fontWeight: '700', padding: '0.1rem 0.35rem', borderRadius: '6px', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', color: 'rgba(109,40,217,0.8)', verticalAlign: 'middle' }}>TALLAS</span>
+                                                            )}
                                                         </p>
                                                         <p style={{ fontSize: '0.7rem', color: 'rgba(150,80,20,0.5)', margin: 0 }}>
                                                             {p.categoria}
@@ -908,11 +935,49 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                                             {formatCurrency(p.precio)}
                                                         </p>
                                                         <p style={{ fontSize: '0.68rem', color: 'rgba(150,80,20,0.45)', margin: 0 }}>
-                                                            Stock: {p.stock}
+                                                            Stock: {p.stock_total ?? p.stock}
                                                         </p>
                                                     </div>
                                                 </button>
                                             ))}
+                                        </div>
+                                    )}
+
+                                    {/* Selector de talla inline */}
+                                    {tallaSelector && (
+                                        <div style={{ marginTop: '0.65rem', padding: '0.9rem', background: 'rgba(255,252,248,0.95)', border: '1.5px solid rgba(185,28,28,0.2)', borderRadius: '12px', boxShadow: '0 4px 16px rgba(180,90,20,0.08)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                                                <div>
+                                                    <p style={{ fontSize: '0.76rem', fontWeight: '600', color: '#2d1a08', margin: 0, letterSpacing: '-0.01em' }}>
+                                                        {tallaSelector.nombre}
+                                                    </p>
+                                                    <p style={{ fontSize: '0.66rem', color: 'rgba(150,80,20,0.55)', margin: '0.1rem 0 0' }}>
+                                                        Elige una talla
+                                                    </p>
+                                                </div>
+                                                <button type="button" onClick={() => setTallaSelector(null)}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', color: 'rgba(150,80,20,0.5)' }}>
+                                                    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                                                {tallaSelector.tallas.map(t => (
+                                                    <button key={t.talla} type="button"
+                                                            onClick={() => agregarProductoConTalla(tallaSelector, t.talla)}
+                                                            style={{
+                                                                padding: '0.35rem 0.7rem', borderRadius: '9px', cursor: 'pointer',
+                                                                background: 'rgba(255,255,255,0.6)', border: '1.5px solid rgba(200,140,80,0.3)',
+                                                                fontSize: '0.78rem', fontWeight: '600', color: '#2d1a08',
+                                                                transition: 'all 0.13s', fontFamily: 'Inter,sans-serif',
+                                                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.1rem',
+                                                            }}>
+                                                        <span>{t.talla}</span>
+                                                        <span style={{ fontSize: '0.6rem', fontWeight: '500', color: 'rgba(4,120,87,0.75)' }}>{t.stock} uds</span>
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -963,6 +1028,11 @@ export default function VentasCreate({ productos = [], clientes = [] }) {
                                                             letterSpacing: '-0.01em',
                                                         }}>
                                                             {item.nombre}
+                                                            {item.talla && (
+                                                                <span style={{ marginLeft: '0.35rem', fontSize: '0.64rem', fontWeight: '700', padding: '0.1rem 0.38rem', borderRadius: '6px', background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.2)', color: 'rgba(185,28,28,0.85)', verticalAlign: 'middle' }}>
+                                                                    {item.talla}
+                                                                </span>
+                                                            )}
                                                         </p>
                                                         <p style={{ fontSize: '0.7rem', color: 'rgba(150,80,20,0.5)', margin: 0 }}>
                                                             Stock: {item.stock_max} · {formatCurrency(item.precio_unitario)} c/u

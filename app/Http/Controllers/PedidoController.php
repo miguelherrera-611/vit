@@ -78,6 +78,7 @@ class PedidoController extends Controller
             'items.*.producto_id'     => 'required|exists:productos,id',
             'items.*.cantidad'        => 'required|integer|min:1',
             'items.*.precio_unitario' => 'required|numeric|min:0',
+            'items.*.talla'           => 'nullable|string|max:20',
         ]);
 
         DB::beginTransaction();
@@ -106,11 +107,13 @@ class PedidoController extends Controller
             ]);
 
             foreach ($validated['items'] as $item) {
-                $producto = Producto::lockForUpdate()->find($item['producto_id']);
+                $producto = Producto::with('tallas')->lockForUpdate()->find($item['producto_id']);
+                $talla    = isset($item['talla']) ? strtoupper(trim($item['talla'])) : null;
 
                 PedidoItem::create([
                     'pedido_id'       => $pedido->id,
                     'producto_id'     => $item['producto_id'],
+                    'talla'           => $producto?->maneja_tallas ? $talla : null,
                     'nombre_producto' => $producto?->nombre ?? 'Producto',
                     'cantidad'        => $item['cantidad'],
                     'precio_unitario' => $item['precio_unitario'],
@@ -119,8 +122,16 @@ class PedidoController extends Controller
                 ]);
 
                 if ($producto) {
-                    $nuevoStock = max(0, $producto->stock - $item['cantidad']);
-                    $producto->update(['stock' => $nuevoStock]);
+                    if ($producto->maneja_tallas && $talla) {
+                        $tallaModel = $producto->tallas->firstWhere('talla', $talla);
+                        if ($tallaModel) {
+                            $nuevoStock = max(0, $tallaModel->stock - $item['cantidad']);
+                            $tallaModel->update(['stock' => $nuevoStock]);
+                        }
+                    } else {
+                        $nuevoStock = max(0, $producto->stock - $item['cantidad']);
+                        $producto->update(['stock' => $nuevoStock]);
+                    }
                 }
             }
 
@@ -185,6 +196,7 @@ class PedidoController extends Controller
                 'items_count'     => $p->items->count(),
                 'items'           => $p->items->map(fn($i) => [
                     'nombre'          => $i->nombre_producto,
+                    'talla'           => $i->talla,
                     'cantidad'        => $i->cantidad,
                     'precio_unitario' => $i->precio_unitario,
                     'imagen'          => $this->storageUrl($i->imagen_producto),
@@ -266,6 +278,7 @@ class PedidoController extends Controller
             'created_at'      => $p->created_at->format('d/m/Y H:i'),
             'items'           => $p->items->map(fn($i) => [
                 'nombre'          => $i->nombre_producto,
+                'talla'           => $i->talla,
                 'cantidad'        => $i->cantidad,
                 'precio_unitario' => $i->precio_unitario,
                 'subtotal'        => $i->subtotal,
@@ -334,8 +347,13 @@ class PedidoController extends Controller
             DB::beginTransaction();
             try {
                 foreach ($pedido->items as $item) {
-                    $producto = Producto::find($item->producto_id);
-                    if ($producto) {
+                    $producto = Producto::with('tallas')->find($item->producto_id);
+                    if (!$producto) continue;
+                    $talla = $item->talla;
+                    if ($producto->maneja_tallas && $talla) {
+                        $tallaModel = $producto->tallas->firstWhere('talla', $talla);
+                        if ($tallaModel) $tallaModel->increment('stock', $item->cantidad);
+                    } else {
                         $producto->increment('stock', $item->cantidad);
                     }
                 }

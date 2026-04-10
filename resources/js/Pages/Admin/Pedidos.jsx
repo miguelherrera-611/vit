@@ -627,7 +627,10 @@ export default function AdminPedidos({ pedidos, conteos, filtro, buscar, metodos
                                         }
                                         <div style={{flex:1,minWidth:0}}>
                                             <p style={{fontSize:'0.82rem',fontWeight:'600',color:'#2d1a08',margin:'0 0 0.1rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.nombre}</p>
-                                            <p style={{fontSize:'0.72rem',color:'rgba(150,80,20,0.55)',margin:0}}>{item.cantidad} × {formatCOP(item.precio_unitario)}</p>
+                                            <p style={{fontSize:'0.72rem',color:'rgba(150,80,20,0.55)',margin:0}}>
+                                                {item.talla && <span style={{fontWeight:'500'}}>Talla {item.talla} · </span>}
+                                                {item.cantidad} × {formatCOP(item.precio_unitario)}
+                                            </p>
                                         </div>
                                         <p style={{fontSize:'0.84rem',fontWeight:'700',color:'#2d1a08',flexShrink:0}}>{formatCOP(item.subtotal)}</p>
                                     </div>

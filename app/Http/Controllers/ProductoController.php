@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Producto;
 use App\Models\ProductoFoto;
+use App\Models\ProductoTalla;
 use App\Models\Proveedor;
 use App\Models\GrupoCategoria;
 use App\Models\Registro;
@@ -12,6 +13,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class ProductoController extends Controller
 {
@@ -35,9 +37,24 @@ class ProductoController extends Controller
             ->toArray();
     }
 
+    private function serializarTallas(Producto $producto): array
+    {
+        if (!$producto->maneja_tallas) return [];
+        return $producto->tallas->map(fn($t) => [
+            'id'    => $t->id,
+            'talla' => $t->talla,
+            'stock' => $t->stock,
+            'orden' => $t->orden,
+        ])->toArray();
+    }
+
     public function index(): Response
     {
-        $productos = Producto::with(['proveedores', 'fotos'])->orderBy('nombre')->get();
+        $productos = Producto::with(['proveedores', 'fotos', 'tallas'])->orderBy('nombre')->get()
+            ->map(fn($p) => array_merge($p->toArray(), [
+                'stock_total'   => $p->stock_total,
+                'maneja_tallas' => $p->maneja_tallas,
+            ]));
 
         return Inertia::render('Productos/Index', [
             'productos' => $productos,
@@ -57,22 +74,32 @@ class ProductoController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre'         => 'required|string|max:255',
-            'descripcion'    => 'nullable|string',
-            'precio'         => 'required|numeric|min:0',
-            'precio_compra'  => 'nullable|numeric|min:0',
-            'stock'          => 'required|integer|min:0',
-            'stock_minimo'   => 'required|integer|min:0',
-            'categoria'      => 'required|string',
-            'codigo_barras'  => 'nullable|string|unique:productos',
-            'imagen'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:20480',
-            'activo'         => 'boolean',
-            'proveedores'    => 'required|array|min:1',
-            'proveedores.*'  => 'exists:proveedores,id',
-            // Fotos adicionales — array de imágenes
-            'fotos'          => 'nullable|array',
-            'fotos.*'        => 'image|mimes:jpg,jpeg,png,webp|max:20480',
+            'nombre'           => 'required|string|max:255',
+            'descripcion'      => 'nullable|string',
+            'precio'           => 'required|numeric|min:0',
+            'precio_compra'    => 'nullable|numeric|min:0',
+            'stock'            => 'required_if:maneja_tallas,false|nullable|integer|min:0',
+            'stock_minimo'     => 'required|integer|min:0',
+            'categoria'        => 'required|string',
+            'codigo_barras'    => 'nullable|string|unique:productos',
+            'imagen'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:20480',
+            'activo'           => 'boolean',
+            'proveedores'      => 'required|array|min:1',
+            'proveedores.*'    => 'exists:proveedores,id',
+            'fotos'            => 'nullable|array',
+            'fotos.*'          => 'image|mimes:jpg,jpeg,png,webp|max:20480',
+            'maneja_tallas'    => 'boolean',
+            'tallas'           => 'nullable|array',
+            'tallas.*.talla'   => 'required_with:tallas|string|max:20',
+            'tallas.*.stock'   => 'required_with:tallas|integer|min:0',
+            'tallas.*.orden'   => 'nullable|integer|min:0',
         ]);
+
+        $manejaTallas = $request->boolean('maneja_tallas', false);
+        if ($manejaTallas) {
+            $validated['stock'] = 0;
+        }
+        $validated['maneja_tallas'] = $manejaTallas;
 
         if ($request->hasFile('imagen')) {
             $validated['imagen'] = $request->file('imagen')->store('productos', 'public');
@@ -80,19 +107,39 @@ class ProductoController extends Controller
 
         $validated['activo'] = $request->boolean('activo', true);
 
-        $producto = Producto::create($validated);
-        $producto->proveedores()->sync($validated['proveedores']);
+        DB::beginTransaction();
+        try {
+            $producto = Producto::create($validated);
+            $producto->proveedores()->sync($validated['proveedores']);
 
-        // Guardar fotos adicionales
-        if ($request->hasFile('fotos')) {
-            foreach ($request->file('fotos') as $orden => $foto) {
-                $ruta = $foto->store('productos/fotos', 'public');
-                ProductoFoto::create([
-                    'producto_id' => $producto->id,
-                    'ruta'        => $ruta,
-                    'orden'       => $orden,
-                ]);
+            // Guardar fotos adicionales
+            if ($request->hasFile('fotos')) {
+                foreach ($request->file('fotos') as $orden => $foto) {
+                    $ruta = $foto->store('productos/fotos', 'public');
+                    ProductoFoto::create([
+                        'producto_id' => $producto->id,
+                        'ruta'        => $ruta,
+                        'orden'       => $orden,
+                    ]);
+                }
             }
+
+            // Guardar tallas
+            if ($manejaTallas && !empty($validated['tallas'])) {
+                foreach ($validated['tallas'] as $idx => $t) {
+                    ProductoTalla::create([
+                        'producto_id' => $producto->id,
+                        'talla'       => strtoupper(trim($t['talla'])),
+                        'stock'       => $t['stock'],
+                        'orden'       => $t['orden'] ?? $idx,
+                    ]);
+                }
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Error al crear el producto: ' . $e->getMessage()]);
         }
 
         Registro::registrar(
@@ -107,20 +154,26 @@ class ProductoController extends Controller
 
     public function show(string $id): Response
     {
-        $producto = Producto::with(['proveedores', 'fotos'])->findOrFail($id);
+        $producto = Producto::with(['proveedores', 'fotos', 'tallas'])->findOrFail($id);
 
         return Inertia::render('Productos/Show', [
-            'producto' => $producto,
+            'producto' => array_merge($producto->toArray(), [
+                'tallas'      => $this->serializarTallas($producto),
+                'stock_total' => $producto->stock_total,
+            ]),
         ]);
     }
 
     public function edit(string $id): Response
     {
-        $producto    = Producto::with(['proveedores', 'fotos'])->findOrFail($id);
+        $producto    = Producto::with(['proveedores', 'fotos', 'tallas'])->findOrFail($id);
         $proveedores = Proveedor::activos()->orderBy('nombre')->get();
 
         return Inertia::render('Productos/Edit', [
-            'producto'    => $producto,
+            'producto'    => array_merge($producto->toArray(), [
+                'tallas'      => $this->serializarTallas($producto),
+                'stock_total' => $producto->stock_total,
+            ]),
             'categorias'  => $this->getCategorias(),
             'proveedores' => $proveedores,
         ]);
@@ -128,29 +181,41 @@ class ProductoController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $producto = Producto::findOrFail($id);
+        $producto = Producto::with('tallas')->findOrFail($id);
         $anterior = $producto->toArray();
 
         $validated = $request->validate([
-            'nombre'         => 'required|string|max:255',
-            'descripcion'    => 'nullable|string',
-            'precio'         => 'required|numeric|min:0',
-            'precio_compra'  => 'nullable|numeric|min:0',
-            'stock'          => 'required|integer|min:0',
-            'stock_minimo'   => 'required|integer|min:0',
-            'categoria'      => 'required|string',
-            'codigo_barras'  => 'nullable|string|unique:productos,codigo_barras,' . $id,
-            'imagen'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:20480',
-            'activo'         => 'boolean',
-            'proveedores'    => 'required|array|min:1',
-            'proveedores.*'  => 'exists:proveedores,id',
-            // Fotos adicionales nuevas
-            'fotos'          => 'nullable|array',
-            'fotos.*'        => 'image|mimes:jpg,jpeg,png,webp|max:20480',
-            // IDs de fotos existentes a eliminar
-            'fotos_eliminar' => 'nullable|array',
-            'fotos_eliminar.*' => 'integer|exists:producto_fotos,id',
+            'nombre'            => 'required|string|max:255',
+            'descripcion'       => 'nullable|string',
+            'precio'            => 'required|numeric|min:0',
+            'precio_compra'     => 'nullable|numeric|min:0',
+            'stock'             => 'required_if:maneja_tallas,false|nullable|integer|min:0',
+            'stock_minimo'      => 'required|integer|min:0',
+            'categoria'         => 'required|string',
+            'codigo_barras'     => 'nullable|string|unique:productos,codigo_barras,' . $id,
+            'imagen'            => 'nullable|image|mimes:jpg,jpeg,png,webp|max:20480',
+            'activo'            => 'boolean',
+            'proveedores'       => 'required|array|min:1',
+            'proveedores.*'     => 'exists:proveedores,id',
+            'fotos'             => 'nullable|array',
+            'fotos.*'           => 'image|mimes:jpg,jpeg,png,webp|max:20480',
+            'fotos_eliminar'    => 'nullable|array',
+            'fotos_eliminar.*'  => 'integer|exists:producto_fotos,id',
+            'maneja_tallas'     => 'boolean',
+            'tallas'            => 'nullable|array',
+            'tallas.*.id'       => 'nullable|integer|exists:producto_tallas,id',
+            'tallas.*.talla'    => 'required_with:tallas|string|max:20',
+            'tallas.*.stock'    => 'required_with:tallas|integer|min:0',
+            'tallas.*.orden'    => 'nullable|integer|min:0',
+            'tallas_eliminar'   => 'nullable|array',
+            'tallas_eliminar.*' => 'integer|exists:producto_tallas,id',
         ]);
+
+        $manejaTallas = $request->boolean('maneja_tallas', false);
+        if ($manejaTallas) {
+            $validated['stock'] = 0;
+        }
+        $validated['maneja_tallas'] = $manejaTallas;
 
         if ($request->hasFile('imagen')) {
             if ($producto->imagen) {
@@ -158,38 +223,72 @@ class ProductoController extends Controller
             }
             $validated['imagen'] = $request->file('imagen')->store('productos', 'public');
         } else {
-            // ← AGREGAR ESTA LÍNEA
             unset($validated['imagen']);
         }
 
         $validated['activo'] = $request->boolean('activo', true);
-        $producto->update($validated);
-        $producto->proveedores()->sync($validated['proveedores']);
 
-        // Eliminar fotos marcadas para borrar
-        if (!empty($validated['fotos_eliminar'])) {
-            $fotosAEliminar = ProductoFoto::whereIn('id', $validated['fotos_eliminar'])
-                ->where('producto_id', $producto->id)
-                ->get();
+        DB::beginTransaction();
+        try {
+            $producto->update($validated);
+            $producto->proveedores()->sync($validated['proveedores']);
 
-            foreach ($fotosAEliminar as $foto) {
-                Storage::disk('public')->delete($foto->ruta);
-                $foto->delete();
+            // Eliminar fotos marcadas para borrar
+            if (!empty($validated['fotos_eliminar'])) {
+                $fotosAEliminar = ProductoFoto::whereIn('id', $validated['fotos_eliminar'])
+                    ->where('producto_id', $producto->id)
+                    ->get();
+                foreach ($fotosAEliminar as $foto) {
+                    Storage::disk('public')->delete($foto->ruta);
+                    $foto->delete();
+                }
             }
-        }
 
-        // Agregar fotos nuevas
-        if ($request->hasFile('fotos')) {
-            $ordenActual = ProductoFoto::where('producto_id', $producto->id)->max('orden') ?? -1;
-            foreach ($request->file('fotos') as $foto) {
-                $ordenActual++;
-                $ruta = $foto->store('productos/fotos', 'public');
-                ProductoFoto::create([
-                    'producto_id' => $producto->id,
-                    'ruta'        => $ruta,
-                    'orden'       => $ordenActual,
-                ]);
+            // Agregar fotos nuevas
+            if ($request->hasFile('fotos')) {
+                $ordenActual = ProductoFoto::where('producto_id', $producto->id)->max('orden') ?? -1;
+                foreach ($request->file('fotos') as $foto) {
+                    $ordenActual++;
+                    $ruta = $foto->store('productos/fotos', 'public');
+                    ProductoFoto::create([
+                        'producto_id' => $producto->id,
+                        'ruta'        => $ruta,
+                        'orden'       => $ordenActual,
+                    ]);
+                }
             }
+
+            // Gestionar tallas
+            if ($manejaTallas) {
+                // Eliminar tallas marcadas
+                if (!empty($validated['tallas_eliminar'])) {
+                    ProductoTalla::whereIn('id', $validated['tallas_eliminar'])
+                        ->where('producto_id', $producto->id)
+                        ->delete();
+                }
+                // Upsert de tallas
+                foreach ($validated['tallas'] ?? [] as $idx => $t) {
+                    $talla = strtoupper(trim($t['talla']));
+                    if (!empty($t['id'])) {
+                        ProductoTalla::where('id', $t['id'])
+                            ->where('producto_id', $producto->id)
+                            ->update(['talla' => $talla, 'stock' => $t['stock'], 'orden' => $t['orden'] ?? $idx]);
+                    } else {
+                        ProductoTalla::updateOrCreate(
+                            ['producto_id' => $producto->id, 'talla' => $talla],
+                            ['stock' => $t['stock'], 'orden' => $t['orden'] ?? $idx]
+                        );
+                    }
+                }
+            } else {
+                // Si desactiva tallas, eliminar todas
+                $producto->tallas()->delete();
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Error al actualizar el producto: ' . $e->getMessage()]);
         }
 
         Registro::registrar(
@@ -233,6 +332,23 @@ class ProductoController extends Controller
 
         return redirect()->route('productos.index')
             ->with('success', "Producto \"{$producto->nombre}\" movido a la papelera.");
+    }
+
+    // ── Eliminar una talla individual ────────────────────────────
+
+    public function eliminarTalla(Request $request, string $productoId, string $tallaId)
+    {
+        $talla = ProductoTalla::where('id', $tallaId)
+            ->where('producto_id', $productoId)
+            ->firstOrFail();
+
+        if ($talla->stock > 0) {
+            return back()->withErrors(['talla' => "No puedes eliminar la talla \"{$talla->talla}\" porque tiene {$talla->stock} unidad(es) en stock."]);
+        }
+
+        $talla->delete();
+
+        return back()->with('success', "Talla \"{$talla->talla}\" eliminada.");
     }
 
     // ── Eliminar una foto individual (llamada desde el frontend) ──
