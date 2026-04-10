@@ -1,60 +1,20 @@
 // resources/js/Pages/Catalogo/Subcategoria.jsx
-import { Head, Link, usePage } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { Head, Link } from '@inertiajs/react';
 import ClienteLayout from '@/Layouts/ClienteLayout';
 
 const formatCOP = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
 
 export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
-    const { auth } = usePage().props;
-    const [animando, setAnimando] = useState(null);
-
-    const agregarAlCarrito = (producto) => {
-        if (!producto.disponible) return;
-
-        // Sin sesión: disparar modal de auth en el layout
-        if (!auth?.user) {
-            window.dispatchEvent(new CustomEvent('vitali:carrito-actualizado', { detail: { abrir: false, sinSesion: true } }));
-            return;
-        }
-
-        setAnimando(producto.id);
-        setTimeout(() => setAnimando(null), 600);
-
-        // Leer carrito con clave por usuario
-        const key = `vitali_carrito_${auth.user.id}`;
-        let carrito = [];
-        try { carrito = JSON.parse(sessionStorage.getItem(key) || '[]'); } catch {}
-
-        const existe = carrito.find(i => i.id === producto.id);
-        if (existe) {
-            carrito = carrito.map(i => i.id === producto.id
-                ? { ...i, cantidad: Math.min(i.cantidad + 1, producto.stock) } : i);
-        } else {
-            carrito = [...carrito, {
-                id: producto.id, nombre: producto.nombre, precio: producto.precio,
-                imagen: producto.imagen, cantidad: 1, stock: producto.stock,
-            }];
-        }
-
-        sessionStorage.setItem(key, JSON.stringify(carrito));
-        sessionStorage.setItem('vitali_carrito', JSON.stringify(carrito));
-
-        // Notificar al layout
-        window.dispatchEvent(new CustomEvent('vitali:carrito-actualizado', { detail: { abrir: true } }));
-    };
-
     return (
         <ClienteLayout>
             <Head title={`${subcat.nombre} — VitaliStore`}/>
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
                 @keyframes slideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-                @keyframes pulse   { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
 
                 .prod-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
                     gap: 1rem;
                 }
                 .prod-card {
@@ -62,6 +22,8 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                     border: 1px solid rgba(200,140,80,0.12);
                     border-radius: 14px; overflow: hidden;
                     transition: all 0.22s ease; position: relative;
+                    text-decoration: none; display: block; color: inherit;
+                    cursor: pointer;
                 }
                 .prod-card:hover {
                     background: rgba(255,255,255,0.65);
@@ -80,28 +42,25 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                     border-bottom: 1px solid rgba(200,140,80,0.1);
                     display: flex; align-items: center; justify-content: center;
                 }
-                .btn-add {
-                    width: 100%; padding: 0.7rem 1rem; border-radius: 9px;
-                    font-size: 0.82rem; font-weight: 500; cursor: pointer;
-                    font-family: 'Inter', sans-serif; transition: all 0.18s; border: none;
+                .talla-pill {
+                    display: inline-flex; align-items: center; justify-content: center;
+                    padding: 0.18rem 0.48rem; border-radius: 6px;
+                    font-size: 0.68rem; font-weight: 500;
+                    background: rgba(255,255,255,0.6);
+                    border: 1px solid rgba(200,140,80,0.2);
+                    color: rgba(100,50,10,0.7);
+                    white-space: nowrap; letter-spacing: 0;
+                }
+                .ver-detalle-hint {
+                    display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+                    padding: 0.5rem; margin-top: 0.5rem;
+                    font-size: 0.74rem; font-weight: 500;
+                    color: rgba(185,28,28,0.75);
+                    border-top: 1px solid rgba(200,140,80,0.08);
                     letter-spacing: -0.01em;
+                    transition: color 0.12s;
                 }
-                .btn-add.disponible {
-                    background: rgba(185,28,28,0.07); border: 1px solid rgba(185,28,28,0.2);
-                    color: rgba(185,28,28,0.9);
-                }
-                .btn-add.disponible:hover { background: rgba(185,28,28,0.12); border-color: rgba(185,28,28,0.32); }
-                .btn-add.animando { animation: pulse 0.6s ease; }
-                .btn-add.agotado {
-                    background: rgba(200,140,80,0.04); border: 1px solid rgba(200,140,80,0.12);
-                    color: rgba(150,80,20,0.3); cursor: not-allowed;
-                }
-                .ver-detalle {
-                    display: block; text-align: center; padding: 0.4rem;
-                    font-size: 0.74rem; color: rgba(150,80,20,0.5);
-                    text-decoration: none; transition: color 0.12s; letter-spacing: -0.01em;
-                }
-                .ver-detalle:hover { color: rgba(120,50,10,0.8); }
+                .prod-card:hover .ver-detalle-hint { color: rgba(185,28,28,1); }
                 .breadcrumb-link {
                     font-size: 0.78rem; color: rgba(150,80,20,0.55);
                     text-decoration: none; padding: 0.25rem 0.5rem;
@@ -116,16 +75,18 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                 .anim-6 { animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.20s both; }
 
                 @media (max-width: 768px) {
-                    .prod-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
-                    .prod-img { height: 180px; }
-                    .prod-placeholder { height: 180px; }
+                    .prod-grid { grid-template-columns: repeat(2, 1fr); gap: 0.65rem; }
+                    .prod-img { height: 160px; }
+                    .prod-placeholder { height: 160px; }
                 }
                 @media (max-width: 400px) {
                     .prod-grid { grid-template-columns: 1fr; }
+                    .prod-img { height: 200px; }
+                    .prod-placeholder { height: 200px; }
                 }
             `}</style>
 
-            <div style={{maxWidth:'1280px',margin:'0 auto',padding:'2rem 1.5rem 4rem'}}>
+            <div style={{maxWidth:'1280px',margin:'0 auto',padding:'2rem 1rem 4rem'}}>
 
                 {/* Breadcrumb */}
                 <div style={{display:'flex',alignItems:'center',gap:'0.25rem',marginBottom:'2rem',flexWrap:'wrap'}}>
@@ -166,7 +127,12 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                 ) : (
                     <div className="prod-grid">
                         {productos.map((prod, idx) => (
-                            <div key={prod.id} className={`prod-card anim-${Math.min((idx % 6) + 1, 6)}`}>
+                            <Link
+                                key={prod.id}
+                                href={`/catalogo/producto/${prod.id}`}
+                                className={`prod-card anim-${Math.min((idx % 6) + 1, 6)}`}
+                            >
+                                {/* Imagen */}
                                 <div style={{overflow:'hidden',position:'relative'}}>
                                     {prod.imagen ? (
                                         <img src={prod.imagen} alt={prod.nombre} className="prod-img"/>
@@ -188,21 +154,22 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                                     )}
                                 </div>
 
-                                <div style={{padding:'1rem'}}>
-                                    <Link href={`/catalogo/producto/${prod.id}`} style={{textDecoration:'none'}}>
-                                        <h3 style={{fontSize:'0.88rem',fontWeight:'500',color:'#2d1a08',
-                                            letterSpacing:'-0.01em',marginBottom:'0.2rem',lineHeight:'1.35'}}>
-                                            {prod.nombre}
-                                        </h3>
-                                    </Link>
+                                {/* Info */}
+                                <div style={{padding:'0.875rem 1rem 0'}}>
+                                    <h3 style={{fontSize:'0.88rem',fontWeight:'500',color:'#2d1a08',
+                                        letterSpacing:'-0.01em',marginBottom:'0.2rem',lineHeight:'1.35'}}>
+                                        {prod.nombre}
+                                    </h3>
                                     {prod.descripcion && (
-                                        <p style={{fontSize:'0.74rem',color:'rgba(150,80,20,0.55)',marginBottom:'0.65rem',
+                                        <p style={{fontSize:'0.74rem',color:'rgba(150,80,20,0.55)',marginBottom:'0.6rem',
                                             lineHeight:'1.4',overflow:'hidden',display:'-webkit-box',
                                             WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>
                                             {prod.descripcion}
                                         </p>
                                     )}
-                                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.75rem'}}>
+
+                                    {/* Precio + stock */}
+                                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.6rem'}}>
                                         <span style={{fontSize:'1.05rem',fontWeight:'600',color:'#2d1a08',letterSpacing:'-0.02em'}}>
                                             {formatCOP(prod.precio)}
                                         </span>
@@ -215,18 +182,35 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                                             {prod.disponible ? `${prod.stock} uds.` : 'Agotado'}
                                         </span>
                                     </div>
-                                    <button
-                                        className={`btn-add ${prod.disponible ? 'disponible' : 'agotado'} ${animando === prod.id ? 'animando' : ''}`}
-                                        onClick={() => agregarAlCarrito(prod)}
-                                        disabled={!prod.disponible}
-                                    >
-                                        {prod.disponible ? 'Agregar al carrito' : 'No disponible'}
-                                    </button>
-                                    <Link href={`/catalogo/producto/${prod.id}`} className="ver-detalle">
-                                        Ver detalle
-                                    </Link>
+
+                                    {/* Tallas disponibles */}
+                                    {prod.maneja_tallas && prod.tallas?.length > 0 && (
+                                        <div style={{marginBottom:'0.6rem'}}>
+                                            <p style={{fontSize:'0.6rem',fontWeight:'500',color:'rgba(150,80,20,0.4)',
+                                                textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'0.3rem'}}>
+                                                Tallas disponibles
+                                            </p>
+                                            <div style={{display:'flex',flexWrap:'wrap',gap:'0.28rem'}}>
+                                                {prod.tallas.slice(0, 6).map(t => (
+                                                    <span key={t.talla} className="talla-pill">{t.talla}</span>
+                                                ))}
+                                                {prod.tallas.length > 6 && (
+                                                    <span className="talla-pill">+{prod.tallas.length - 6}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
+
+                                {/* Ver detalle hint */}
+                                <div className="ver-detalle-hint">
+                                    <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                    Ver detalle
+                                </div>
+                            </Link>
                         ))}
                     </div>
                 )}

@@ -800,6 +800,81 @@ export default function ProductosShow({ producto }) {
                                 </div>
                             </div>
 
+                            {/* Tallas */}
+                            {producto.maneja_tallas && (
+                                <div className="a4">
+                                    <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                                        <p className="section-label">Tallas disponibles</p>
+
+                                        {producto.tallas && producto.tallas.length > 0 ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                                                {producto.tallas.map(t => {
+                                                    const agot  = t.stock === 0;
+                                                    const bajo  = !agot && t.stock <= (producto.stock_minimo || 5);
+                                                    const color = agot  ? 'rgba(185,28,28,0.85)'
+                                                                : bajo  ? 'rgba(174,95,0,0.9)'
+                                                                :         'rgba(4,120,87,0.85)';
+                                                    const bgBadge = agot  ? 'rgba(220,38,38,0.07)'
+                                                                  : bajo  ? 'rgba(245,158,11,0.08)'
+                                                                  :         'rgba(16,185,129,0.07)';
+                                                    const border  = agot  ? 'rgba(220,38,38,0.2)'
+                                                                  : bajo  ? 'rgba(245,158,11,0.22)'
+                                                                  :         'rgba(16,185,129,0.22)';
+                                                    return (
+                                                        <div key={t.id} style={{
+                                                            display: 'flex', alignItems: 'center',
+                                                            justifyContent: 'space-between',
+                                                            padding: '0.5rem 0.85rem',
+                                                            background: 'rgba(255,255,255,0.06)',
+                                                            border: '1px solid rgba(200,140,80,0.15)',
+                                                            borderRadius: '10px',
+                                                        }}>
+                                                            <span style={{
+                                                                minWidth: '2.6rem', textAlign: 'center',
+                                                                padding: '0.18rem 0.55rem', borderRadius: '7px',
+                                                                fontSize: '0.78rem', fontWeight: '700',
+                                                                background: 'rgba(185,28,28,0.07)',
+                                                                border: '1px solid rgba(185,28,28,0.18)',
+                                                                color: 'rgba(185,28,28,0.85)',
+                                                            }}>
+                                                                {t.talla}
+                                                            </span>
+                                                            <span style={{
+                                                                fontSize: '0.78rem', fontWeight: '600',
+                                                                color, padding: '0.15rem 0.55rem',
+                                                                borderRadius: '7px', background: bgBadge,
+                                                                border: `1px solid ${border}`,
+                                                            }}>
+                                                                {t.stock} uds.
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+
+                                                {/* Total */}
+                                                <div style={{
+                                                    display: 'flex', justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    marginTop: '0.25rem', paddingTop: '0.6rem',
+                                                    borderTop: '1px solid rgba(200,140,80,0.12)',
+                                                }}>
+                                                    <span style={{ fontSize: '0.68rem', fontWeight: '600', color: 'rgba(150,80,20,0.5)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                                                        Total en stock
+                                                    </span>
+                                                    <span style={{ fontSize: '0.88rem', fontWeight: '700', color: '#2d1a08', letterSpacing: '-0.02em' }}>
+                                                        {producto.tallas.reduce((s, t) => s + (t.stock || 0), 0)} uds.
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p style={{ fontSize: '0.8rem', color: 'rgba(150,80,20,0.42)', textAlign: 'center', padding: '0.75rem 0' }}>
+                                                Sin tallas registradas
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Resumen de precios */}
                             {producto.precio_compra > 0 && (
                                 <div className="a4">

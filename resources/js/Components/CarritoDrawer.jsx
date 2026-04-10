@@ -20,15 +20,17 @@ export default function CarritoDrawer({ open, onClose, carrito, setCarrito, auth
     const totalPags     = Math.ceil(carrito.length / PER_PAGE) || 1;
     const itemsVisibles = carrito.slice((pagina - 1) * PER_PAGE, pagina * PER_PAGE);
 
-    const cambiarCantidad = (id, delta) => {
+    const match = (i, id, talla) => i.id === id && (i.talla ?? null) === (talla ?? null);
+
+    const cambiarCantidad = (id, talla, delta) => {
         setCarrito(prev => prev.map(i =>
-            i.id !== id ? i : { ...i, cantidad: Math.max(1, Math.min(i.stock, i.cantidad + delta)) }
+            !match(i, id, talla) ? i : { ...i, cantidad: Math.max(1, Math.min(i.stock, i.cantidad + delta)) }
         ));
     };
 
-    const eliminar = (id) => {
+    const eliminar = (id, talla) => {
         setCarrito(prev => {
-            const nuevo = prev.filter(i => i.id !== id);
+            const nuevo = prev.filter(i => !match(i, id, talla));
             const np    = Math.ceil(nuevo.length / PER_PAGE) || 1;
             if (pagina > np) setPagina(np);
             return nuevo;
@@ -229,7 +231,7 @@ export default function CarritoDrawer({ open, onClose, carrito, setCarrito, auth
                             </button>
                         </div>
                     ) : itemsVisibles.map(item => (
-                        <div key={item.id} className="c-item">
+                        <div key={`${item.id}-${item.talla ?? 'sin'}`} className="c-item">
                             {imgSrc(item.imagen)
                                 ? <img src={imgSrc(item.imagen)} alt={item.nombre} className="c-img"/>
                                 : <div className="c-placeholder">
@@ -245,21 +247,35 @@ export default function CarritoDrawer({ open, onClose, carrito, setCarrito, auth
                                         maxWidth:'170px',letterSpacing:'-0.01em'}}>
                                         {item.nombre}
                                     </h4>
-                                    <button className="c-rm" onClick={() => eliminar(item.id)}>
+                                    <button className="c-rm" onClick={() => eliminar(item.id, item.talla)}>
                                         <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
                                         </svg>
                                     </button>
                                 </div>
+
+                                {/* Talla — solo si el producto la tiene */}
+                                {item.talla && (
+                                    <span style={{
+                                        display:'inline-block', marginBottom:'0.28rem',
+                                        padding:'0.1rem 0.42rem', borderRadius:'5px',
+                                        fontSize:'0.62rem', fontWeight:'600', letterSpacing:'0.03em',
+                                        background:'rgba(185,28,28,0.07)', border:'1px solid rgba(185,28,28,0.18)',
+                                        color:'rgba(185,28,28,0.8)',
+                                    }}>
+                                        Talla {item.talla}
+                                    </span>
+                                )}
+
                                 <p style={{fontSize:'0.84rem',fontWeight:'600',color:'#2d1a08',margin:'0 0 0.35rem',letterSpacing:'-0.02em'}}>
                                     {formatCOP(item.precio * item.cantidad)}
                                 </p>
                                 <div style={{display:'flex',alignItems:'center',gap:'0.32rem'}}>
-                                    <button className="c-qty-btn" onClick={()=>cambiarCantidad(item.id,-1)} disabled={item.cantidad<=1}>−</button>
+                                    <button className="c-qty-btn" onClick={()=>cambiarCantidad(item.id,item.talla,-1)} disabled={item.cantidad<=1}>−</button>
                                     <span style={{fontSize:'0.75rem',fontWeight:'500',color:'rgba(120,55,10,0.8)',minWidth:'14px',textAlign:'center'}}>
                                         {item.cantidad}
                                     </span>
-                                    <button className="c-qty-btn" onClick={()=>cambiarCantidad(item.id,+1)} disabled={item.cantidad>=item.stock}>+</button>
+                                    <button className="c-qty-btn" onClick={()=>cambiarCantidad(item.id,item.talla,+1)} disabled={item.cantidad>=item.stock}>+</button>
                                     <span style={{fontSize:'0.66rem',color:'rgba(150,80,20,0.38)',marginLeft:'0.1rem'}}>
                                         {formatCOP(item.precio)} c/u
                                     </span>

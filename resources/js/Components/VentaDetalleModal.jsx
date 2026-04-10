@@ -468,6 +468,17 @@ export default function VentaDetalleModal({ venta, open, onClose }) {
                                                         <p style={{fontWeight:'500',color:'#2d1a08',margin:'0 0 0.1rem',letterSpacing:'-0.01em'}}>
                                                             {d.producto?.nombre || 'Producto'}
                                                         </p>
+                                                        {d.talla && (
+                                                            <span style={{
+                                                                display:'inline-block',marginBottom:'0.18rem',
+                                                                padding:'0.1rem 0.42rem',borderRadius:'5px',
+                                                                fontSize:'0.62rem',fontWeight:'600',letterSpacing:'0.03em',
+                                                                background:'rgba(185,28,28,0.07)',border:'1px solid rgba(185,28,28,0.18)',
+                                                                color:'rgba(185,28,28,0.8)',
+                                                            }}>
+                                                                Talla {d.talla}
+                                                            </span>
+                                                        )}
                                                         {d.producto?.codigo_barras && (
                                                             <p style={{fontSize:'0.68rem',color:'rgba(150,80,20,0.45)',margin:0}}>
                                                                 Ref: {d.producto.codigo_barras}

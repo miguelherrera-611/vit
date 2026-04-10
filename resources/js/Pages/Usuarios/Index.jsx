@@ -28,8 +28,9 @@ export default function UsuariosIndex({ usuarios }) {
     };
 
     const rolMeta = (rol) => {
-        if (rol === 'admin')    return { label: 'Administrador', cls: 'u-badge-admin' };
-        if (rol === 'empleado') return { label: 'Empleado',      cls: 'u-badge-emp'   };
+        if (rol === 'admin')    return { label: 'Administrador', cls: 'u-badge-admin'   };
+        if (rol === 'empleado') return { label: 'Empleado',      cls: 'u-badge-emp'    };
+        if (rol === 'cliente')  return { label: 'Cliente',       cls: 'u-badge-cliente'};
         return { label: 'Sin rol', cls: 'u-badge-none' };
     };
 
@@ -121,9 +122,10 @@ export default function UsuariosIndex({ usuarios }) {
                     padding: 0.18rem 0.6rem; border-radius: 5px;
                     font-size: 0.69rem; font-weight: 500; letter-spacing: 0.01em;
                 }
-                .u-badge-admin { background: rgba(185,28,28,0.07); border: 1px solid rgba(185,28,28,0.18); color: rgba(185,28,28,0.9); }
-                .u-badge-emp   { background: rgba(59,130,246,0.07); border: 1px solid rgba(59,130,246,0.18); color: rgba(29,78,216,0.9); }
-                .u-badge-none  { background: rgba(200,140,80,0.06); border: 1px solid rgba(200,140,80,0.15); color: rgba(120,60,10,0.6); }
+                .u-badge-admin   { background: rgba(185,28,28,0.07);  border: 1px solid rgba(185,28,28,0.18);  color: rgba(185,28,28,0.9); }
+                .u-badge-emp     { background: rgba(59,130,246,0.07); border: 1px solid rgba(59,130,246,0.18); color: rgba(29,78,216,0.9); }
+                .u-badge-cliente { background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.22); color: rgba(4,120,87,0.9); }
+                .u-badge-none    { background: rgba(200,140,80,0.06); border: 1px solid rgba(200,140,80,0.15); color: rgba(120,60,10,0.6); }
 
                 .u-badge-locked {
                     display: inline-flex; align-items: center; gap: 0.3rem;

@@ -254,15 +254,16 @@ const FORM_STYLES = `
         .glass-panel { padding:1.1rem; border-radius:14px; }
         .panel-title { font-size:0.9rem; margin-bottom:1rem; }
         .fotos-grid { grid-template-columns:repeat(3,1fr); gap:0.45rem; }
-
-        /* extra responsive sobrio */
-        @media (max-width: 768px) {
-            .create-left .glass-panel > div[style*="gridTemplateColumns: '1fr 1fr'"] { grid-template-columns: 1fr !important; }
-        }
+        .precios-grid { grid-template-columns:1fr !important; }
     }
     @media (max-width: 560px) {
         .fotos-grid { grid-template-columns:repeat(2,1fr); }
         .btn-primary, .btn-ghost { width:100%; }
+        .talla-quick-btns { gap:0.35rem; }
+        .talla-quick-btn { padding:0.28rem 0.6rem; font-size:0.74rem; }
+        .talla-badge-pill { min-width:2rem; font-size:0.7rem; }
+        .talla-row { padding:0.35rem 0.5rem; gap:0.4rem; }
+        .pg-header h1 { font-size:1.2rem !important; }
     }
 
     /* ── Tallas ── */
@@ -284,13 +285,12 @@ const FORM_STYLES = `
         padding:0.18rem 0.5rem; border-radius:8px; font-size:0.74rem; font-weight:700;
         background:rgba(220,38,38,0.07); border:1px solid rgba(220,38,38,0.2); color:rgba(185,28,28,0.85);
     }
-    .talla-stock-input {
-        flex:1; padding:0.36rem 0.6rem; background:rgba(255,255,255,0.1);
-        border:1px solid rgba(200,140,80,0.35); border-radius:9px;
-        font-size:0.84rem; color:#2d1a08; font-family:'Inter',sans-serif; outline:none;
-        transition:border-color 0.15s; box-sizing:border-box;
+    .talla-stock-input-readonly {
+        flex:1; padding:0.36rem 0.6rem;
+        background:rgba(180,90,20,0.04); border:1px solid rgba(200,140,80,0.22); border-radius:9px;
+        font-size:0.84rem; color:rgba(100,55,10,0.45); font-family:'Inter',sans-serif; outline:none;
+        box-sizing:border-box; cursor:not-allowed;
     }
-    .talla-stock-input:focus { border-color:rgba(200,140,80,0.65); }
     .talla-del-btn {
         flex-shrink:0; width:26px; height:26px; border-radius:8px; cursor:pointer;
         background:rgba(220,38,38,0.06); border:1px solid rgba(220,38,38,0.2);
@@ -310,13 +310,12 @@ const normalize = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u03
 
 const TALLAS_LETRAS  = ['XXXS','XXS','XS','S','M','L','XL','XXL','XXXL','XXXXL','XXXXXL'];
 const TALLAS_NUMEROS = Array.from({ length: 25 }, (_, i) => String(12 + i * 2));
-const TALLAS_JEANS   = Array.from({ length: 12 }, (_, i) => String(26 + i * 2));
 const TODAS_PREDEFINIDAS = [
     ...TALLAS_LETRAS.map(t  => ({ talla: t, grupo: 'Letras' })),
     ...TALLAS_NUMEROS.map(t => ({ talla: t, grupo: 'Números' })),
-    ...TALLAS_JEANS.map(t   => ({ talla: t, grupo: 'Jeans' })),
     { talla: 'ÚNICA', grupo: 'Especial' },
 ];
+const SET_PREDEFINIDAS = new Set([...TALLAS_LETRAS, ...TALLAS_NUMEROS, 'ÚNICA']);
 
 // ── Dropdown de categoría con portal ─────────────────────────────────────────
 function CategoriaDropdown({ categorias, value, onChange, error }) {
@@ -385,15 +384,18 @@ function CategoriaDropdown({ categorias, value, onChange, error }) {
         return () => document.removeEventListener('mousedown', h);
     }, [open]);
 
-    // Recalcular si el scroll mueve el trigger
+    // Cerrar en scroll fuera del panel (no dentro de la lista)
     useEffect(() => {
         if (!open) return;
-        const h = () => calcPos();
-        window.addEventListener('scroll', h, true);
-        window.addEventListener('resize', h);
+        const close = (e) => {
+            if (panelRef.current?.contains(e.target)) return;
+            setOpen(false);
+        };
+        window.addEventListener('scroll', close, true);
+        window.addEventListener('resize', () => setOpen(false));
         return () => {
-            window.removeEventListener('scroll', h, true);
-            window.removeEventListener('resize', h);
+            window.removeEventListener('scroll', close, true);
+            window.removeEventListener('resize', () => setOpen(false));
         };
     }, [open]);
 
@@ -551,13 +553,13 @@ function TallaDropdown({ tallasAgregadas, onAdd }) {
     const [open,     setOpen]    = useState(false);
     const [busqueda, setBusqueda]= useState('');
     const [pagina,   setPagina]  = useState(1);
-    const [panelPos, setPanelPos]= useState({ top: 0, left: 0, width: 0 });
+    const [panelPos, setPanelPos]= useState({ top: 0, left: 0, width: 0, listMaxH: 200, flipUp: false });
 
     const triggerRef = useRef(null);
     const panelRef   = useRef(null);
     const inputRef   = useRef(null);
 
-    const TALLAS_POR_PAG = 8;
+    const TALLAS_POR_PAG = 10;
     const agregadasSet = useMemo(() => new Set(tallasAgregadas.map(t => t.talla)), [tallasAgregadas]);
 
     const disponibles = useMemo(() => {
@@ -574,31 +576,50 @@ function TallaDropdown({ tallasAgregadas, onAdd }) {
         return Object.entries(mapa);
     }, [paginadas]);
 
-    const busquedaUpper    = busqueda.trim().toUpperCase();
-    const esCustom         = busquedaUpper && !agregadasSet.has(busquedaUpper) && !TODAS_PREDEFINIDAS.some(t => t.talla === busquedaUpper);
+    const busquedaUpper = busqueda.trim().toUpperCase();
+    const esCustom      = busquedaUpper && !agregadasSet.has(busquedaUpper) && !TODAS_PREDEFINIDAS.some(t => t.talla === busquedaUpper);
 
     const calcPos = () => {
         if (!triggerRef.current) return;
-        const r = triggerRef.current.getBoundingClientRect();
-        setPanelPos({ top: r.bottom + 6, left: r.left, width: r.width });
+        const r          = triggerRef.current.getBoundingClientRect();
+        const vH         = window.innerHeight;
+        const GAP        = 6;
+        const BOTTOM_PAD = 24;  // margen antes del borde inferior
+        const SEARCH_H   = 92;  // buscador
+        const PAGER_H    = 46;  // paginador
+        const MIN_LIST   = 100;
+
+        // Siempre abre hacia abajo — la lista se limita al espacio disponible
+        const spaceBelow = vH - r.bottom - GAP - BOTTOM_PAD;
+        const listMaxH   = Math.max(MIN_LIST, spaceBelow - SEARCH_H - PAGER_H);
+
+        setPanelPos({ top: r.bottom + GAP, left: r.left, width: r.width, listMaxH });
     };
 
+    // Cerrar al click fuera
     useEffect(() => {
         if (!open) return;
         const h = (e) => {
-            if (triggerRef.current && !triggerRef.current.contains(e.target) &&
-                panelRef.current   && !panelRef.current.contains(e.target)) setOpen(false);
+            if (triggerRef.current?.contains(e.target) || panelRef.current?.contains(e.target)) return;
+            setOpen(false);
         };
         document.addEventListener('mousedown', h);
         return () => document.removeEventListener('mousedown', h);
     }, [open]);
 
+    // Cerrar solo en scroll FUERA del panel (no dentro de la lista)
     useEffect(() => {
         if (!open) return;
-        const h = () => calcPos();
-        window.addEventListener('scroll', h, true);
-        window.addEventListener('resize', h);
-        return () => { window.removeEventListener('scroll', h, true); window.removeEventListener('resize', h); };
+        const close = (e) => {
+            if (panelRef.current?.contains(e.target)) return;
+            setOpen(false);
+        };
+        window.addEventListener('scroll', close, true);
+        window.addEventListener('resize', () => setOpen(false));
+        return () => {
+            window.removeEventListener('scroll', close, true);
+            window.removeEventListener('resize', () => setOpen(false));
+        };
     }, [open]);
 
     useEffect(() => {
@@ -621,7 +642,10 @@ function TallaDropdown({ tallasAgregadas, onAdd }) {
             </button>
 
             {open && createPortal(
-                <div ref={panelRef} className="cat-portal-panel" style={{ top: panelPos.top, left: panelPos.left, width: panelPos.width }}>
+                <div ref={panelRef} className="cat-portal-panel" style={{
+                    top: panelPos.top, left: panelPos.left, width: panelPos.width,
+                }}>
+                    {/* Buscador */}
                     <div className="cat-search-wrap">
                         <div style={{ position: 'relative' }}>
                             <svg style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(180,100,30,0.4)', pointerEvents: 'none' }}
@@ -653,6 +677,7 @@ function TallaDropdown({ tallasAgregadas, onAdd }) {
                         </p>
                     </div>
 
+                    {/* Lista paginada */}
                     {paginadas.length === 0 && !esCustom ? (
                         <div style={{ padding: '1.25rem', textAlign: 'center' }}>
                             <p style={{ fontSize: '0.84rem', color: 'rgba(150,80,20,0.5)' }}>
@@ -660,7 +685,7 @@ function TallaDropdown({ tallasAgregadas, onAdd }) {
                             </p>
                         </div>
                     ) : paginadas.length > 0 ? (
-                        <div className="cat-list">
+                        <div className="cat-list" style={{ maxHeight: panelPos.listMaxH }}>
                             {grupos.map(([grupo, talls]) => (
                                 <div key={grupo}>
                                     <p className="cat-group-label">{grupo}</p>
@@ -676,6 +701,7 @@ function TallaDropdown({ tallasAgregadas, onAdd }) {
                         </div>
                     ) : null}
 
+                    {/* Paginador */}
                     {totalPags > 1 && (
                         <div className="cat-pager">
                             <button type="button" className="cat-pager-btn" disabled={pagina === 1}
@@ -771,20 +797,13 @@ export default function ProductosCreate({ categorias = [], proveedores = [] }) {
     };
 
     const agregarConjunto = (tipo) => {
-        let set;
-        if (tipo === 'letras')  set = TALLAS_LETRAS;
-        else if (tipo === 'numeros') set = TALLAS_NUMEROS;
-        else if (tipo === 'jeans')   set = TALLAS_JEANS;
-        else set = ['ÚNICA'];
-        const existentes = new Set(data.tallas.map(t => t.talla));
-        const nuevas = set.filter(t => !existentes.has(t)).map(t => ({ talla: t, stock: 0 }));
-        if (nuevas.length) setData('tallas', [...data.tallas, ...nuevas]);
-    };
-
-    const actualizarStockTalla = (index, valor) => {
-        const copia = [...data.tallas];
-        copia[index] = { ...copia[index], stock: Math.max(0, parseInt(valor) || 0) };
-        setData('tallas', copia);
+        let newSet;
+        if (tipo === 'letras')       newSet = TALLAS_LETRAS;
+        else if (tipo === 'numeros') newSet = TALLAS_NUMEROS;
+        else                         newSet = ['ÚNICA'];
+        // Mantener solo las tallas personalizadas (no predefinidas) y reemplazar el conjunto
+        const custom = data.tallas.filter(t => !SET_PREDEFINIDAS.has(t.talla));
+        setData('tallas', [...custom, ...newSet.map(t => ({ talla: t, stock: 0 }))]);
     };
 
     const quitarTalla = (index) => {
@@ -857,7 +876,7 @@ export default function ProductosCreate({ categorias = [], proveedores = [] }) {
                                 {/* Precios */}
                                 <div className="glass-panel">
                                     <p className="panel-title">Precios e Inventario</p>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div className="precios-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                         <div>
                                             <label className="form-label">Precio de Compra <span style={{ fontSize: '0.68rem', color: 'rgba(150,80,20,0.5)', textTransform: 'none', letterSpacing: 0 }}>(costo)</span></label>
                                             <div className="prefix-wrap">
@@ -931,7 +950,6 @@ export default function ProductosCreate({ categorias = [], proveedores = [] }) {
                                                 <div className="talla-quick-btns">
                                                     <button type="button" className="talla-quick-btn" onClick={() => agregarConjunto('letras')}>Letras</button>
                                                     <button type="button" className="talla-quick-btn" onClick={() => agregarConjunto('numeros')}>Números</button>
-                                                    <button type="button" className="talla-quick-btn" onClick={() => agregarConjunto('jeans')}>Jeans</button>
                                                     <button type="button" className="talla-quick-btn" onClick={() => agregarConjunto('unica')}>Talla única</button>
                                                 </div>
                                             </div>
@@ -955,10 +973,8 @@ export default function ProductosCreate({ categorias = [], proveedores = [] }) {
                                                         {data.tallas.map((t, i) => (
                                                             <div key={t.talla} className="talla-row">
                                                                 <span className="talla-badge-pill">{t.talla}</span>
-                                                                <input type="number" value={t.stock} min="0"
-                                                                       onChange={e => actualizarStockTalla(i, e.target.value)}
-                                                                       className="talla-stock-input"
-                                                                       placeholder="Stock" />
+                                                                <input type="number" value={0} readOnly
+                                                                       className="talla-stock-input-readonly" />
                                                                 <button type="button" className="talla-del-btn" onClick={() => quitarTalla(i)}>
                                                                     <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -967,12 +983,9 @@ export default function ProductosCreate({ categorias = [], proveedores = [] }) {
                                                             </div>
                                                         ))}
                                                     </div>
-                                                    <div className="talla-total-bar">
-                                                        <span style={{ color: 'rgba(80,40,8,0.65)' }}>Stock total inicial</span>
-                                                        <span style={{ fontWeight: '600', color: 'rgba(4,120,87,0.85)' }}>
-                                                            {data.tallas.reduce((s, t) => s + (parseInt(t.stock) || 0), 0)} uds.
-                                                        </span>
-                                                    </div>
+                                                    <p className="hint-text" style={{ marginTop: '0.5rem' }}>
+                                                        El stock por talla se gestiona desde el módulo de Inventario
+                                                    </p>
                                                 </>
                                             ) : (
                                                 <p style={{ fontSize: '0.8rem', color: 'rgba(150,80,20,0.42)', textAlign: 'center', padding: '0.5rem 0' }}>
