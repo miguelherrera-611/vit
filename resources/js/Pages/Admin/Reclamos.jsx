@@ -359,6 +359,20 @@ export default function AdminReclamos({ reclamos, conteos, filtro }) {
                 }
 
                 .anim-1 { animation:staggerUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
+
+                .reclamos-wrap { max-width:1200px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
+
+                @media (max-width:768px) {
+                    .reclamos-wrap { padding:1.5rem 1rem 3rem; }
+                    .estado-grid { grid-template-columns:1fr; }
+                    .detalle-panel { width:100vw; border-left:none; }
+                    h1 { font-size:1.35rem !important; }
+                }
+                @media (max-width:480px) {
+                    .reclamos-wrap { padding:1rem 0.875rem 2.5rem; }
+                    .confirm-card { border-radius:12px; }
+                    .rg-th, .rg-td { padding:0.6rem 0.75rem; }
+                }
             `}</style>
 
             <div style={{
@@ -368,7 +382,7 @@ export default function AdminReclamos({ reclamos, conteos, filtro }) {
                     linear-gradient(145deg,#fdf6f0 0%,#fdf3ec 35%,#fef5ef 70%,#fef8f4 100%)`,
                 fontFamily:'Inter,sans-serif',
             }}>
-                <div style={{maxWidth:'1200px',margin:'0 auto',padding:'2.5rem 1.5rem 4rem'}}>
+                <div className="reclamos-wrap">
 
                     {/* ── HEADER ── */}
                     <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'1rem',marginBottom:'1.5rem',flexWrap:'wrap'}}>

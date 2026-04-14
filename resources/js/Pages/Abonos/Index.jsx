@@ -1,14 +1,16 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useForm, usePage, router } from '@inertiajs/react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function AbonosIndex({ clientes = [], busqueda = '' }) {
     const { auth } = usePage().props;
     const esAdmin = auth?.user?.roles?.some(r => r.name === 'admin') ?? false;
 
-    const [busquedaLocal, setBusquedaLocal]         = useState(busqueda);
+    const [busquedaLocal, setBusquedaLocal]         = useState(busqueda ?? '');
     const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
     const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
+    const debounceRef = useRef(null);
+    const primeraRender = useRef(true);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         venta_id:         '',
@@ -18,10 +20,17 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
         tipo_movimiento:  'abono_normal',
     });
 
-    const buscar = (e) => {
-        e.preventDefault();
-        window.location.href = '/abonos?cliente=' + encodeURIComponent(busquedaLocal);
-    };
+    useEffect(() => {
+        if (primeraRender.current) {
+            primeraRender.current = false;
+            return;
+        }
+        clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            router.get('/abonos', { cliente: busquedaLocal }, { preserveScroll: false, replace: true });
+        }, 500);
+        return () => clearTimeout(debounceRef.current);
+    }, [busquedaLocal]);
 
     const seleccionarVenta = (venta, cliente) => {
         setVentaSeleccionada(venta);
@@ -115,15 +124,41 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                     pointer-events:none;
                 }
                 .ab-sticky{position:sticky;top:1rem}
+
+                /* Stats de venta — CSS puro sin Tailwind */
+                .ab-sale-grid{
+                    display:grid;
+                    grid-template-columns:repeat(3,1fr);
+                    gap:0.75rem;
+                    margin-bottom:0.75rem;
+                }
+
+                /* Fila de badges + fecha en cada venta */
+                .ab-venta-header{
+                    display:flex;align-items:flex-start;justify-content:space-between;
+                    gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;
+                }
+                .ab-venta-badges{
+                    display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;min-width:0;
+                }
+                .ab-venta-fecha{
+                    font-size:0.72rem;color:rgba(150,80,20,0.45);white-space:nowrap;flex-shrink:0;
+                    padding-top:0.1rem;
+                }
+
                 @media (min-width:1024px){
                     .ab-grid{grid-template-columns:3fr 2fr;gap:1.25rem}
                     .ab-shell{padding:2rem 1.5rem 3rem}
+                }
+                @media (max-width:1023px){
+                    /* En móvil/tablet ocultar el panel derecho si no hay venta seleccionada */
+                    .ab-right-empty{display:none}
                 }
                 @media (max-width:768px){
                     .ab-sticky{position:static}
                     .ab-actions{display:grid;grid-template-columns:1fr;gap:.55rem}
                     .ab-actions > *{width:100%}
-                    .ab-sale-grid{grid-template-columns:1fr !important}
+                    .ab-sale-grid{grid-template-columns:1fr}
                     .ab-form-grid-2{grid-template-columns:1fr !important}
                 }
 
@@ -174,21 +209,18 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                         <div className="space-y-4">
                             <div className="ab-glass p-4 sm:p-5">
                                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Buscar Cliente</h2>
-                                <form onSubmit={buscar} className="flex flex-col sm:flex-row gap-3">
-                                    <div className="relative flex-1">
-                                        <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 ab-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
-                                        <input
-                                            type="text"
-                                            value={busquedaLocal}
-                                            onChange={(e) => setBusquedaLocal(e.target.value)}
-                                            placeholder="Nombre, teléfono o documento..."
-                                            className="ab-input has-icon"
-                                        />
-                                    </div>
-                                    <button type="submit" className="ab-btn-main">Buscar</button>
-                                </form>
+                                <div className="relative">
+                                    <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 ab-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    <input
+                                        type="text"
+                                        value={busquedaLocal}
+                                        onChange={(e) => setBusquedaLocal(e.target.value)}
+                                        placeholder="Nombre, teléfono o documento..."
+                                        className="ab-input has-icon"
+                                    />
+                                </div>
                             </div>
 
                             {!busqueda && (
@@ -224,16 +256,16 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
                                         <div className="divide-y" style={{borderColor:'rgba(200,140,80,.08)'}}>
                                             {cliente.ventas.map((venta) => (
                                                 <div key={venta.id} className={'px-4 sm:px-6 py-4 transition ' + (ventaSeleccionada?.id === venta.id ? 'bg-blue-50/60 border-l-4 border-blue-500' : 'hover:bg-white/30')}>
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="font-medium text-gray-800">{venta.numero_venta}</span>
+                                                    <div className="ab-venta-header">
+                                                        <div className="ab-venta-badges">
+                                                            <span style={{fontSize:'0.83rem',fontWeight:500,color:'#2d1a08'}}>{venta.numero_venta}</span>
                                                             <span className={'px-2 py-0.5 rounded-full text-xs font-medium ' + estadoColor(venta.estado)}>{venta.estado}</span>
                                                             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">{venta.tipo_venta}</span>
                                                         </div>
-                                                        <span className="text-xs text-gray-400">{venta.created_at}</span>
+                                                        <span className="ab-venta-fecha">{venta.created_at}</span>
                                                     </div>
 
-                                                    <div className="grid grid-cols-3 gap-3 mb-3 ab-sale-grid">
+                                                    <div className="ab-sale-grid">
                                                         <div>
                                                             <p className="text-xs text-gray-400">Total</p>
                                                             <p className="text-sm font-medium text-gray-700">{fmt(venta.total)}</p>
@@ -284,7 +316,7 @@ export default function AbonosIndex({ clientes = [], busqueda = '' }) {
 
                         <div>
                             {!ventaSeleccionada ? (
-                                <div className="ab-glass p-6 sm:p-8 text-center ab-sticky">
+                                <div className="ab-glass p-6 sm:p-8 text-center ab-sticky ab-right-empty">
                                     <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
                                         <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />

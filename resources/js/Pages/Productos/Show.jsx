@@ -397,13 +397,14 @@ export default function ProductosShow({ producto }) {
     const fotoAnterior  = () => setFotoActiva(f => (f - 1 + todasLasFotos.length) % todasLasFotos.length);
     const fotoSiguiente = () => setFotoActiva(f => (f + 1) % todasLasFotos.length);
 
-    /* stock logic */
-    const minimo  = producto.stock_minimo || 5;
-    const agotado = producto.stock === 0;
-    const bajo    = !agotado && producto.stock <= minimo;
+    /* stock logic — usar stock_total para soportar productos con tallas */
+    const minimo      = producto.stock_minimo || 5;
+    const stockActual = producto.stock_total ?? producto.stock ?? 0;
+    const agotado     = stockActual === 0;
+    const bajo        = !agotado && stockActual <= minimo;
 
-    const stockMax = Math.max(producto.stock, minimo * 4, 1);
-    const stockPct = Math.min(100, Math.round((producto.stock / stockMax) * 100));
+    const stockMax = Math.max(stockActual, minimo * 4, 1);
+    const stockPct = Math.min(100, Math.round((stockActual / stockMax) * 100));
     const stockBarColor = agotado
         ? 'rgba(220,38,38,0.55)'
         : bajo
@@ -565,7 +566,7 @@ export default function ProductosShow({ producto }) {
                                         fontSize: '1.7rem', fontWeight: '700', letterSpacing: '-0.04em', lineHeight: 1,
                                         color: agotado ? 'rgba(185,28,28,0.85)' : bajo ? 'rgba(174,95,0,0.9)' : '#2d1a08',
                                     }}>
-                                        {producto.stock}
+                                        {stockActual}
                                     </p>
                                     <p style={{ fontSize: '0.67rem', color: 'rgba(150,80,20,0.48)', marginTop: '0.22rem', fontWeight: '500' }}>
                                         Stock actual
@@ -756,11 +757,11 @@ export default function ProductosShow({ producto }) {
                                         {[
                                             {
                                                 label: 'Stock actual',
-                                                value: producto.stock,
+                                                value: stockActual,
                                                 color: agotado ? 'rgba(185,28,28,0.85)' : bajo ? 'rgba(174,95,0,0.9)' : '#2d1a08',
                                             },
-                                            { label: 'Stock mínimo',     value: minimo,                              color: '#2d1a08' },
-                                            { label: 'Disponible extra', value: Math.max(0, producto.stock - minimo), color: '#2d1a08' },
+                                            { label: 'Stock mínimo',     value: minimo,                             color: '#2d1a08' },
+                                            { label: 'Disponible extra', value: Math.max(0, stockActual - minimo),  color: '#2d1a08' },
                                         ].map(({ label, value, color }) => (
                                             <div key={label} style={{
                                                 textAlign: 'center', padding: '0.9rem 0.6rem',

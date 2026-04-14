@@ -115,6 +115,22 @@ const FORM_STYLES = `
     .foto-marcada-del { opacity:0.35; }
     .foto-add-btn { aspect-ratio:1/1; border-radius:11px; cursor:pointer; border:1.5px dashed rgba(200,140,80,0.38); background:rgba(255,255,255,0.04); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.35rem; transition:all 0.18s; color:rgba(150,80,20,0.5); }
     .foto-add-btn:hover { border-color:rgba(200,140,80,0.62); background:rgba(255,255,255,0.1); color:rgba(120,55,10,0.8); }
+
+    /* ── Layout grid ── */
+    .edit-grid { display:grid; grid-template-columns:1fr 300px; gap:1.5rem; align-items:start; }
+    .edit-left  { display:flex; flex-direction:column; gap:1.25rem; }
+    .edit-right { display:flex; flex-direction:column; gap:1.25rem; }
+
+    @media (max-width:1024px) {
+        .edit-grid { grid-template-columns:1fr; }
+    }
+    @media (max-width:768px) {
+        .pg-header > div { padding:1rem !important; }
+        .glass-panel { padding:1.25rem; }
+    }
+    @media (max-width:560px) {
+        .fotos-grid { grid-template-columns:repeat(2,1fr); }
+    }
 `;
 
 const TALLAS_LETRAS  = ['XXXS','XXS','XS','S','M','L','XL','XXL','XXXL','XXXXL','XXXXXL'];

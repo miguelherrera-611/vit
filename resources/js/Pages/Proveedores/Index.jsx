@@ -91,7 +91,7 @@ export default function ProveedoresIndex({ proveedores, filters = {} }) {
                     border-bottom: 1px solid rgba(200,140,80,0.1);
                 }
                 .pv-thead th:last-child { text-align: right; }
-                .pv-tr { transition: background 0.13s; border-bottom: 1px solid rgba(200,140,80,0.07); }
+                .pv-tr { transition: background 0.13s; border-bottom: 1px solid rgba(200,140,80,0.07); cursor: pointer; }
                 .pv-tr:last-child { border-bottom: none; }
                 .pv-tr:hover { background: rgba(255,255,255,0.35); }
                 .pv-td { padding: 0.9rem 1.1rem; font-size: 0.82rem; color: #2d1a08; vertical-align: middle; }
@@ -230,7 +230,7 @@ export default function ProveedoresIndex({ proveedores, filters = {} }) {
                                 </thead>
                                 <tbody>
                                 {lista.map((proveedor) => (
-                                    <tr key={proveedor.id} className="pv-tr">
+                                    <tr key={proveedor.id} className="pv-tr" onClick={() => router.visit(`/proveedores/${proveedor.id}`)}>
                                         <td className="pv-td">
                                             <div style={{display:'flex',alignItems:'center',gap:'0.65rem'}}>
                                                 <Link href={`/proveedores/${proveedor.id}`} className="pv-avatar">
@@ -264,7 +264,7 @@ export default function ProveedoresIndex({ proveedores, filters = {} }) {
                                                     {proveedor.activo ? 'Activo' : 'Inactivo'}
                                                 </span>
                                         </td>
-                                        <td className="pv-td-right">
+                                        <td className="pv-td-right" onClick={(e) => e.stopPropagation()}>
                                             <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:'1rem'}}>
                                                 <Link href={`/proveedores/${proveedor.id}`} className="act-link act-view">Ver</Link>
                                                 <Link href={`/proveedores/${proveedor.id}/edit`} className="act-link act-edit">Editar</Link>

@@ -48,8 +48,8 @@ function EstadoDropdown({ value, onChange }) {
                     display: 'flex', alignItems: 'center', gap: '0.45rem',
                     padding: '0.58rem 0.85rem',
                     background: open
-                        ? 'rgba(255,248,242,0.98)'
-                        : 'rgba(255,252,248,0.82)',
+                        ? '#fff8f2'
+                        : '#fffcf8',
                     border: open
                         ? '1.5px solid rgba(185,28,28,0.45)'
                         : isActive
@@ -66,7 +66,6 @@ function EstadoDropdown({ value, onChange }) {
                     transition: 'all 0.15s ease',
                     boxSizing: 'border-box',
                     userSelect: 'none',
-                    backdropFilter: 'blur(8px)',
                 }}
             >
                 {/* Icono filtro */}
@@ -433,7 +432,7 @@ export default function ReporteVentas({
                 <div style={{ maxWidth:'1280px', margin:'0 auto', padding:'1.5rem 1rem 3rem', display:'flex', flexDirection:'column', gap:'1.25rem' }}>
 
                     {/* ── Filtros ── */}
-                    <div className="vt-glass vt-a1" style={{ padding:'1.4rem 1.5rem', overflow:'visible' }}>
+                    <div className="vt-glass vt-a1" style={{ padding:'1.4rem 1.5rem', overflow:'visible', position:'relative', zIndex:20 }}>
                         <p style={{ fontSize:'0.75rem', fontWeight:'700', color:'rgba(140,70,15,0.6)', letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:'0.85rem' }}>
                             Filtrar período
                         </p>
