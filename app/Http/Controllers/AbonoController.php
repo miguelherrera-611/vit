@@ -80,18 +80,28 @@ class AbonoController extends Controller
             $tipoMovimiento = 'ajuste';
         }
 
-        $venta = Venta::with('cliente')->findOrFail($validated['venta_id']);
-
-        if ($venta->estado === 'Cancelada') {
+        // Verificación rápida previa (sin lock) para respuesta inmediata
+        $ventaCheck = Venta::findOrFail($validated['venta_id']);
+        if ($ventaCheck->estado === 'Cancelada') {
             return back()->withErrors(['monto' => 'No se pueden registrar abonos en una venta cancelada.']);
-        }
-
-        if ($validated['monto'] > $venta->saldo_pendiente && $validated['monto'] > 0) {
-            return back()->withErrors(['monto' => "El abono ($" . number_format($validated['monto'], 0, ',', '.') . ") supera el saldo pendiente ($" . number_format($venta->saldo_pendiente, 0, ',', '.') . ")."]);
         }
 
         DB::beginTransaction();
         try {
+            // Recargar con lock para operación atómica (evita doble abono concurrente)
+            $venta = Venta::with('cliente')->lockForUpdate()->findOrFail($validated['venta_id']);
+
+            // Re-validar dentro del lock para atrapar concurrencia
+            if ($venta->estado === 'Cancelada') {
+                DB::rollBack();
+                return back()->withErrors(['monto' => 'No se pueden registrar abonos en una venta cancelada.']);
+            }
+
+            if ($validated['monto'] > $venta->saldo_pendiente && $validated['monto'] > 0) {
+                DB::rollBack();
+                return back()->withErrors(['monto' => "El abono ($" . number_format($validated['monto'], 0, ',', '.') . ") supera el saldo pendiente ($" . number_format($venta->saldo_pendiente, 0, ',', '.') . ")."]);
+            }
+
             $abono = $venta->abonos()->create([
                 'monto'           => $validated['monto'],
                 'forma_pago'      => $validated['forma_pago'],

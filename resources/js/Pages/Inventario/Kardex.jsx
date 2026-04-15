@@ -1,5 +1,5 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 const GLASS_BG = `
@@ -49,6 +49,11 @@ const STYLES = `
     .kx-kpi-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; }
     .kx-table-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
     .kx-table{ width:100%; min-width:980px; border-collapse:collapse; }
+    .kx-pagination{ display:flex; align-items:center; justify-content:center; gap:0.4rem; padding:1.25rem 1.5rem; flex-wrap:wrap; }
+    .kx-page-btn{ padding:0.35rem 0.75rem; border-radius:9px; font-size:0.8rem; font-weight:500; cursor:pointer; border:1px solid rgba(200,140,80,0.3); background:rgba(255,255,255,0.06); color:rgba(120,60,10,0.75); font-family:Inter,sans-serif; transition:all 0.13s; }
+    .kx-page-btn:hover:not(.active):not(.disabled){ background:rgba(180,90,20,0.09); }
+    .kx-page-btn.active{ background:rgba(180,90,20,0.13); border-color:rgba(180,90,20,0.4); color:rgba(120,60,10,0.9); font-weight:600; }
+    .kx-page-btn.disabled{ opacity:0.38; cursor:default; pointer-events:none; }
 
     @media (max-width: 900px){
         .kx-content-wrap{ padding:1.5rem 1rem; gap:1rem; }
@@ -74,17 +79,28 @@ const TIPO_BADGE = {
 
 const tipoBadge = (tipo) => TIPO_BADGE[tipo] ?? TIPO_BADGE.default;
 
-export default function Kardex({ producto, movimientos }) {
+export default function Kardex({ producto, movimientos, totales }) {
     const [modalObs, setModalObs] = useState(null);
+
+    // movimientos es un paginador de Laravel (formato plano):
+    // { data, total, last_page, current_page, links (array), prev_page_url, next_page_url }
+    const lista      = movimientos.data ?? [];
+    const totalItems = movimientos.total ?? 0;
+    const lastPage   = movimientos.last_page ?? 1;
+    const pageLinks  = movimientos.links ?? [];   // array de {url, label, active}
+    const prevUrl    = movimientos.prev_page_url ?? null;
+    const nextUrl    = movimientos.next_page_url ?? null;
+
+    const goToPage = (url) => { if (url) router.get(url, {}, { preserveScroll: true }); };
 
     const stockColor = (s) =>
         s === 0 ? 'rgba(185,28,28,0.85)' : s <= 5 ? 'rgba(146,64,14,0.85)' : 'rgba(4,120,87,0.85)';
 
     const RESUMEN = [
-        { label: 'Total movimientos',  value: movimientos.length,                                                                   accent: 'rgba(180,90,20,0.8)',  bg: 'rgba(180,90,20,0.07)'  },
-        { label: 'Ventas registradas', value: movimientos.filter(m => m.tipo === 'venta').length,                                   accent: 'rgba(220,38,38,0.8)',  bg: 'rgba(220,38,38,0.07)'  },
-        { label: 'Ajustes entrada',    value: movimientos.filter(m => m.tipo === 'ajuste_entrada' || m.tipo === 'anulacion').length, accent: 'rgba(16,185,129,0.8)', bg: 'rgba(16,185,129,0.07)' },
-        { label: 'Ajustes salida',     value: movimientos.filter(m => m.tipo === 'ajuste_salida').length,                           accent: 'rgba(245,158,11,0.8)', bg: 'rgba(245,158,11,0.07)' },
+        { label: 'Total movimientos',  value: totales.total,           accent: 'rgba(180,90,20,0.8)',  bg: 'rgba(180,90,20,0.07)'  },
+        { label: 'Ventas registradas', value: totales.ventas,          accent: 'rgba(220,38,38,0.8)',  bg: 'rgba(220,38,38,0.07)'  },
+        { label: 'Ajustes entrada',    value: totales.ajustes_entrada, accent: 'rgba(16,185,129,0.8)', bg: 'rgba(16,185,129,0.07)' },
+        { label: 'Ajustes salida',     value: totales.ajustes_salida,  accent: 'rgba(245,158,11,0.8)', bg: 'rgba(245,158,11,0.07)' },
     ];
 
     return (
@@ -173,10 +189,10 @@ export default function Kardex({ producto, movimientos }) {
                     <div className="kx-glass kx-a2" style={{ overflow: 'hidden' }}>
                         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <h2 style={{ fontSize: '0.97rem', fontWeight: '600', color: '#2d1a08', margin: 0 }}>Historial de movimientos</h2>
-                            <span style={{ fontSize: '0.8rem', color: 'rgba(150,80,20,0.55)' }}>{movimientos.length} registro{movimientos.length !== 1 ? 's' : ''}</span>
+                            <span style={{ fontSize: '0.8rem', color: 'rgba(150,80,20,0.55)' }}>{totalItems} registro{totalItems !== 1 ? 's' : ''}</span>
                         </div>
 
-                        {movimientos.length === 0 ? (
+                        {totalItems === 0 ? (
                             <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
                                 <div style={{
                                     width: '50px', height: '50px', borderRadius: '16px', margin: '0 auto 1rem',
@@ -191,11 +207,12 @@ export default function Kardex({ producto, movimientos }) {
                                 <p style={{ fontSize: '0.78rem', color: 'rgba(150,80,20,0.4)', marginTop: '0.3rem' }}>Los movimientos se registran al vender, anular o ajustar el inventario</p>
                             </div>
                         ) : (
+                            <>
                             <div className="kx-table-scroll">
                                 <table className="kx-table">
                                     <thead>
                                     <tr style={{ borderBottom: '1px solid rgba(180,90,20,0.12)' }}>
-                                        {['Fecha', 'Tipo', 'Motivo', 'Cantidad', 'Stock anterior', 'Stock nuevo', 'Usuario'].map((h, i) => (
+                                        {['Fecha', 'Tipo', 'Motivo', 'Cantidad', 'Stock anterior', 'Stock nuevo', 'Usuario'].map((h) => (
                                             <th key={h} style={{
                                                 padding: '0.85rem 1.25rem',
                                                 textAlign: ['Cantidad', 'Stock anterior', 'Stock nuevo'].includes(h) ? 'center' : 'left',
@@ -206,7 +223,7 @@ export default function Kardex({ producto, movimientos }) {
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    {movimientos.map(m => {
+                                    {lista.map(m => {
                                         const badge = tipoBadge(m.tipo);
                                         const cantPositivo = m.es_entrada;
                                         return (
@@ -269,6 +286,31 @@ export default function Kardex({ producto, movimientos }) {
                                     </tbody>
                                 </table>
                             </div>
+
+                            {/* ── Paginación ── */}
+                            {lastPage > 1 && (
+                                <div className="kx-pagination">
+                                    <button
+                                        className={`kx-page-btn${!prevUrl ? ' disabled' : ''}`}
+                                        onClick={() => goToPage(prevUrl)}
+                                    >← Ant</button>
+
+                                    {pageLinks.slice(1, -1).map((link, i) => (
+                                        <button
+                                            key={i}
+                                            className={`kx-page-btn${link.active ? ' active' : ''}${!link.url ? ' disabled' : ''}`}
+                                            onClick={() => goToPage(link.url)}
+                                            dangerouslySetInnerHTML={{ __html: link.label }}
+                                        />
+                                    ))}
+
+                                    <button
+                                        className={`kx-page-btn${!nextUrl ? ' disabled' : ''}`}
+                                        onClick={() => goToPage(nextUrl)}
+                                    >Sig →</button>
+                                </div>
+                            )}
+                            </>
                         )}
                     </div>
                 </div>

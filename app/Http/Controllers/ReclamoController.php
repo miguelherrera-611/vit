@@ -10,6 +10,7 @@ use App\Models\Papelera;
 use App\Models\ConfigContacto;
 use App\Mail\ReclamoNuevoAdminMail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
@@ -37,18 +38,26 @@ class ReclamoController extends Controller
             'telefono_contacto' => 'required|string|max:20',
         ]);
 
-        $reclamo = Reclamo::create([
-            'user_id'           => auth()->id(),
-            'tipo'              => $request->tipo,
-            'descripcion'       => $request->descripcion,
-            'telefono_contacto' => $request->telefono_contacto,
-            'estado'            => 'pendiente',
-        ]);
+        DB::beginTransaction();
+        try {
+            $reclamo = Reclamo::create([
+                'user_id'           => auth()->id(),
+                'tipo'              => $request->tipo,
+                'descripcion'       => $request->descripcion,
+                'telefono_contacto' => $request->telefono_contacto,
+                'estado'            => 'pendiente',
+            ]);
 
-        // Correo inmediato al admin
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Error al enviar el reporte. Intenta de nuevo.']);
+        }
+
+        // Correo fuera de la transaction (after_commit = true en queue garantiza que el reclamo ya existe)
         $adminEmails = \App\Models\User::role('admin')->pluck('email')->toArray();
         if (!empty($adminEmails)) {
-            Mail::to($adminEmails)->send(new ReclamoNuevoAdminMail($reclamo));
+            Mail::to($adminEmails)->queue(new ReclamoNuevoAdminMail($reclamo));
         }
 
         return back()->with('success', 'Reporte enviado. Nos comunicaremos contigo pronto.');
@@ -81,11 +90,17 @@ class ReclamoController extends Controller
                 && $r->created_at->diffInDays(now()) >= 30,
         ]);
 
+        // Una sola query GROUP BY en vez de 4 COUNT separados
+        $conteosRaw = Reclamo::selectRaw('estado, COUNT(*) as total')
+            ->whereIn('estado', ['pendiente', 'en_revision', 'resuelto', 'cerrado'])
+            ->groupBy('estado')
+            ->pluck('total', 'estado');
+
         $conteos = [
-            'pendiente'   => Reclamo::where('estado', 'pendiente')->count(),
-            'en_revision' => Reclamo::where('estado', 'en_revision')->count(),
-            'resuelto'    => Reclamo::where('estado', 'resuelto')->count(),
-            'cerrado'     => Reclamo::where('estado', 'cerrado')->count(),
+            'pendiente'   => (int) ($conteosRaw['pendiente']   ?? 0),
+            'en_revision' => (int) ($conteosRaw['en_revision'] ?? 0),
+            'resuelto'    => (int) ($conteosRaw['resuelto']    ?? 0),
+            'cerrado'     => (int) ($conteosRaw['cerrado']     ?? 0),
         ];
 
         return Inertia::render('Admin/Reclamos', [

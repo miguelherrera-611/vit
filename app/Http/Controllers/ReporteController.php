@@ -64,24 +64,44 @@ class ReporteController extends Controller
 
         $ventas = $query->orderBy('created_at', 'desc')->get();
 
-        $totalIngresos    = $ventas->sum('total');
-        $totalDescuentos  = $ventas->sum('descuento');
-        $totalPendiente   = $ventas->where('estado', 'Pendiente')->sum('saldo_pendiente');
-        $ticketPromedio   = $ventas->count() ? $ventas->avg('total') : 0;
+        // KPIs y agregaciones via DB — evita iterar la colección en PHP
+        $baseQuery = fn() => Venta::whereBetween(DB::raw('DATE(created_at)'), [$desde, $hasta])
+            ->when($estado, fn($q) => $q->where('estado', $estado));
 
-        $ventasPorDia = $ventas->groupBy(fn($v) => Carbon::parse($v->created_at)->toDateString())
-            ->map(fn($grupo) => [
-                'fecha'  => Carbon::parse($grupo->first()->created_at)->format('d/m'),
-                'total'  => $grupo->sum('total'),
-                'count'  => $grupo->count(),
-            ])->values();
+        $totalIngresos   = $baseQuery()->sum('total');
+        $totalDescuentos = $baseQuery()->sum('descuento');
+        $totalPendiente  = $baseQuery()->where('estado', 'Pendiente')->sum('saldo_pendiente');
+        $numVentas       = $baseQuery()->count();
+        $ticketPromedio  = $numVentas ? ($totalIngresos / $numVentas) : 0;
 
-        $porMetodoPago = $ventas->groupBy('metodo_pago')
-            ->map(fn($g) => ['metodo' => $g->first()->metodo_pago, 'total' => $g->sum('total'), 'count' => $g->count()])
+        $ventasPorDia = Venta::whereBetween(DB::raw('DATE(created_at)'), [$desde, $hasta])
+            ->when($estado, fn($q) => $q->where('estado', $estado))
+            ->select(
+                DB::raw('DATE(created_at) as fecha_raw'),
+                DB::raw('DATE_FORMAT(created_at, "%d/%m") as fecha'),
+                DB::raw('SUM(total) as total'),
+                DB::raw('COUNT(*) as count')
+            )
+            ->groupBy('fecha_raw', 'fecha')
+            ->orderBy('fecha_raw')
+            ->get()
+            ->map(fn($r) => ['fecha' => $r->fecha, 'total' => (float) $r->total, 'count' => (int) $r->count])
             ->values();
 
-        $porEstado = $ventas->groupBy('estado')
-            ->map(fn($g) => ['estado' => $g->first()->estado, 'total' => $g->sum('total'), 'count' => $g->count()])
+        $porMetodoPago = Venta::whereBetween(DB::raw('DATE(created_at)'), [$desde, $hasta])
+            ->when($estado, fn($q) => $q->where('estado', $estado))
+            ->select('metodo_pago', DB::raw('SUM(total) as total'), DB::raw('COUNT(*) as count'))
+            ->groupBy('metodo_pago')
+            ->get()
+            ->map(fn($g) => ['metodo' => $g->metodo_pago, 'total' => (float) $g->total, 'count' => (int) $g->count])
+            ->values();
+
+        $porEstado = Venta::whereBetween(DB::raw('DATE(created_at)'), [$desde, $hasta])
+            ->when($estado, fn($q) => $q->where('estado', $estado))
+            ->select('estado', DB::raw('SUM(total) as total'), DB::raw('COUNT(*) as count'))
+            ->groupBy('estado')
+            ->get()
+            ->map(fn($g) => ['estado' => $g->estado, 'total' => (float) $g->total, 'count' => (int) $g->count])
             ->values();
 
         $productosTop = VentaDetalle::with('producto')
@@ -109,7 +129,7 @@ class ReporteController extends Controller
                 'total_descuentos' => $totalDescuentos,
                 'total_pendiente'  => $totalPendiente,
                 'ticket_promedio'  => $ticketPromedio,
-                'num_ventas'       => $ventas->count(),
+                'num_ventas'       => $numVentas,
             ],
             'filtros'         => ['desde' => $desde, 'hasta' => $hasta, 'estado' => $estado],
         ]);
@@ -120,33 +140,69 @@ class ReporteController extends Controller
      ─────────────────────────────────────────────────────────────*/
     public function inventario(): Response
     {
-        $productos = Producto::whereNull('deleted_at')->orderBy('categoria')->orderBy('nombre')->get();
+        // KPIs: una sola query DB con agregaciones (evita cargar toda la colección en PHP)
+        $kpisRaw = DB::table('productos')
+            ->whereNull('deleted_at')
+            ->selectRaw('
+                SUM(CASE WHEN activo = 1 THEN 1 ELSE 0 END)                              AS total_productos,
+                SUM(precio * stock)                                                       AS valor_inventario_venta,
+                SUM(COALESCE(precio_compra, 0) * stock)                                  AS valor_inventario_compra,
+                SUM((precio - COALESCE(precio_compra, 0)) * stock)                       AS ganancia_potencial,
+                SUM(CASE WHEN stock > 0 AND stock <= stock_minimo THEN 1 ELSE 0 END)     AS bajo_stock,
+                SUM(CASE WHEN stock = 0 THEN 1 ELSE 0 END)                               AS agotados,
+                SUM(CASE WHEN stock > stock_minimo THEN 1 ELSE 0 END)                    AS en_stock
+            ')
+            ->first();
 
         $kpis = [
-            'total_productos'         => $productos->where('activo', 1)->count(),
-            'valor_inventario_venta'  => $productos->sum(fn($p) => $p->precio * $p->stock),
-            'valor_inventario_compra' => $productos->sum(fn($p) => ($p->precio_compra ?? 0) * $p->stock),
-            'ganancia_potencial'      => $productos->sum(fn($p) => (($p->precio - ($p->precio_compra ?? 0)) * $p->stock)),
-            'bajo_stock'              => $productos->filter(fn($p) => $p->stock > 0 && $p->stock <= $p->stock_minimo)->count(),
-            'agotados'                => $productos->where('stock', 0)->count(),
-            'en_stock'                => $productos->filter(fn($p) => $p->stock > $p->stock_minimo)->count(),
+            'total_productos'         => (int)   ($kpisRaw->total_productos         ?? 0),
+            'valor_inventario_venta'  => (float) ($kpisRaw->valor_inventario_venta  ?? 0),
+            'valor_inventario_compra' => (float) ($kpisRaw->valor_inventario_compra ?? 0),
+            'ganancia_potencial'      => (float) ($kpisRaw->ganancia_potencial      ?? 0),
+            'bajo_stock'              => (int)   ($kpisRaw->bajo_stock              ?? 0),
+            'agotados'                => (int)   ($kpisRaw->agotados                ?? 0),
+            'en_stock'                => (int)   ($kpisRaw->en_stock                ?? 0),
         ];
 
-        $porCategoria = $productos->groupBy('categoria')
-            ->map(fn($g) => [
-                'categoria'          => $g->first()->categoria,
-                'total_productos'    => $g->count(),
-                'total_stock'        => $g->sum('stock'),
-                'valor_venta'        => $g->sum(fn($p) => $p->precio * $p->stock),
-                'valor_compra'       => $g->sum(fn($p) => ($p->precio_compra ?? 0) * $p->stock),
-                'ganancia_potencial' => $g->sum(fn($p) => (($p->precio - ($p->precio_compra ?? 0)) * $p->stock)),
-                'bajo_stock'         => $g->filter(fn($p) => $p->stock > 0 && $p->stock <= $p->stock_minimo)->count(),
-                'agotados'           => $g->where('stock', 0)->count(),
-            ])->values();
-
-        $criticos = $productos->filter(fn($p) => $p->stock <= $p->stock_minimo)
-            ->sortBy('stock')
+        // Por categoría: GROUP BY en DB (una query en vez de N iteraciones PHP)
+        $porCategoria = DB::table('productos')
+            ->whereNull('deleted_at')
+            ->select('categoria')
+            ->selectRaw('
+                COUNT(*)                                                                  AS total_productos,
+                SUM(stock)                                                                AS total_stock,
+                SUM(precio * stock)                                                       AS valor_venta,
+                SUM(COALESCE(precio_compra, 0) * stock)                                  AS valor_compra,
+                SUM((precio - COALESCE(precio_compra, 0)) * stock)                       AS ganancia_potencial,
+                SUM(CASE WHEN stock > 0 AND stock <= stock_minimo THEN 1 ELSE 0 END)     AS bajo_stock,
+                SUM(CASE WHEN stock = 0 THEN 1 ELSE 0 END)                               AS agotados
+            ')
+            ->groupBy('categoria')
+            ->orderBy('categoria')
+            ->get()
+            ->map(fn($r) => [
+                'categoria'          => $r->categoria,
+                'total_productos'    => (int)   $r->total_productos,
+                'total_stock'        => (int)   $r->total_stock,
+                'valor_venta'        => (float) $r->valor_venta,
+                'valor_compra'       => (float) $r->valor_compra,
+                'ganancia_potencial' => (float) $r->ganancia_potencial,
+                'bajo_stock'         => (int)   $r->bajo_stock,
+                'agotados'           => (int)   $r->agotados,
+            ])
             ->values();
+
+        // Críticos: query directa filtrada (sin iterar toda la colección)
+        $criticos = Producto::whereNull('deleted_at')
+            ->whereRaw('stock <= stock_minimo')
+            ->orderBy('stock')
+            ->get();
+
+        // Lista completa para la tabla del reporte
+        $productos = Producto::whereNull('deleted_at')
+            ->orderBy('categoria')
+            ->orderBy('nombre')
+            ->get();
 
         return Inertia::render('Reportes/Inventario', compact('productos', 'porCategoria', 'criticos', 'kpis'));
     }
@@ -212,11 +268,25 @@ class ReporteController extends Controller
     {
         $meses = collect(range(5, 0))->map(fn($i) => Carbon::now()->subMonths($i));
 
+        // Una sola query GROUP BY en lugar de 18 queries (3 por mes × 6 meses)
+        $inicio6Meses = Carbon::now()->subMonths(5)->startOfMonth();
+        $ventasPorMes = Venta::select(
+                DB::raw('YEAR(created_at) as anio'),
+                DB::raw('MONTH(created_at) as mes_num'),
+                DB::raw('SUM(total) as ingresos'),
+                DB::raw('SUM(descuento) as descuentos'),
+                DB::raw('COUNT(*) as num_ventas')
+            )
+            ->where('created_at', '>=', $inicio6Meses)
+            ->groupBy('anio', 'mes_num')
+            ->get()
+            ->keyBy(fn($v) => $v->anio . '-' . $v->mes_num);
+
         $porMes = $meses->map(fn($mes) => [
             'mes'        => $mes->format('M Y'),
-            'ingresos'   => Venta::whereYear('created_at', $mes->year)->whereMonth('created_at', $mes->month)->sum('total'),
-            'descuentos' => Venta::whereYear('created_at', $mes->year)->whereMonth('created_at', $mes->month)->sum('descuento'),
-            'num_ventas' => Venta::whereYear('created_at', $mes->year)->whereMonth('created_at', $mes->month)->count(),
+            'ingresos'   => (float) ($ventasPorMes->get($mes->year . '-' . $mes->month)?->ingresos   ?? 0),
+            'descuentos' => (float) ($ventasPorMes->get($mes->year . '-' . $mes->month)?->descuentos ?? 0),
+            'num_ventas' => (int)   ($ventasPorMes->get($mes->year . '-' . $mes->month)?->num_ventas  ?? 0),
         ]);
 
         $mesActual      = Carbon::now()->startOfMonth();
@@ -254,10 +324,22 @@ class ReporteController extends Controller
         $mes    = Carbon::now()->startOfMonth();
         $semana = Carbon::now()->startOfWeek();
 
+        // Una sola query GROUP BY en lugar de 60 queries (2 por día × 30 días)
+        $inicio30 = Carbon::now()->subDays(29)->startOfDay();
+        $ventas30raw = Venta::select(
+                DB::raw('DATE(created_at) as dia'),
+                DB::raw('SUM(total) as total'),
+                DB::raw('COUNT(*) as count')
+            )
+            ->where('created_at', '>=', $inicio30)
+            ->groupBy('dia')
+            ->get()
+            ->keyBy('dia');
+
         $ultimos30 = collect(range(29, 0))->map(fn($i) => [
             'fecha' => Carbon::now()->subDays($i)->format('d/m'),
-            'total' => Venta::whereDate('created_at', Carbon::now()->subDays($i))->sum('total'),
-            'count' => Venta::whereDate('created_at', Carbon::now()->subDays($i))->count(),
+            'total' => (float) ($ventas30raw->get(Carbon::now()->subDays($i)->toDateString())?->total ?? 0),
+            'count' => (int)   ($ventas30raw->get(Carbon::now()->subDays($i)->toDateString())?->count ?? 0),
         ]);
 
         $topProductos = VentaDetalle::with('producto')

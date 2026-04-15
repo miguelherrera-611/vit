@@ -89,12 +89,12 @@ export default function CarritoDrawer({ open, onClose, carrito, setCarrito, auth
                     flex-shrink: 0;
                 }
                 .c-close {
-                    width: 26px; height: 26px; border-radius: 6px;
-                    background: none; border: 1px solid rgba(200,140,80,0.18);
+                    width: 28px; height: 28px; border-radius: 6px;
+                    background: rgba(220,38,38,0.07); border: 1px solid rgba(220,38,38,0.2);
                     display: flex; align-items: center; justify-content: center;
-                    cursor: pointer; color: rgba(150,80,20,0.5); transition: all 0.12s;
+                    cursor: pointer; color: rgba(185,28,28,0.65); transition: all 0.15s;
                 }
-                .c-close:hover { background: rgba(200,140,80,0.06); }
+                .c-close:hover { background: rgba(220,38,38,0.14); border-color: rgba(220,38,38,0.4); color: rgba(185,28,28,0.95); }
 
                 .c-list {
                     flex: 1; overflow-y: auto;
@@ -132,10 +132,12 @@ export default function CarritoDrawer({ open, onClose, carrito, setCarrito, auth
                 .c-qty-btn:hover { background: rgba(200,140,80,0.14); }
                 .c-qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
                 .c-rm {
-                    background: none; border: none; cursor: pointer; padding: 0.15rem;
-                    color: rgba(150,80,20,0.2); border-radius: 4px; transition: color 0.1s; flex-shrink: 0;
+                    background: rgba(220,38,38,0.07); border: 1px solid rgba(220,38,38,0.2);
+                    cursor: pointer; padding: 0.3rem; border-radius: 6px;
+                    color: rgba(185,28,28,0.65); transition: all 0.15s; flex-shrink: 0;
+                    display: flex; align-items: center; justify-content: center;
                 }
-                .c-rm:hover { color: rgba(185,28,28,0.55); }
+                .c-rm:hover { background: rgba(220,38,38,0.14); border-color: rgba(220,38,38,0.4); color: rgba(185,28,28,0.95); }
 
                 .c-pag {
                     display: flex; align-items: center; justify-content: center; gap: 0.25rem;
@@ -202,8 +204,8 @@ export default function CarritoDrawer({ open, onClose, carrito, setCarrito, auth
                             {carrito.length > PER_PAGE && ` · pág. ${pagina}/${totalPags}`}
                         </p>
                     </div>
-                    <button className="c-close" onClick={onClose}>
-                        <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <button className="c-close" onClick={onClose} title="Cerrar carrito">
+                        <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
@@ -247,8 +249,8 @@ export default function CarritoDrawer({ open, onClose, carrito, setCarrito, auth
                                         maxWidth:'170px',letterSpacing:'-0.01em'}}>
                                         {item.nombre}
                                     </h4>
-                                    <button className="c-rm" onClick={() => eliminar(item.id, item.talla)}>
-                                        <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <button className="c-rm" onClick={() => eliminar(item.id, item.talla)} title="Quitar producto">
+                                        <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
                                         </svg>
                                     </button>

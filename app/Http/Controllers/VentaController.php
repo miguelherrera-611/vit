@@ -101,14 +101,15 @@ class VentaController extends Controller
             return back()->withErrors(['cliente_id' => 'Las ventas a crédito o separado requieren un cliente registrado.']);
         }
 
-        $subtotal  = 0;
-        $descuento = $validated['descuento'] ?? 0;
+        $subtotal  = '0';
+        $descuento = (string) ($validated['descuento'] ?? 0);
         foreach ($validated['items'] as $item) {
-            $subtotal += $item['cantidad'] * $item['precio_unitario'];
+            $linea    = bcmul((string) $item['cantidad'], (string) $item['precio_unitario'], 2);
+            $subtotal = bcadd($subtotal, $linea, 2);
         }
-        $total          = $subtotal - $descuento;
-        $pagado         = $validated['pagado'];
-        $saldoPendiente = max(0, $total - $pagado);
+        $total          = bcsub($subtotal, $descuento, 2);
+        $pagado         = (string) $validated['pagado'];
+        $saldoPendiente = bccomp($total, $pagado, 2) > 0 ? bcsub($total, $pagado, 2) : '0.00';
 
         // NUEVO: contado no permite saldo pendiente (aplica para cualquier cliente)
         if ($validated['tipo_venta'] === 'Contado' && $saldoPendiente > 0) {
@@ -120,12 +121,13 @@ class VentaController extends Controller
         DB::beginTransaction();
 
         try {
-            // Verificar stock suficiente with lockForUpdate
+            // Verificar stock suficiente con lockForUpdate (lock también en tallas)
             $erroresStock          = [];
             $productosEnTransaccion = [];
+            $tallasEnTransaccion    = [];
 
             foreach ($validated['items'] as $item) {
-                $producto = Producto::with('tallas')->lockForUpdate()->find($item['producto_id']);
+                $producto = Producto::lockForUpdate()->find($item['producto_id']);
 
                 if (!$producto) {
                     $erroresStock[] = "Uno de los productos ya no existe en el sistema.";
@@ -135,12 +137,17 @@ class VentaController extends Controller
                 $talla = isset($item['talla']) ? strtoupper(trim($item['talla'])) : null;
 
                 if ($producto->maneja_tallas && $talla) {
-                    $tallaModel = $producto->tallas->firstWhere('talla', $talla);
+                    // Lock directo en producto_tallas para evitar overselling concurrente
+                    $tallaModel = ProductoTalla::where('producto_id', $producto->id)
+                        ->where('talla', $talla)
+                        ->lockForUpdate()
+                        ->first();
                     $stockDisp  = $tallaModel ? $tallaModel->stock : 0;
                     if ($stockDisp < $item['cantidad']) {
                         $erroresStock[] = "Stock insuficiente para \"{$producto->nombre}\" talla {$talla}: "
                             . "disponible {$stockDisp}, solicitado {$item['cantidad']}.";
                     }
+                    $tallasEnTransaccion[$item['producto_id'] . '_' . $talla] = $tallaModel;
                 } elseif (!$producto->maneja_tallas) {
                     if ($producto->stock < $item['cantidad']) {
                         $erroresStock[] = "Stock insuficiente para \"{$producto->nombre}\": "
@@ -197,13 +204,15 @@ class VentaController extends Controller
                     'talla'           => $producto->maneja_tallas ? $talla : null,
                     'cantidad'        => $item['cantidad'],
                     'precio_unitario' => $item['precio_unitario'],
-                    'subtotal'        => $item['cantidad'] * $item['precio_unitario'],
+                    'subtotal'        => bcmul((string) $item['cantidad'], (string) $item['precio_unitario'], 2),
                 ]);
 
                 if ($producto->maneja_tallas && $talla) {
-                    $tallaModel        = $producto->tallas->firstWhere('talla', $talla);
+                    $tallaModel        = $tallasEnTransaccion[$item['producto_id'] . '_' . $talla] ?? null;
                     $stockAnteriorTotal = $producto->stock_total;
-                    ProductoTalla::where('id', $tallaModel->id)->decrement('stock', $item['cantidad']);
+                    if ($tallaModel) {
+                        $tallaModel->decrement('stock', $item['cantidad']);
+                    }
                     $stockTotalNuevo = $stockAnteriorTotal - $item['cantidad'];
                     MovimientoInventario::registrar(
                         producto:      $producto,
@@ -320,12 +329,12 @@ class VentaController extends Controller
         try {
             $productosRestaurados = [];
             foreach ($venta->detalles as $detalle) {
-                $producto = Producto::with('tallas')->find($detalle->producto_id);
+                $producto = Producto::lockForUpdate()->find($detalle->producto_id);
                 if ($producto) {
                     $talla = $detalle->talla;
                     if ($producto->maneja_tallas && $talla) {
                         $tallaModel = ProductoTalla::where('producto_id', $producto->id)
-                            ->where('talla', $talla)->first();
+                            ->where('talla', $talla)->lockForUpdate()->first();
                         if ($tallaModel) {
                             $stockAnteriorTotal = $producto->stock_total;
                             $tallaModel->increment('stock', $detalle->cantidad);

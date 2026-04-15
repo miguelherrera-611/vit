@@ -1,10 +1,19 @@
 // resources/js/Pages/Catalogo/Subcategoria.jsx
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import ClienteLayout from '@/Layouts/ClienteLayout';
 
 const formatCOP = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
 
 export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
+    const lista       = productos.data;
+    const totalItems  = productos.total ?? lista.length;
+    const lastPage    = productos.last_page ?? 1;
+    const currentPage = productos.current_page ?? 1;
+
+    const goToPage = (url) => {
+        if (url) router.get(url, {}, { preserveScroll: false });
+    };
+
     return (
         <ClienteLayout>
             <Head title={`${subcat.nombre} — VitaliStore`}/>
@@ -84,6 +93,19 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                     .prod-img { height: 200px; }
                     .prod-placeholder { height: 200px; }
                 }
+                .pagination { display:flex; align-items:center; justify-content:center; gap:0.35rem; flex-wrap:wrap; margin-top:2.5rem; }
+                .page-btn {
+                    min-width:2.2rem; height:2.2rem; padding:0 0.6rem;
+                    border-radius:8px; border:1px solid rgba(200,140,80,0.2);
+                    background:rgba(255,255,255,0.5); color:rgba(100,50,10,0.7);
+                    font-size:0.78rem; font-weight:500; cursor:pointer;
+                    display:inline-flex; align-items:center; justify-content:center;
+                    text-decoration:none; transition:all 0.15s; white-space:nowrap;
+                }
+                .page-btn:hover:not(:disabled) { background:rgba(255,255,255,0.8); border-color:rgba(200,140,80,0.4); color:#2d1a08; }
+                .page-btn.active { background:rgba(180,90,20,0.85); border-color:transparent; color:#fff; cursor:default; }
+                .page-btn:disabled, .page-btn.disabled { opacity:0.35; cursor:default; pointer-events:none; }
+                .page-btn.dots { cursor:default; pointer-events:none; border:none; background:none; }
             `}</style>
 
             <div style={{maxWidth:'1280px',margin:'0 auto',padding:'2rem 1rem 4rem'}}>
@@ -105,12 +127,12 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                         {subcat.nombre}
                     </h1>
                     <p style={{fontSize:'0.82rem',color:'rgba(150,80,20,0.5)'}}>
-                        {productos.length} {productos.length === 1 ? 'producto disponible' : 'productos disponibles'}
+                        {totalItems} {totalItems === 1 ? 'producto disponible' : 'productos disponibles'}
                     </p>
                 </div>
 
                 {/* Grid */}
-                {productos.length === 0 ? (
+                {lista.length === 0 ? (
                     <div style={{textAlign:'center',padding:'4rem 0',
                         background:'rgba(255,255,255,0.4)',borderRadius:'14px',
                         border:'1px solid rgba(200,140,80,0.1)'}}>
@@ -126,7 +148,7 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                     </div>
                 ) : (
                     <div className="prod-grid">
-                        {productos.map((prod, idx) => (
+                        {lista.map((prod, idx) => (
                             <Link
                                 key={prod.id}
                                 href={`/catalogo/producto/${prod.id}`}
@@ -213,6 +235,53 @@ export default function CatalogoSubcategoria({ grupo, subcat, productos }) {
                             </Link>
                         ))}
                     </div>
+                )}
+
+                {/* Paginación */}
+                {lastPage > 1 && (
+                    <div className="pagination">
+                        {/* Anterior */}
+                        <button
+                            className={`page-btn${!productos.links?.prev ? ' disabled' : ''}`}
+                            onClick={() => goToPage(productos.links?.prev)}
+                            disabled={!productos.links?.prev}
+                        >
+                            ‹ Anterior
+                        </button>
+
+                        {/* Números de página */}
+                        {meta.links
+                            .filter(l => l.label !== '&laquo; Previous' && l.label !== 'Next &raquo;')
+                            .map((link, i) => (
+                                link.label === '...'
+                                    ? <span key={i} className="page-btn dots">…</span>
+                                    : <button
+                                        key={i}
+                                        className={`page-btn${link.active ? ' active' : ''}`}
+                                        onClick={() => goToPage(link.url)}
+                                        disabled={link.active}
+                                    >
+                                        {link.label}
+                                    </button>
+                            ))
+                        }
+
+                        {/* Siguiente */}
+                        <button
+                            className={`page-btn${!productos.links?.next ? ' disabled' : ''}`}
+                            onClick={() => goToPage(productos.links?.next)}
+                            disabled={!productos.links?.next}
+                        >
+                            Siguiente ›
+                        </button>
+                    </div>
+                )}
+
+                {/* Info de página */}
+                {lastPage > 1 && (
+                    <p style={{textAlign:'center',fontSize:'0.74rem',color:'rgba(150,80,20,0.4)',marginTop:'0.75rem'}}>
+                        Página {currentPage} de {lastPage} — {totalItems} productos
+                    </p>
                 )}
             </div>
 

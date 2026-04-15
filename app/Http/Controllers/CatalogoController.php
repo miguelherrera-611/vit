@@ -104,8 +104,9 @@ class CatalogoController extends Controller
             ->whereNull('deleted_at')
             ->orderBy('nombre')
             ->with(['fotos', 'tallas'])
-            ->get()
-            ->map(fn($p) => [
+            ->paginate(24)
+            ->withQueryString()
+            ->through(fn($p) => [
                 'id'           => $p->id,
                 'nombre'       => $p->nombre,
                 'descripcion'  => $p->descripcion,

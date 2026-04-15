@@ -8,6 +8,7 @@ use App\Models\PedidoItem;
 use App\Models\Producto;
 use App\Models\ConfigPago;
 use App\Models\ConfigContacto;
+use App\Models\ProductoTalla;
 use App\Models\Papelera;
 use App\Models\Registro;
 use App\Mail\PedidoRecibidoAdminMail;
@@ -83,7 +84,9 @@ class PedidoController extends Controller
 
         DB::beginTransaction();
         try {
-            $subtotal = collect($validated['items'])->sum(fn($i) => $i['cantidad'] * $i['precio_unitario']);
+            $subtotal = array_reduce($validated['items'], function ($carry, $i) {
+                return bcadd($carry, bcmul((string) $i['cantidad'], (string) $i['precio_unitario'], 2), 2);
+            }, '0');
             $maxId    = DB::table('pedidos')->lockForUpdate()->max('id') ?? 0;
             $numero   = 'PED-' . str_pad($maxId + 1, 6, '0', STR_PAD_LEFT);
 
@@ -106,32 +109,65 @@ class PedidoController extends Controller
                 'email_cliente'     => $validated['email_cliente'] ?? auth()->user()?->email,
             ]);
 
-            foreach ($validated['items'] as $item) {
-                $producto = Producto::with('tallas')->lockForUpdate()->find($item['producto_id']);
+            // ── Paso 1: bloquear y validar stock antes de crear registros ──
+            $erroresStock = [];
+            $stockLocked  = [];
+
+            foreach ($validated['items'] as $idx => $item) {
+                $producto = Producto::lockForUpdate()->find($item['producto_id']);
                 $talla    = isset($item['talla']) ? strtoupper(trim($item['talla'])) : null;
+
+                if (!$producto) {
+                    $erroresStock[] = 'Uno de los productos ya no existe en el sistema.';
+                    continue;
+                }
+
+                if ($producto->maneja_tallas && $talla) {
+                    $tallaModel = ProductoTalla::where('producto_id', $producto->id)
+                        ->where('talla', $talla)
+                        ->lockForUpdate()
+                        ->first();
+                    $stockDisp = $tallaModel ? $tallaModel->stock : 0;
+                    if ($stockDisp < $item['cantidad']) {
+                        $erroresStock[] = "Stock insuficiente para \"{$producto->nombre}\" talla {$talla}: "
+                            . "disponible {$stockDisp}, solicitado {$item['cantidad']}.";
+                    }
+                    $stockLocked[$idx] = ['producto' => $producto, 'tallaModel' => $tallaModel, 'talla' => $talla];
+                } else {
+                    if ($producto->stock < $item['cantidad']) {
+                        $erroresStock[] = "Stock insuficiente para \"{$producto->nombre}\": "
+                            . "disponible {$producto->stock}, solicitado {$item['cantidad']}.";
+                    }
+                    $stockLocked[$idx] = ['producto' => $producto, 'tallaModel' => null, 'talla' => null];
+                }
+            }
+
+            if (!empty($erroresStock)) {
+                DB::rollBack();
+                return back()->withErrors(['items' => implode(' | ', $erroresStock)]);
+            }
+
+            // ── Paso 2: crear ítems y descontar stock (locks ya adquiridos) ──
+            foreach ($validated['items'] as $idx => $item) {
+                $data     = $stockLocked[$idx];
+                $producto = $data['producto'];
+                $talla    = $data['talla'];
 
                 PedidoItem::create([
                     'pedido_id'       => $pedido->id,
                     'producto_id'     => $item['producto_id'],
-                    'talla'           => $producto?->maneja_tallas ? $talla : null,
-                    'nombre_producto' => $producto?->nombre ?? 'Producto',
+                    'talla'           => $talla,
+                    'nombre_producto' => $producto->nombre,
                     'cantidad'        => $item['cantidad'],
                     'precio_unitario' => $item['precio_unitario'],
-                    'subtotal'        => $item['cantidad'] * $item['precio_unitario'],
-                    'imagen_producto' => $producto?->imagen,
+                    'subtotal'        => bcmul((string) $item['cantidad'], (string) $item['precio_unitario'], 2),
+                    'imagen_producto' => $producto->imagen,
                 ]);
 
-                if ($producto) {
-                    if ($producto->maneja_tallas && $talla) {
-                        $tallaModel = $producto->tallas->firstWhere('talla', $talla);
-                        if ($tallaModel) {
-                            $nuevoStock = max(0, $tallaModel->stock - $item['cantidad']);
-                            $tallaModel->update(['stock' => $nuevoStock]);
-                        }
-                    } else {
-                        $nuevoStock = max(0, $producto->stock - $item['cantidad']);
-                        $producto->update(['stock' => $nuevoStock]);
-                    }
+                if ($producto->maneja_tallas && $talla && $data['tallaModel']) {
+                    $data['tallaModel']->decrement('stock', $item['cantidad']);
+                } else {
+                    $producto->decrement('stock', $item['cantidad']);
                 }
             }
 
@@ -139,7 +175,7 @@ class PedidoController extends Controller
 
             $adminEmails = \App\Models\User::role('admin')->pluck('email')->toArray();
             if (!empty($adminEmails)) {
-                Mail::to($adminEmails)->send(new PedidoRecibidoAdminMail($pedido));
+                Mail::to($adminEmails)->queue(new PedidoRecibidoAdminMail($pedido));
             }
 
             Registro::registrar('crear', 'pedidos',
@@ -182,8 +218,9 @@ class PedidoController extends Controller
         $pedidos = Pedido::with('items')
             ->where('user_id', auth()->id())
             ->orderByDesc('created_at')
-            ->get()
-            ->map(fn($p) => [
+            ->paginate(10)
+            ->withQueryString()
+            ->through(fn($p) => [
                 'id'              => $p->id,
                 'numero_pedido'   => $p->numero_pedido,
                 'estado'          => $p->estado,
@@ -225,7 +262,7 @@ class PedidoController extends Controller
 
         $adminEmails = \App\Models\User::role('admin')->pluck('email')->toArray();
         if (!empty($adminEmails)) {
-            Mail::to($adminEmails)->send(new AdminEntregaConfirmadaMail($pedido));
+            Mail::to($adminEmails)->queue(new AdminEntregaConfirmadaMail($pedido));
         }
 
         Registro::registrar('confirmar_entrega', 'pedidos',
@@ -286,12 +323,18 @@ class PedidoController extends Controller
             ]),
         ]);
 
+        // Una sola query GROUP BY en vez de 5 COUNT separados
+        $conteosRaw = Pedido::selectRaw('estado, COUNT(*) as total')
+            ->whereIn('estado', ['revision', 'aprobado', 'envio_curso', 'entregado', 'rechazado'])
+            ->groupBy('estado')
+            ->pluck('total', 'estado');
+
         $conteos = [
-            'revision'    => Pedido::where('estado', 'revision')->count(),
-            'aprobado'    => Pedido::where('estado', 'aprobado')->count(),
-            'envio_curso' => Pedido::where('estado', 'envio_curso')->count(),
-            'entregado'   => Pedido::where('estado', 'entregado')->count(),
-            'rechazado'   => Pedido::where('estado', 'rechazado')->count(),
+            'revision'    => (int) ($conteosRaw['revision']    ?? 0),
+            'aprobado'    => (int) ($conteosRaw['aprobado']    ?? 0),
+            'envio_curso' => (int) ($conteosRaw['envio_curso'] ?? 0),
+            'entregado'   => (int) ($conteosRaw['entregado']   ?? 0),
+            'rechazado'   => (int) ($conteosRaw['rechazado']   ?? 0),
         ];
 
         $metodosPago = ConfigPago::all()->map(fn($m) => [
@@ -347,11 +390,14 @@ class PedidoController extends Controller
             DB::beginTransaction();
             try {
                 foreach ($pedido->items as $item) {
-                    $producto = Producto::with('tallas')->find($item->producto_id);
+                    $producto = Producto::lockForUpdate()->find($item->producto_id);
                     if (!$producto) continue;
                     $talla = $item->talla;
                     if ($producto->maneja_tallas && $talla) {
-                        $tallaModel = $producto->tallas->firstWhere('talla', $talla);
+                        $tallaModel = ProductoTalla::where('producto_id', $producto->id)
+                            ->where('talla', $talla)
+                            ->lockForUpdate()
+                            ->first();
                         if ($tallaModel) $tallaModel->increment('stock', $item->cantidad);
                     } else {
                         $producto->increment('stock', $item->cantidad);
@@ -371,12 +417,12 @@ class PedidoController extends Controller
         $emailCliente = $pedido->email;
 
         if ($request->estado === 'envio_curso' && $emailCliente) {
-            Mail::to($emailCliente)->send(new PedidoEnvioClienteMail($pedido->fresh()));
+            Mail::to($emailCliente)->queue(new PedidoEnvioClienteMail($pedido->fresh()));
         }
 
         if ($request->estado === 'rechazado' && $emailCliente) {
             $contacto = ConfigContacto::all()->pluck('valor', 'clave');
-            Mail::to($emailCliente)->send(new PedidoRechazadoClienteMail($pedido->fresh(), $contacto));
+            Mail::to($emailCliente)->queue(new PedidoRechazadoClienteMail($pedido->fresh(), $contacto));
         }
 
         Registro::registrar('cambiar_estado_pedido', 'pedidos',
@@ -427,7 +473,7 @@ class PedidoController extends Controller
         if (!empty($cambios)) {
             $adminEmails = \App\Models\User::role('admin')->pluck('email')->toArray();
             if (!empty($adminEmails)) {
-                Mail::to($adminEmails)->send(new ConfigPagoCambioMail(
+                Mail::to($adminEmails)->queue(new ConfigPagoCambioMail(
                     $configPago->metodo,
                     $cambios,
                     auth()->user()->name
@@ -469,7 +515,7 @@ class PedidoController extends Controller
         if (!empty($cambios)) {
             $adminEmails = \App\Models\User::role('admin')->pluck('email')->toArray();
             if (!empty($adminEmails)) {
-                Mail::to($adminEmails)->send(new ConfigContactoCambioMail(
+                Mail::to($adminEmails)->queue(new ConfigContactoCambioMail(
                     $cambios,
                     auth()->user()->name
                 ));
@@ -493,21 +539,24 @@ class PedidoController extends Controller
 
         $unMesAtras = Carbon::now()->subMonth();
 
-        $pedidos = Pedido::whereIn('estado', ['entregado', 'rechazado', 'cancelado'])
+        $total     = 0;
+        $adminName = auth()->user()->name;
+
+        // chunk(100) evita cargar miles de pedidos en memoria de una sola vez
+        Pedido::whereIn('estado', ['entregado', 'rechazado', 'cancelado'])
             ->where('created_at', '<', $unMesAtras)
-            ->get();
-
-        $total = $pedidos->count();
-
-        foreach ($pedidos as $pedido) {
-            Papelera::archivar('pedido', $pedido, $pedido->numero_pedido, auth()->user()->name);
-            $pedido->delete();
-        }
+            ->chunk(100, function ($pedidos) use (&$total, $adminName) {
+                foreach ($pedidos as $pedido) {
+                    Papelera::archivar('pedido', $pedido, $pedido->numero_pedido, $adminName);
+                    $pedido->delete();
+                }
+                $total += $pedidos->count();
+            });
 
         if ($total > 0) {
             $adminEmails = \App\Models\User::role('admin')->pluck('email')->toArray();
             if (!empty($adminEmails)) {
-                Mail::to($adminEmails)->send(new HistorialLimpiadoMail(
+                Mail::to($adminEmails)->queue(new HistorialLimpiadoMail(
                     $total,
                     auth()->user()->name
                 ));

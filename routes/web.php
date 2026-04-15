@@ -44,7 +44,7 @@ Route::get('/', function () {
 // ─────────────────────────────────────────────────────────────────────────────
 // NUEVO — Registro público solo para clientes (solo guests)
 // ─────────────────────────────────────────────────────────────────────────────
-Route::middleware('guest')->group(function () {
+Route::middleware(['guest', 'throttle:10,1'])->group(function () {
     Route::get('/registro', [ClienteRegisterController::class, 'create'])->name('registro.cliente');
     Route::post('/registro', [ClienteRegisterController::class, 'store'])->name('registro.cliente.store');
 });
@@ -52,9 +52,9 @@ Route::middleware('guest')->group(function () {
 // ─────────────────────────────────────────────────────────────────────────────
 // NUEVO — Catálogo público (sin autenticación)
 // ─────────────────────────────────────────────────────────────────────────────
-Route::prefix('catalogo')->name('catalogo.')->group(function () {
+Route::prefix('catalogo')->name('catalogo.')->middleware('throttle:60,1')->group(function () {
     Route::get('/', [CatalogoController::class, 'index'])->name('index');
-    Route::get('/producto/{producto}', [CatalogoController::class, 'producto'])->name('producto');
+    Route::get('/producto/{producto}', [CatalogoController::class, 'producto'])->name('producto')->middleware('throttle:30,1');
     Route::get('/{grupo}', [CatalogoController::class, 'grupo'])->name('grupo');
     Route::get('/{grupo}/{subcat}', [CatalogoController::class, 'subcategoria'])->name('subcategoria');
 });

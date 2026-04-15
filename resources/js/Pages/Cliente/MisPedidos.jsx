@@ -26,6 +26,18 @@ export default function MisPedidos({ pedidos, contacto }) {
     const [processing, setProcessing]  = useState(false);
     const [expandido, setExpandido]    = useState(null);
 
+    // El paginador de Laravel envía formato plano: { data, total, last_page, prev_page_url, next_page_url, links[] }
+    const lista        = pedidos.data ?? [];
+    const totalPedidos = pedidos.total ?? lista.length;
+    const lastPage     = pedidos.last_page ?? 1;
+    const prevUrl      = pedidos.prev_page_url ?? null;
+    const nextUrl      = pedidos.next_page_url ?? null;
+    const pageLinks    = pedidos.links ?? [];   // array de {url, label, active}
+
+    const goToPage = (url) => {
+        if (url) router.get(url, {}, { preserveScroll: false });
+    };
+
     const telefonos = [contacto?.telefono1, contacto?.telefono2].filter(Boolean);
     const correos   = [contacto?.correo1,   contacto?.correo2].filter(Boolean);
 
@@ -103,6 +115,18 @@ export default function MisPedidos({ pedidos, contacto }) {
                 @media (max-width: 420px) {
                     .pedido-left { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
                 }
+                .mp-pagination { display:flex; align-items:center; justify-content:center; gap:0.35rem; flex-wrap:wrap; margin-top:1.75rem; }
+                .mp-page-btn {
+                    min-width:2.2rem; height:2.2rem; padding:0 0.6rem;
+                    border-radius:8px; border:1px solid rgba(200,140,80,0.2);
+                    background:rgba(255,255,255,0.5); color:rgba(100,50,10,0.7);
+                    font-size:0.78rem; font-weight:500; cursor:pointer;
+                    display:inline-flex; align-items:center; justify-content:center;
+                    font-family:'Inter',sans-serif; transition:all 0.15s; white-space:nowrap;
+                }
+                .mp-page-btn:hover:not(:disabled) { background:rgba(255,255,255,0.8); border-color:rgba(200,140,80,0.4); color:#2d1a08; }
+                .mp-page-btn.active { background:rgba(180,90,20,0.85); border-color:transparent; color:#fff; cursor:default; }
+                .mp-page-btn:disabled { opacity:0.35; cursor:default; }
             `}</style>
 
             <div className="mp-wrap">
@@ -117,13 +141,13 @@ export default function MisPedidos({ pedidos, contacto }) {
                         Mis pedidos
                     </h1>
                     <p style={{fontSize:'0.8rem',color:'rgba(150,80,20,0.5)'}}>
-                        {pedidos.length} {pedidos.length===1?'pedido':'pedidos'} en total
+                        {totalPedidos} {totalPedidos===1?'pedido':'pedidos'} en total
                     </p>
                 </div>
 
                 {flash?.success && <div className="alert-ok">{flash.success}</div>}
 
-                {pedidos.length === 0 ? (
+                {lista.length === 0 ? (
                     <div style={{
                         textAlign:'center',padding:'3.5rem 0',
                         background:'rgba(255,255,255,0.45)',borderRadius:'14px',
@@ -140,7 +164,7 @@ export default function MisPedidos({ pedidos, contacto }) {
                             Ir al catálogo
                         </a>
                     </div>
-                ) : pedidos.map((pedido, idx) => {
+                ) : lista.map((pedido, idx) => {
                     const st      = ESTADO_STYLES[pedido.estado] || ESTADO_STYLES.revision;
                     const abierto = expandido === pedido.id;
                     return (
@@ -281,6 +305,41 @@ export default function MisPedidos({ pedidos, contacto }) {
                         </div>
                     );
                 })}
+                {/* Paginación */}
+                {lastPage > 1 && (
+                    <div className="mp-pagination">
+                        <button
+                            className="mp-page-btn"
+                            onClick={() => goToPage(prevUrl)}
+                            disabled={!prevUrl}
+                        >
+                            ‹ Anterior
+                        </button>
+
+                        {pageLinks
+                            .filter(l => l.label !== '&laquo; Previous' && l.label !== 'Next &raquo;')
+                            .map((link, i) => (
+                                <button
+                                    key={i}
+                                    className={`mp-page-btn${link.active ? ' active' : ''}`}
+                                    onClick={() => goToPage(link.url)}
+                                    disabled={link.active || link.label === '...'}
+                                >
+                                    {link.label === '...' ? '…' : link.label}
+                                </button>
+                            ))
+                        }
+
+                        <button
+                            className="mp-page-btn"
+                            onClick={() => goToPage(nextUrl)}
+                            disabled={!nextUrl}
+                        >
+                            Siguiente ›
+                        </button>
+                    </div>
+                )}
+
             </div>
 
             {confirmando && (

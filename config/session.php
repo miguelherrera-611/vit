@@ -32,8 +32,10 @@ return [
     |
     */
 
-    // MODIFICADO: cambiado de 120 a 30 minutos para cerrar sesiones inactivas
-    'lifetime' => (int) env('SESSION_LIFETIME', 30),
+    // 120 min: tiempo suficiente para completar el proceso de checkout
+    // (subir comprobante, llenar datos de envío) sin perder la sesión a mitad.
+    // Para sesiones admin más estrictas, configurar SESSION_LIFETIME en .env
+    'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

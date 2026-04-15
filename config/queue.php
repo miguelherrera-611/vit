@@ -40,7 +40,9 @@ return [
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
             'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
-            'after_commit' => false,
+            // true: el job se encola DESPUÉS del commit, evita que se ejecute
+            // con datos aún no guardados si se usa Mail::queue() dentro de una transaction
+            'after_commit' => true,
         ],
 
         'beanstalkd' => [
