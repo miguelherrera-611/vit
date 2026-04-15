@@ -1,6 +1,6 @@
 // resources/js/Pages/Auth/RegisterCliente.jsx
-import { useForm, Link, Head } from '@inertiajs/react';
-import { useState } from 'react';
+import { useForm, Link, Head, router } from '@inertiajs/react';
+import { useState, useEffect, useRef } from 'react';
 
 const BG = `
     radial-gradient(ellipse 75% 60% at 0% 0%, rgba(255,210,170,0.2) 0%, transparent 55%),
@@ -8,6 +8,8 @@ const BG = `
     radial-gradient(ellipse 55% 50% at 75% 10%, rgba(255,215,175,0.12) 0%, transparent 55%),
     linear-gradient(145deg, #fdf6f0 0%, #fdf3ec 35%, #fef5ef 70%, #fef8f4 100%)
 `;
+
+const COOLDOWN = 60;
 
 const STYLES = `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
@@ -157,6 +159,43 @@ const STYLES = `
 
     .footer-text { text-align: center; margin-top: 1.5rem; font-size: 0.68rem; color: rgba(150,80,20,0.38); }
 
+    /* Modal rate-limit */
+    @keyframes rlFadeIn  { from{opacity:0} to{opacity:1} }
+    @keyframes rlSlideUp { from{opacity:0;transform:translateY(20px) scale(0.96)} to{opacity:1;transform:translateY(0) scale(1)} }
+    .rl-overlay {
+        position: fixed; inset: 0; z-index: 9999;
+        background: rgba(20,8,0,0.45); backdrop-filter: blur(6px);
+        display: flex; align-items: center; justify-content: center; padding: 1.25rem;
+        animation: rlFadeIn 0.2s ease both;
+    }
+    .rl-card {
+        width: 100%; max-width: 360px;
+        background: rgba(253,246,240,0.98);
+        border: 1px solid rgba(220,38,38,0.18);
+        border-radius: 20px; padding: 2rem 1.75rem;
+        box-shadow: 0 24px 64px rgba(180,30,10,0.18), inset 0 1px 0 rgba(255,255,255,0.92);
+        animation: rlSlideUp 0.3s cubic-bezier(0.16,1,0.3,1) both;
+        text-align: center;
+    }
+    .rl-icon {
+        width: 52px; height: 52px; border-radius: 16px; margin: 0 auto 1.1rem;
+        background: rgba(220,38,38,0.08); border: 1px solid rgba(220,38,38,0.2);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .rl-countdown {
+        font-size: 2.4rem; font-weight: 700; color: rgba(185,28,28,0.85);
+        letter-spacing: -0.05em; line-height: 1; margin: 0.75rem 0 0.4rem;
+    }
+    .rl-btn {
+        margin-top: 1.25rem; width: 100%; padding: 0.72rem;
+        border-radius: 10px; font-family: 'Inter', sans-serif;
+        font-size: 0.85rem; font-weight: 500; cursor: pointer;
+        background: rgba(220,38,38,0.08); border: 1px solid rgba(220,38,38,0.22);
+        color: rgba(185,28,28,0.85); transition: all 0.15s;
+    }
+    .rl-btn:hover:not(:disabled) { background: rgba(220,38,38,0.14); }
+    .rl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
     @media (max-width: 480px) {
         .form-row { grid-template-columns: 1fr; }
         .glass-card { padding: 1.75rem 1.25rem; }
@@ -173,6 +212,47 @@ export default function RegisterCliente({ status }) {
     });
     const [showPass,    setShowPass]    = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
+    const [rateLimited,  setRateLimited]  = useState(false);
+    const [countdown,    setCountdown]    = useState(COOLDOWN);
+    const timerRef = useRef(null);
+
+    // Detecta throttle vía errors.email (ValidationException → 422)
+    useEffect(() => {
+        if (!errors.email) return;
+        const match = errors.email.match(/(\d+)\s*second/i);
+        if (match || /too many|demasiados/i.test(errors.email)) {
+            const secs = match ? parseInt(match[1], 10) : COOLDOWN;
+            openRateLimit(secs);
+        }
+    }, [errors.email]);
+
+    // Detecta throttle vía respuesta HTTP 429 (middleware de ruta)
+    useEffect(() => {
+        const unsubscribe = router.on('invalid', (e) => {
+            if (e.detail.response?.status === 429) {
+                e.preventDefault();
+                openRateLimit(COOLDOWN);
+            }
+        });
+        return unsubscribe;
+    }, []);
+
+    const openRateLimit = (secs = COOLDOWN) => {
+        setRateLimited(true);
+        setCountdown(secs);
+        clearInterval(timerRef.current);
+        timerRef.current = setInterval(() => {
+            setCountdown(prev => {
+                if (prev <= 1) { clearInterval(timerRef.current); return 0; }
+                return prev - 1;
+            });
+        }, 1000);
+    };
+
+    const closeRateLimit = () => {
+        setRateLimited(false);
+        clearInterval(timerRef.current);
+    };
 
     const submit = (e) => {
         e.preventDefault();
@@ -243,7 +323,9 @@ export default function RegisterCliente({ status }) {
                                 <input className="glass-input" type="email" placeholder="tu@email.com"
                                        value={data.email} onChange={e => setData('email', e.target.value)}
                                        autoComplete="username" />
-                                {errors.email && <p className="field-error">{errors.email}</p>}
+                                {errors.email && !/too many|demasiados/i.test(errors.email) && (
+                                    <p className="field-error">{errors.email}</p>
+                                )}
                             </div>
 
                             {/* Contraseña */}
@@ -299,6 +381,40 @@ export default function RegisterCliente({ status }) {
                     <p className="footer-text">© {new Date().getFullYear()} VitaliStore. Todos los derechos reservados.</p>
                 </div>
             </div>
+
+            {/* ── Modal demasiadas solicitudes ── */}
+            {rateLimited && (
+                <div className="rl-overlay" onClick={countdown === 0 ? closeRateLimit : undefined}>
+                    <div className="rl-card" onClick={e => e.stopPropagation()}>
+                        <div className="rl-icon">
+                            <svg width="22" height="22" fill="none" stroke="rgba(185,28,28,0.75)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                        </div>
+
+                        <h2 style={{ fontSize:'1rem', fontWeight:'600', color:'#2d1a08', letterSpacing:'-0.02em', marginBottom:'0.35rem' }}>
+                            Demasiados intentos
+                        </h2>
+                        <p style={{ fontSize:'0.8rem', color:'rgba(150,80,20,0.6)', lineHeight:'1.6' }}>
+                            Has realizado demasiados intentos de registro. Por favor espera antes de volver a intentarlo.
+                        </p>
+
+                        <div className="rl-countdown">{countdown}s</div>
+                        <p style={{ fontSize:'0.72rem', color:'rgba(150,80,20,0.45)' }}>
+                            {countdown > 0 ? 'Podrás intentarlo nuevamente en...' : '¡Ya puedes volver a intentarlo!'}
+                        </p>
+
+                        <button
+                            className="rl-btn"
+                            onClick={closeRateLimit}
+                            disabled={countdown > 0}
+                        >
+                            {countdown > 0 ? `Espera ${countdown}s` : 'Cerrar e intentar de nuevo'}
+                        </button>
+                    </div>
+                </div>
+            )}
         </>
     );
 }
